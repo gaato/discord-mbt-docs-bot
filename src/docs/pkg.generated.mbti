@@ -1,0 +1,34 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gaato/discord-mbt-docs-bot/docs"
+
+import {
+  "gaato/discord/model",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn resolve(Array[Section], String) -> Section?
+
+pub fn search(Array[Section], String, limit? : Int) -> Array[Section]
+
+pub let sections : Array[Section]
+
+// Errors
+
+// Types and methods
+pub(all) struct Section {
+  chapter : String
+  file : String
+  title : String
+  anchor : String
+  body : String
+} derive(Eq, @debug.Debug)
+pub fn Section::key(Self) -> String
+pub fn Section::label(Self) -> String
+pub fn Section::to_embed(Self) -> @model.Embed
+pub fn Section::url(Self) -> String
+
+// Type aliases
+
+// Traits
+

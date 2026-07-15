@@ -1,0 +1,14 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gaato/discord-mbt-docs-bot/gen"
+
+// Values
+
+// Errors
+
+// Types and methods
+type RawSection
+
+// Type aliases
+
+// Traits
+
