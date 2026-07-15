@@ -14,8 +14,7 @@ async fn main {
       println("DISCORD_TOKEN is not set")
       return
     }
-    let app = @discord.App(sync=command_sync())
-    @ui.register(app, @docs.sections)
+    let app = @app.build(sync=command_sync())
     let bot = @discord.Bot(app, token~)
     bot.on(@discord.Events::ready(), (_, ready) => {
       println(

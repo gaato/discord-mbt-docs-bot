@@ -21,7 +21,12 @@ interactions or on serverless.
 - `src/gen` — the index generator. It parses the guide chapters by heading and
   emits `src/docs/index_generated.mbt`.
 - `src/ui` — the `/docs` command, pagination buttons, and component handler.
+- `src/app` — the shared `App` definition used by every executor below.
 - `src/main` — the native Gateway executable.
+- `src/worker` — the Cloudflare Workers adapter (HTTP interactions) plus
+  `entry.js` and `wrangler.toml`.
+- `src/register` — one-shot command registration for the Worker deployment,
+  which has no startup phase to sync commands in.
 
 ## Development
 
@@ -53,3 +58,37 @@ Set `DISCORD_GUILD_ID` to sync the command to a single guild while developing
 
 The bot only needs the `applications.commands` and `bot` install scopes; it
 subscribes to no privileged intents.
+
+## Deploy to Cloudflare Workers
+
+The Worker serves the same `App` over signed HTTP interactions — no Gateway
+connection. Secrets come from Wrangler, not `.env`; the commands below copy
+the token out of `.env` without echoing it (fish syntax):
+
+```fish
+moon build --target js src/worker
+cd src/worker
+npx wrangler login   # once
+env (cat ../../.env) sh -c 'printf %s "$DISCORD_TOKEN" | npx wrangler secret put DISCORD_TOKEN'
+printf %s "<public key from the developer portal>" | npx wrangler secret put DISCORD_PUBLIC_KEY
+npx wrangler deploy
+```
+
+Then register the commands (Workers have no startup phase, so this is a
+separate one-shot; it diff-syncs, so re-running is free):
+
+```fish
+env (cat .env) moon run --target native --release src/register
+```
+
+Finally set the Worker URL as the **Interactions Endpoint URL** in the Discord
+developer portal. Note that once an endpoint URL is configured, Discord sends
+interactions there instead of the Gateway, so the native `src/main` bot stops
+receiving them until the URL is cleared again.
+
+Known issue: `moonbitlang/async` on the JS target needs the one-line
+`js_async` scheduler fix from
+[moonbitlang/async#500](https://github.com/moonbitlang/async/pull/500) until
+it is released upstream. It is applied to `.mooncakes/` in this checkout;
+re-fetching dependencies reverts it, so re-apply the patch if deferred
+handlers stop resuming on Workers.
