@@ -20,16 +20,19 @@ test "generated keys are unique and fit Discord choice limits" {
 }
 
 ///|
-test "every page of every section renders a bounded embed" {
+test "every page of every section fits the Components V2 text budget" {
   for section in @docs.sections {
-    for page in 0..<section.pages().length() {
-      let embed = section.to_embed(page~)
-      guard embed.description is Some(description) else {
-        fail("missing description: \{section.key()} page \{page}")
+    let pages = section.pages()
+    let title = "### [\{section.label()}](\{section.url()})"
+    for page, body in pages {
+      let footer = if pages.length() > 1 {
+        "-# discord.mbt guide · \{page + 1}/\{pages.length()}"
+      } else {
+        "-# discord.mbt guide"
       }
       assert_true(
-        description.length() <= 4096,
-        msg="description too long: \{section.key()} page \{page}",
+        title.length() + body.length() + footer.length() <= 4000,
+        msg="text displays too long: \{section.key()} page \{page}",
       )
     }
   }

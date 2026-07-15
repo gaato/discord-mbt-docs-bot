@@ -16,7 +16,7 @@ pub fn parse_suffix(String) -> (Int, String)?
 
 pub fn register(@app.App, Array[@docs.Section]) -> Unit
 
-pub fn view(Array[@docs.Section], @docs.Section, page~ : Int) -> (Array[@model.Embed], Array[@model.Component])
+pub fn view(Array[@docs.Section], @docs.Section, page~ : Int) -> Array[@model.Component]
 
 // Errors
 

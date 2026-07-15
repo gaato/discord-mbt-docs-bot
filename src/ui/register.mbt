@@ -9,8 +9,8 @@ pub fn register(app : @discord.App, sections : Array[@docs.Section]) -> Unit {
         Some((page, key)) =>
           match @docs.find_by_key(sections, key) {
             Some(section) => {
-              let (embeds, components) = view(sections, section, page~)
-              @discord.ComponentReply::update_message(embeds~, components~)
+              let components = view(sections, section, page~)
+              @discord.ComponentReply::update_message(embeds=[], components~)
             }
             None => stale_reply()
           }
@@ -39,8 +39,8 @@ fn docs_command(sections : Array[@docs.Section]) -> @discord.Command[String] {
     handler=Immediate((_, query) => {
       match @docs.resolve(sections, query) {
         Some(section) => {
-          let (embeds, components) = view(sections, section, page=0)
-          @discord.CommandReply::message(embeds~, components~)
+          let components = view(sections, section, page=0)
+          @discord.CommandReply::message(components~)
         }
         None =>
           @discord.CommandReply::message(

@@ -2,7 +2,6 @@
 package "gaato/discord-mbt-docs-bot/docs"
 
 import {
-  "gaato/discord/model",
   "moonbitlang/core/debug",
 }
 
@@ -28,7 +27,6 @@ pub(all) struct Section {
 pub fn Section::key(Self) -> String
 pub fn Section::label(Self) -> String
 pub fn Section::pages(Self, page_chars? : Int) -> Array[String]
-pub fn Section::to_embed(Self, page? : Int) -> @model.Embed
 pub fn Section::url(Self) -> String
 
 // Type aliases

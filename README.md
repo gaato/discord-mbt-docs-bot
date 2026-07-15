@@ -1,7 +1,8 @@
 # discord-mbt-docs-bot
 
 A Discord bot that searches the [discord.mbt](https://github.com/gaato/discord.mbt)
-guide and posts the matching section as an embed — built with discord.mbt itself.
+guide and posts the matching section in a Discord Components V2 container —
+built with discord.mbt itself.
 
 `/docs <query>` autocompletes over every `##` section of the in-repo guide
 (`src/guide/*.mbt.md` in discord.mbt) and replies with the section body and a

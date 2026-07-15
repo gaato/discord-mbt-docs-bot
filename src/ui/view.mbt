@@ -20,18 +20,28 @@ pub fn parse_suffix(suffix : String) -> (Int, String)? {
 }
 
 ///|
-/// The embeds and components for one section page.
+/// The Components V2 layout for one section page.
 pub fn view(
   sections : Array[@docs.Section],
   section : @docs.Section,
   page~ : Int,
-) -> (Array[@model.Embed], Array[@model.Component]) {
+) -> Array[@model.Component] {
   let pages = section.pages()
   let last = pages.length() - 1
   let page = if page < 0 { 0 } else if page > last { last } else { page }
-  let rows : Array[@model.Component] = []
+  let footer = if last > 0 {
+    "-# discord.mbt guide · \{page + 1}/\{pages.length()}"
+  } else {
+    "-# discord.mbt guide"
+  }
+  let components = [
+    @discord.text_display("### [\{section.label()}](\{section.url()})"),
+    @discord.text_display(pages[page]),
+    @discord.separator(divider=true, spacing=1),
+    @discord.text_display(footer),
+  ]
   if last > 0 {
-    rows.push(
+    components.push(
       @discord.action_row([
         @discord.button(
           custom_id=custom_id(section, page=page - 1),
@@ -76,9 +86,9 @@ pub fn view(
     }
   }
   if !neighbors.is_empty() {
-    rows.push(@discord.action_row(neighbors))
+    components.push(@discord.action_row(neighbors))
   }
-  ([section.to_embed(page~)], rows)
+  [@discord.container(components~, accent_color=0x5865F2)]
 }
 
 ///|

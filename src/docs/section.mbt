@@ -43,39 +43,6 @@ pub fn Section::url(self : Section) -> String {
 }
 
 ///|
-pub fn Section::to_embed(self : Section, page? : Int = 0) -> @model.Embed {
-  let pages = self.pages()
-  let page = if page < 0 {
-    0
-  } else if page >= pages.length() {
-    pages.length() - 1
-  } else {
-    page
-  }
-  let footer = if pages.length() > 1 {
-    "discord.mbt guide · \{page + 1}/\{pages.length()}"
-  } else {
-    "discord.mbt guide"
-  }
-  {
-    title: Some(self.label()),
-    typ: None,
-    url: Some(self.url()),
-    description: Some(pages[page]),
-    timestamp: None,
-    color: Some(0x5865F2),
-    footer: Some({ text: footer, icon_url: None, proxy_icon_url: None }),
-    image: None,
-    thumbnail: None,
-    video: None,
-    provider: None,
-    author: None,
-    fields: None,
-    flags: None,
-  }
-}
-
-///|
 fn clip(s : String, limit : Int) -> String {
   if s.length() <= limit {
     s

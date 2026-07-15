@@ -1,4 +1,3 @@
 import {
-  "gaato/discord/model",
   "moonbitlang/core/cmp",
 }

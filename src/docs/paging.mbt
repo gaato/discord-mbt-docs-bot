@@ -1,5 +1,5 @@
 ///|
-/// Split the body into pages that each fit comfortably in one embed.
+/// Split the body into self-contained pages at an approximate character budget.
 /// Pages break at line boundaries. A page that would cut a fenced code
 /// block closes the fence, and the next page reopens it with the same
 /// info string, so every page renders as valid markdown on its own.

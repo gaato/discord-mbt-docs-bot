@@ -3,3 +3,5 @@ import {
   "gaato/discord-mbt-docs-bot/docs",
   "gaato/discord-mbt-docs-bot/ui",
 }
+
+supported_targets = "js + native"

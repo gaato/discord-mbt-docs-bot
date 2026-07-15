@@ -8,3 +8,5 @@ import {
 import {
   "gaato/discord-mbt-docs-bot/docs",
 } for "test"
+
+supported_targets = "js + native"
