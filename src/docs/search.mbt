@@ -22,15 +22,23 @@ pub fn search(
 }
 
 ///|
-/// Resolve a command argument: an exact key (as produced by autocomplete)
-/// wins, otherwise fall back to the best search hit for free-form text.
-pub fn resolve(sections : Array[Section], query : String) -> Section? {
+pub fn find_by_key(sections : Array[Section], key : String) -> Section? {
   for section in sections {
-    if section.key() == query {
+    if section.key() == key {
       return Some(section)
     }
   }
-  search(sections, query, limit=1).get(0)
+  None
+}
+
+///|
+/// Resolve a command argument: an exact key (as produced by autocomplete)
+/// wins, otherwise fall back to the best search hit for free-form text.
+pub fn resolve(sections : Array[Section], query : String) -> Section? {
+  match find_by_key(sections, query) {
+    Some(section) => Some(section)
+    None => search(sections, query, limit=1).get(0)
+  }
 }
 
 ///|

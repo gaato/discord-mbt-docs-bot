@@ -43,19 +43,28 @@ pub fn Section::url(self : Section) -> String {
 }
 
 ///|
-pub fn Section::to_embed(self : Section) -> @model.Embed {
+pub fn Section::to_embed(self : Section, page? : Int = 0) -> @model.Embed {
+  let pages = self.pages()
+  let page = if page < 0 {
+    0
+  } else if page >= pages.length() {
+    pages.length() - 1
+  } else {
+    page
+  }
+  let footer = if pages.length() > 1 {
+    "discord.mbt guide · \{page + 1}/\{pages.length()}"
+  } else {
+    "discord.mbt guide"
+  }
   {
     title: Some(self.label()),
     typ: None,
     url: Some(self.url()),
-    description: Some(clip_at_line(self.body, 1400)),
+    description: Some(pages[page]),
     timestamp: None,
     color: Some(0x5865F2),
-    footer: Some({
-      text: "discord.mbt guide",
-      icon_url: None,
-      proxy_icon_url: None,
-    }),
+    footer: Some({ text: footer, icon_url: None, proxy_icon_url: None }),
     image: None,
     thumbnail: None,
     video: None,
@@ -73,19 +82,4 @@ fn clip(s : String, limit : Int) -> String {
   } else {
     "\{s[:limit - 1]}…"
   }
-}
-
-///|
-/// Truncate at the last line boundary that fits, so code fences and
-/// markdown structure are never cut mid-line.
-fn clip_at_line(s : String, limit : Int) -> String {
-  if s.length() <= limit {
-    return s
-  }
-  let head = s[:limit]
-  let cut = match head.rev_find("\n") {
-    Some(pos) => s[:pos]
-    None => head
-  }
-  "\{cut}\n…"
 }

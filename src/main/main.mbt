@@ -1,34 +1,4 @@
 ///|
-fn docs_command() -> @discord.Command[String] {
-  @discord.slash(
-    name="docs",
-    description="Search the discord.mbt guide",
-    args=@discord.Args::of(
-      @discord.arg_string(
-        name="query",
-        description="Guide section to look up",
-        suggest=(_, input) => {
-          @docs.search(@docs.sections, input).map(section => {
-            @discord.string_choice(section.label(), section.key())
-          })
-        },
-      ),
-    ),
-    handler=Immediate((_, query) => {
-      match @docs.resolve(@docs.sections, query) {
-        Some(section) =>
-          @discord.CommandReply::message(embeds=[section.to_embed()])
-        None =>
-          @discord.CommandReply::message(
-            content="No guide section matches “\{query}”.",
-            ephemeral=true,
-          )
-      }
-    }),
-  )
-}
-
-///|
 fn command_sync() -> @discord.CommandSync raise {
   match @env.get_env_var("DISCORD_GUILD_ID") {
     Some(id) => Guild(@model.Id::parse(id))
@@ -45,7 +15,7 @@ async fn main {
       return
     }
     let app = @discord.App(sync=command_sync())
-    app.command(docs_command())
+    @ui.register(app, @docs.sections)
     let bot = @discord.Bot(app, token~)
     bot.on(@discord.Events::ready(), (_, ready) => {
       println(

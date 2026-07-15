@@ -20,15 +20,17 @@ test "generated keys are unique and fit Discord choice limits" {
 }
 
 ///|
-test "every section renders a bounded embed" {
+test "every page of every section renders a bounded embed" {
   for section in @docs.sections {
-    let embed = section.to_embed()
-    guard embed.description is Some(description) else {
-      fail("missing description: \{section.key()}")
+    for page in 0..<section.pages().length() {
+      let embed = section.to_embed(page~)
+      guard embed.description is Some(description) else {
+        fail("missing description: \{section.key()} page \{page}")
+      }
+      assert_true(
+        description.length() <= 4096,
+        msg="description too long: \{section.key()} page \{page}",
+      )
     }
-    assert_true(
-      description.length() <= 4096,
-      msg="description too long: \{section.key()}",
-    )
   }
 }

@@ -1,0 +1,10 @@
+import {
+  "gaato/discord",
+  "gaato/discord-mbt-docs-bot/docs",
+  "gaato/discord/model",
+  "moonbitlang/core/string",
+}
+
+import {
+  "gaato/discord-mbt-docs-bot/docs",
+} for "test"

@@ -7,6 +7,8 @@ import {
 }
 
 // Values
+pub fn find_by_key(Array[Section], String) -> Section?
+
 pub fn resolve(Array[Section], String) -> Section?
 
 pub fn search(Array[Section], String, limit? : Int) -> Array[Section]
@@ -25,7 +27,8 @@ pub(all) struct Section {
 } derive(Eq, @debug.Debug)
 pub fn Section::key(Self) -> String
 pub fn Section::label(Self) -> String
-pub fn Section::to_embed(Self) -> @model.Embed
+pub fn Section::pages(Self, page_chars? : Int) -> Array[String]
+pub fn Section::to_embed(Self, page? : Int) -> @model.Embed
 pub fn Section::url(Self) -> String
 
 // Type aliases

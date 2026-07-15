@@ -5,14 +5,22 @@ guide and posts the matching section as an embed — built with discord.mbt itse
 
 `/docs <query>` autocompletes over every `##` section of the in-repo guide
 (`src/guide/*.mbt.md` in discord.mbt) and replies with the section body and a
-link to the rendered page on GitHub.
+link to the rendered page on GitHub. Long sections paginate with `◀ ▶`
+buttons (code fences are closed and reopened across page breaks), and `« »`
+buttons step to the neighboring guide sections.
+
+Button state lives entirely in the `custom_id`
+(`docs:<page>:<section key>`), so clicks survive bot restarts and need no
+per-conversation state — the same handlers will work behind HTTP
+interactions or on serverless.
 
 ## Layout
 
-- `src/docs` — the section index and search. `index_generated.mbt` is generated;
-  the rest is hand-written.
+- `src/docs` — the section index, search, and paging. `index_generated.mbt`
+  is generated; the rest is hand-written.
 - `src/gen` — the index generator. It parses the guide chapters by heading and
   emits `src/docs/index_generated.mbt`.
+- `src/ui` — the `/docs` command, pagination buttons, and component handler.
 - `src/main` — the native Gateway executable.
 
 ## Development

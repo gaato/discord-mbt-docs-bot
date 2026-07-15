@@ -1,0 +1,28 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gaato/discord-mbt-docs-bot/ui"
+
+import {
+  "gaato/discord-mbt-docs-bot/docs",
+  "gaato/discord/app",
+  "gaato/discord/model",
+}
+
+// Values
+pub let component_prefix : String
+
+pub fn custom_id(@docs.Section, page~ : Int) -> String
+
+pub fn parse_suffix(String) -> (Int, String)?
+
+pub fn register(@app.App, Array[@docs.Section]) -> Unit
+
+pub fn view(Array[@docs.Section], @docs.Section, page~ : Int) -> (Array[@model.Embed], Array[@model.Component])
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits
+

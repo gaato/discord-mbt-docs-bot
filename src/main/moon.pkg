@@ -1,6 +1,7 @@
 import {
   "gaato/discord",
   "gaato/discord-mbt-docs-bot/docs",
+  "gaato/discord-mbt-docs-bot/ui",
   "gaato/discord/model",
   "moonbitlang/async",
   "moonbitlang/async/signal",
