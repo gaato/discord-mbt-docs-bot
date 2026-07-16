@@ -1,0 +1,6 @@
+import {
+  "gaato/discord-mbt-docs-bot/docs",
+  "moonbitlang/core/cmp",
+}
+
+supported_targets = "js + native"

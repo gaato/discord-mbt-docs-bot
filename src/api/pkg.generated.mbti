@@ -1,0 +1,37 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "gaato/discord-mbt-docs-bot/api"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub let entries : Array[ApiEntry]
+
+pub fn find_by_key(Array[ApiEntry], String) -> ApiEntry?
+
+pub fn resolve(Array[ApiEntry], String) -> ApiEntry?
+
+pub fn search(Array[ApiEntry], String, limit? : Int) -> Array[ApiEntry]
+
+// Errors
+
+// Types and methods
+pub(all) struct ApiEntry {
+  pkg : String
+  name : String
+  kind : String
+  signature : String
+  doc : String
+  file : String
+  line : Int
+} derive(Eq, @debug.Debug)
+pub fn ApiEntry::key(Self) -> String
+pub fn ApiEntry::label(Self) -> String
+pub fn ApiEntry::pages(Self) -> Array[String]
+pub fn ApiEntry::url(Self) -> String
+
+// Type aliases
+
+// Traits
+

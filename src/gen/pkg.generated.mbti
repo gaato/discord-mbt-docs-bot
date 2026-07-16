@@ -6,7 +6,15 @@ package "gaato/discord-mbt-docs-bot/gen"
 // Errors
 
 // Types and methods
+type ApiIndex
+
+type RawApiEntry
+
 type RawSection
+
+type RawSymbol
+
+type SourceDoc
 
 // Type aliases
 

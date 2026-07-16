@@ -12,6 +12,8 @@ import {
 
 warnings = "-29"
 
+supported_targets = "js"
+
 options(
   link: {
     "js": {

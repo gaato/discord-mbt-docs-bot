@@ -8,6 +8,8 @@ import {
 // Values
 pub fn find_by_key(Array[Section], String) -> Section?
 
+pub fn paginate(String, page_chars? : Int) -> Array[String]
+
 pub fn resolve(Array[Section], String) -> Section?
 
 pub fn search(Array[Section], String, limit? : Int) -> Array[Section]

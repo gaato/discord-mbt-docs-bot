@@ -1,8 +1,8 @@
 # discord-mbt-docs-bot
 
 A Discord bot that searches the [discord.mbt](https://github.com/gaato/discord.mbt)
-guide and posts the matching section in a Discord Components V2 container —
-built with discord.mbt itself.
+guide and public API, then posts the match in a Discord Components V2
+container — built with discord.mbt itself.
 
 `/docs <query>` autocompletes over every `##` section of the in-repo guide
 (`src/guide/*.mbt.md` in discord.mbt) and replies with the section body and a
@@ -10,18 +10,25 @@ link to the rendered page on GitHub. Long sections paginate with `◀ ▶`
 buttons (code fences are closed and reopened across page breaks), and `« »`
 buttons step to the neighboring guide sections.
 
+`/api <symbol>` autocompletes over public declarations from discord.mbt's
+generated package interfaces. It shows the full signature, source docstring,
+and a link to the declaration on GitHub. Long API entries paginate with the
+same fence-aware `◀ ▶` controls as guide sections.
+
 Button state lives entirely in the `custom_id`
-(`docs:<page>:<section key>`), so clicks survive bot restarts and need no
-per-conversation state — the same handlers will work behind HTTP
-interactions or on serverless.
+(`docs:<page>:<section key>` or `api:<page>:<package alias>#<symbol>`), so
+clicks survive bot restarts and need no per-conversation state — the same
+handlers will work behind HTTP interactions or on serverless.
 
 ## Layout
 
 - `src/docs` — the section index, search, and paging. `index_generated.mbt`
   is generated; the rest is hand-written.
-- `src/gen` — the index generator. It parses the guide chapters by heading and
-  emits `src/docs/index_generated.mbt`.
-- `src/ui` — the `/docs` command, pagination buttons, and component handler.
+- `src/api` — the generated public-symbol index, API search, and entry model.
+- `src/gen` — the index generator. It parses guide headings, package interface
+  files, and source docstrings, then emits both generated indexes.
+- `src/ui` — the `/docs` and `/api` commands, pagination buttons, and component
+  handlers.
 - `src/app` — the shared `App` definition used by every executor below.
 - `src/main` — the native Gateway executable.
 - `src/worker` — the Cloudflare Workers adapter (HTTP interactions) plus
@@ -41,17 +48,19 @@ github.com/gaato/
 └── discord-mbt-docs-bot/
 ```
 
-Regenerate the index after the guide changes:
+Refresh discord.mbt's checked-in interfaces, then regenerate both indexes
+after guide or public API changes:
 
-```sh
+```fish
+moon info
 moon run --target native --release src/gen
 ```
 
 Test and run:
 
-```sh
+```fish
 moon test --target native --release
-DISCORD_TOKEN=... moon run --target native --release src/main
+env DISCORD_TOKEN=... moon run --target native --release src/main
 ```
 
 Set `DISCORD_GUILD_ID` to sync the command to a single guild while developing

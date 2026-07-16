@@ -1,13 +1,30 @@
 ///|
-/// Regenerates `src/docs/index_generated.mbt` from the discord.mbt guide:
+/// Regenerates the guide and symbol API indexes from discord.mbt:
 ///
-///   moon run --target native --release src/gen [guide_dir [out_file]]
+///   moon run --target native --release src/gen [lib_root [docs_out [api_out]]]
 ///
-/// The defaults assume the ghq sibling checkout wired up in `moon.work`.
+/// The default `lib_root` is `../discord.mbt`. For compatibility, passing a
+/// path that does not contain `src/guide` is treated as the old
+/// `[guide_dir [docs_out]]` form; a trailing `/src/guide` lets the generator
+/// infer the library root, otherwise the default sibling supplies API data.
 async fn main {
   let argv = @env.args()
-  let guide_dir = argv.get(1).unwrap_or("../discord.mbt/src/guide")
-  let out_file = argv.get(2).unwrap_or("src/docs/index_generated.mbt")
+  let mut lib_root = "../discord.mbt"
+  let mut guide_dir = "../discord.mbt/src/guide"
+  let docs_out = argv.get(2).unwrap_or("src/docs/index_generated.mbt")
+  let api_out = argv.get(3).unwrap_or("src/api/index_generated.mbt")
+  if argv.get(1) is Some(first) {
+    if @fs.exists("\{first}/src/guide") {
+      lib_root = first
+      guide_dir = "\{first}/src/guide"
+    } else {
+      guide_dir = first
+      let suffix = "/src/guide"
+      if first.has_suffix(suffix) {
+        lib_root = first[:first.length() - suffix.length()].to_owned()
+      }
+    }
+  }
   let files = @fs.readdir(guide_dir).filter(is_chapter_file)
   // String's Compare is shortlex (length first), so sort lexicographically
   // to keep chapter files in `01-`, `02-`, ... order.
@@ -17,8 +34,23 @@ async fn main {
     let content = @fs.read_file("\{guide_dir}/\{file}").text()
     sections.append(parse_chapter(file, content))
   }
-  @fs.write_file(out_file, render(sections), create_mode=CreateOrTruncate)
-  println("wrote \{sections.length()} sections to \{out_file}")
+  @fs.write_file(docs_out, render(sections), create_mode=CreateOrTruncate)
+  println("wrote \{sections.length()} guide sections to \{docs_out}")
+  let api_index = load_api_index(lib_root)
+  @fs.write_file(
+    api_out,
+    render_api(api_index.entries),
+    create_mode=CreateOrTruncate,
+  )
+  println(
+    "wrote \{api_index.entries.length()} API symbols from \{api_index.package_count} packages to \{api_out}",
+  )
+  println(
+    "matched \{api_index.entries.length() - api_index.inherited - api_index.mismatches} API symbols directly to source docs",
+  )
+  println(
+    "inherited docs for \{api_index.inherited} API symbols; \{api_index.mismatches} remain unmatched (empty doc, line 1)",
+  )
 }
 
 ///|
@@ -150,5 +182,413 @@ fn quote(s : String) -> String {
     }
   }
   out <+ "\""
+  out.to_string()
+}
+
+///|
+struct RawApiEntry {
+  pkg : String
+  name : String
+  kind : String
+  signature : String
+  doc : String
+  file : String
+  line : Int
+}
+
+///|
+struct RawSymbol {
+  pkg : String
+  name : String
+  kind : String
+  signature : String
+}
+
+///|
+struct SourceDoc {
+  doc : String
+  file : String
+  line : Int
+}
+
+///|
+struct ApiIndex {
+  entries : Array[RawApiEntry]
+  package_count : Int
+  inherited : Int
+  mismatches : Int
+}
+
+///|
+async fn load_api_index(lib_root : String) -> ApiIndex {
+  let src_dir = "\{lib_root}/src"
+  let mbti_files = ["src/pkg.generated.mbti"]
+  let names = @fs.readdir(src_dir)
+  names.sort_by(lex_compare)
+  for name in names {
+    let package_dir = "\{src_dir}/\{name}"
+    if @fs.kind(package_dir) == Directory {
+      let relative = "src/\{name}/pkg.generated.mbti"
+      if @fs.exists("\{lib_root}/\{relative}") {
+        mbti_files.push(relative)
+      }
+    }
+  }
+  let entries : Array[RawApiEntry] = []
+  let seen : Map[String, Unit] = Map([])
+  let aliases : Map[String, String] = Map([])
+  let mut package_count = 0
+  let mut mismatches = 0
+  for mbti_file in mbti_files {
+    let content = @fs.read_file("\{lib_root}/\{mbti_file}").text()
+    let pkg = parse_package_name(content)
+    let short_name = package_alias(pkg)
+    match aliases.get(short_name) {
+      Some(other) if other != pkg => {
+        println(
+          "duplicate API package alias \{short_name}: \{other} and \{pkg}",
+        )
+        abort("duplicate API package alias: \{short_name}")
+      }
+      _ => aliases[short_name] = pkg
+    }
+    let symbols = parse_mbti(pkg, content)
+    if symbols.is_empty() {
+      continue
+    }
+    package_count += 1
+    let slash = mbti_file.rev_find("/").unwrap()
+    let source_dir = mbti_file[:slash].to_owned()
+    let source_files = @fs.readdir("\{lib_root}/\{source_dir}").filter(
+      is_source_file,
+    )
+    source_files.sort_by(lex_compare)
+    let docs = load_source_docs(lib_root, source_dir, source_files, pkg)
+    let fallback_file = match source_files.get(0) {
+      Some(file) => "\{source_dir}/\{file}"
+      None => mbti_file
+    }
+    for symbol in symbols {
+      let key = "\{short_name}#\{symbol.name}"
+      if key.length() > 90 {
+        println("API symbol key exceeds 90 characters: \{key}")
+        abort("API symbol key exceeds 90 characters: \{key}")
+      }
+      if seen.contains(key) {
+        println("duplicate API symbol key: \{key}")
+        abort("duplicate API symbol key: \{key}")
+      }
+      seen[key] = ()
+      match docs.get("\{symbol.pkg}#\{symbol.name}") {
+        Some(source) =>
+          entries.push({
+            pkg: symbol.pkg,
+            name: symbol.name,
+            kind: symbol.kind,
+            signature: symbol.signature,
+            doc: source.doc,
+            file: source.file,
+            line: source.line,
+          })
+        None => {
+          mismatches += 1
+          entries.push({
+            pkg: symbol.pkg,
+            name: symbol.name,
+            kind: symbol.kind,
+            signature: symbol.signature,
+            doc: "",
+            file: fallback_file,
+            line: 1,
+          })
+        }
+      }
+    }
+  }
+  let inherited = inherit_docs(entries)
+  mismatches -= inherited
+  entries.sort_by((a, b) => {
+    let package_order = lex_compare(a.pkg, b.pkg)
+    if package_order != 0 {
+      package_order
+    } else {
+      lex_compare(a.name, b.name)
+    }
+  })
+  { entries, package_count, inherited, mismatches }
+}
+
+///|
+/// Fill undocumented facade re-exports from their documented declaration.
+/// Only entries that had docs before this pass may donate, preventing an
+/// inherited entry from making a later match spuriously ambiguous.
+fn inherit_docs(entries : Array[RawApiEntry]) -> Int {
+  let donors = entries.filter(entry => !entry.doc.is_empty())
+  let mut inherited = 0
+  for i, entry in entries {
+    if entry.doc.is_empty() && find_doc_donor(donors, entry) is Some(donor) {
+      entries[i] = {
+        ..entry,
+        doc: donor.doc,
+        file: donor.file,
+        line: donor.line,
+      }
+      inherited += 1
+    }
+  }
+  inherited
+}
+
+///|
+fn find_doc_donor(
+  donors : Array[RawApiEntry],
+  target : RawApiEntry,
+) -> RawApiEntry? {
+  let matches : Array[RawApiEntry] = []
+  let identical : Array[RawApiEntry] = []
+  for donor in donors {
+    if donor.pkg != target.pkg &&
+      donor.name == target.name &&
+      donor.kind == target.kind {
+      matches.push(donor)
+      if donor.signature == target.signature {
+        identical.push(donor)
+      }
+    }
+  }
+  if identical.length() == 1 {
+    identical.get(0)
+  } else if identical.is_empty() && matches.length() == 1 {
+    matches.get(0)
+  } else {
+    None
+  }
+}
+
+///|
+fn package_alias(pkg : String) -> String {
+  if pkg == "gaato/discord" {
+    "discord"
+  } else {
+    let mut short_name = pkg
+    for segment in pkg.split("/") {
+      short_name = segment.to_owned()
+    }
+    short_name
+  }
+}
+
+///|
+fn parse_package_name(content : String) -> String {
+  for line in content.split("\n") {
+    let line = line.trim()
+    if line.has_prefix("package \"") && line.has_suffix("\"") {
+      return line["package \"".length():line.length() - 1].to_owned()
+    }
+  }
+  println("pkg.generated.mbti has no package header")
+  abort("pkg.generated.mbti has no package header")
+}
+
+///|
+fn parse_mbti(pkg : String, content : String) -> Array[RawSymbol] {
+  let lines = content.split("\n").map(line => line.to_owned()).to_array()
+  let symbols : Array[RawSymbol] = []
+  let mut i = 0
+  while i < lines.length() {
+    let line = lines[i].trim().to_owned()
+    match declaration_kind(line) {
+      Some(kind) => {
+        let name = declaration_name(line, kind)
+        let signature = [lines[i]]
+        let mut depth = brace_delta(lines[i])
+        while depth > 0 && i + 1 < lines.length() {
+          i += 1
+          signature.push(lines[i])
+          depth += brace_delta(lines[i])
+        }
+        symbols.push({ pkg, name, kind, signature: signature.join("\n") })
+      }
+      None => ()
+    }
+    i += 1
+  }
+  symbols
+}
+
+///|
+fn declaration_kind(line : String) -> String? {
+  guard strip_pub(line) is Some(rest) else { return None }
+  let rest = if rest.has_prefix("async ") {
+    rest["async ".length():].trim_start().to_owned()
+  } else {
+    rest
+  }
+  if rest.has_prefix("fn ") || rest.has_prefix("fn[") {
+    Some("fn")
+  } else if rest.has_prefix("struct ") {
+    Some("struct")
+  } else if rest.has_prefix("enum ") {
+    Some("enum")
+  } else if rest.has_prefix("suberror ") {
+    Some("suberror")
+  } else if rest.has_prefix("typealias ") {
+    Some("typealias")
+  } else if rest.has_prefix("type ") {
+    Some("type")
+  } else if rest.has_prefix("trait ") {
+    Some("trait")
+  } else if rest.has_prefix("let ") {
+    Some("let")
+  } else if rest.has_prefix("const ") {
+    Some("const")
+  } else {
+    None
+  }
+}
+
+///|
+fn strip_pub(line : String) -> String? {
+  let line = line.trim().to_owned()
+  if line.has_prefix("pub(all) ") {
+    Some(line["pub(all) ".length():].to_owned())
+  } else if line.has_prefix("pub(open) ") {
+    Some(line["pub(open) ".length():].to_owned())
+  } else if line.has_prefix("pub ") {
+    Some(line["pub ".length():].to_owned())
+  } else {
+    None
+  }
+}
+
+///|
+fn declaration_name(line : String, kind : String) -> String {
+  let mut rest = strip_pub(line).unwrap()
+  if rest.has_prefix("async ") {
+    rest = rest["async ".length():].trim_start().to_owned()
+  }
+  if kind == "fn" {
+    rest = rest["fn".length():].to_owned()
+    if rest.has_prefix("[") {
+      let mut depth = 0
+      let mut stop = 0
+      for i, c in rest {
+        if c == '[' {
+          depth += 1
+        } else if c == ']' {
+          depth -= 1
+          if depth == 0 {
+            stop = i + 1
+            break
+          }
+        }
+      }
+      rest = rest[stop:].trim_start().to_owned()
+    } else {
+      rest = rest.trim_start().to_owned()
+    }
+  } else {
+    rest = rest[kind.length():].trim_start().to_owned()
+  }
+  for i, c in rest {
+    if c == '(' || c == '{' || c.is_whitespace() {
+      return rest[:i].to_owned()
+    }
+  }
+  rest
+}
+
+///|
+fn brace_delta(line : String) -> Int {
+  let mut depth = 0
+  for c in line {
+    if c == '{' {
+      depth += 1
+    } else if c == '}' {
+      depth -= 1
+    }
+  }
+  depth
+}
+
+///|
+fn is_source_file(name : String) -> Bool {
+  name.has_suffix(".mbt") &&
+  !name.has_suffix("_test.mbt") &&
+  !name.has_suffix("_wbtest.mbt")
+}
+
+///|
+async fn load_source_docs(
+  lib_root : String,
+  source_dir : String,
+  source_files : Array[String],
+  pkg : String,
+) -> Map[String, SourceDoc] {
+  let docs : Map[String, SourceDoc] = Map([])
+  for file in source_files {
+    let relative = "\{source_dir}/\{file}"
+    let content = @fs.read_file("\{lib_root}/\{relative}").text()
+    let lines = content.split("\n").map(line => line.to_owned()).to_array()
+    let pending : Array[String] = []
+    let mut active = false
+    for i, line in lines {
+      let trimmed = line.trim().to_owned()
+      if trimmed == "///|" {
+        pending.clear()
+        active = true
+      } else if active && trimmed.has_prefix("///") {
+        let mut doc_line = trimmed["///".length():].to_owned()
+        if doc_line.has_prefix(" ") {
+          doc_line = doc_line[1:].to_owned()
+        }
+        pending.push(normalize_doc_line(doc_line))
+      } else if active && trimmed.has_prefix("#") {
+        ()
+      } else if active {
+        match declaration_kind(trimmed) {
+          Some(kind) => {
+            let name = declaration_name(trimmed, kind)
+            docs["\{pkg}#\{name}"] = {
+              doc: pending.join("\n").trim().to_owned(),
+              file: relative,
+              line: i + 1,
+            }
+            active = false
+          }
+          None => ()
+        }
+      }
+    }
+  }
+  docs
+}
+
+///|
+fn normalize_doc_line(line : String) -> String {
+  line
+  .replace_all(old="```mbt check", new="```mbt")
+  .replace_all(old="```mbt nocheck", new="```mbt")
+  .replace_all(old="```moonbit", new="```mbt")
+}
+
+///|
+fn render_api(entries : Array[RawApiEntry]) -> String {
+  let out = StringBuilder()
+  out <+
+    "// Generated by `moon run --target native --release src/gen`. Do not edit by hand.\n"
+  out <+ "\n///|\npub let entries : Array[ApiEntry] = [\n"
+  for entry in entries {
+    out <+ "  {\n"
+    out <+ "    pkg: \{quote(entry.pkg)},\n"
+    out <+ "    name: \{quote(entry.name)},\n"
+    out <+ "    kind: \{quote(entry.kind)},\n"
+    out <+ "    signature: \{quote(entry.signature)},\n"
+    out <+ "    doc: \{quote(entry.doc)},\n"
+    out <+ "    file: \{quote(entry.file)},\n"
+    out <+ "    line: \{entry.line},\n"
+    out <+ "  },\n"
+  }
+  out <+ "]\n"
   out.to_string()
 }

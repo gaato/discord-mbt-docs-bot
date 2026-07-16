@@ -5,6 +5,6 @@
 /// cannot drift.
 pub fn build(sync? : @discord.CommandSync = Disabled) -> @discord.App {
   let app = @discord.App(sync~)
-  @ui.register(app, @docs.sections)
+  @ui.register(app, @docs.sections, @api.entries)
   app
 }
