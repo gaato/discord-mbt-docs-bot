@@ -35,6 +35,8 @@ handlers will work behind HTTP interactions or on serverless.
   `entry.js` and `wrangler.toml`.
 - `src/register` — one-shot command registration for the Worker deployment,
   which has no startup phase to sync commands in.
+- `src/endpoint` — one-shot inspection and management of Discord's
+  Interactions Endpoint URL.
 
 ## Development
 
@@ -91,10 +93,21 @@ separate one-shot; it diff-syncs, so re-running is free):
 env (cat .env) moon run --target native --release src/register
 ```
 
-Finally set the Worker URL as the **Interactions Endpoint URL** in the Discord
-developer portal. Note that once an endpoint URL is configured, Discord sends
-interactions there instead of the Gateway, so the native `src/main` bot stops
-receiving them until the URL is cleared again.
+Finally set the Worker URL as the application's **Interactions Endpoint URL**.
+Run `set` only after `wrangler deploy`: Discord sends the URL a PING while
+validating it. The `status` output also includes the `verify_key` needed for
+the `DISCORD_PUBLIC_KEY` Wrangler secret.
+
+```fish
+env (cat .env) moon run --target native --release src/endpoint            # show status
+env (cat .env) moon run --target native --release src/endpoint -- set https://<worker>.workers.dev
+env (cat .env) moon run --target native --release src/endpoint -- clear   # back to the Gateway
+```
+
+Once an endpoint URL is configured, Discord sends interactions there instead
+of the Gateway, so the native `src/main` bot stops receiving them. `clear`
+removes the endpoint and returns interaction delivery to Gateway operation
+(`src/main`).
 
 Known issue: `moonbitlang/async` on the JS target needs the one-line
 `js_async` scheduler fix from
