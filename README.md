@@ -53,14 +53,14 @@ github.com/gaato/
 Refresh discord.mbt's checked-in interfaces, then regenerate both indexes
 after guide or public API changes:
 
-```fish
+```sh
 moon info
 moon run --target native --release src/gen
 ```
 
 Test and run:
 
-```fish
+```sh
 moon test --target native --release
 env DISCORD_TOKEN=... moon run --target native --release src/main
 ```
@@ -75,13 +75,13 @@ subscribes to no privileged intents.
 
 The Worker serves the same `App` over signed HTTP interactions — no Gateway
 connection. Secrets come from Wrangler, not `.env`; the commands below copy
-the token out of `.env` without echoing it (fish syntax):
+the token out of `.env` without echoing it (works in bash, zsh, and fish ≥ 3.4):
 
-```fish
+```sh
 moon build --target js src/worker
 cd src/worker
 npx wrangler login   # once
-env (cat ../../.env) sh -c 'printf %s "$DISCORD_TOKEN" | npx wrangler secret put DISCORD_TOKEN'
+env $(cat ../../.env) sh -c 'printf %s "$DISCORD_TOKEN" | npx wrangler secret put DISCORD_TOKEN'
 printf %s "<public key from the developer portal>" | npx wrangler secret put DISCORD_PUBLIC_KEY
 npx wrangler deploy
 ```
@@ -89,8 +89,8 @@ npx wrangler deploy
 Then register the commands (Workers have no startup phase, so this is a
 separate one-shot; it diff-syncs, so re-running is free):
 
-```fish
-env (cat .env) moon run --target native --release src/register
+```sh
+env $(cat .env) moon run --target native --release src/register
 ```
 
 Finally set the Worker URL as the application's **Interactions Endpoint URL**.
@@ -98,10 +98,10 @@ Run `set` only after `wrangler deploy`: Discord sends the URL a PING while
 validating it. The `status` output also includes the `verify_key` needed for
 the `DISCORD_PUBLIC_KEY` Wrangler secret.
 
-```fish
-env (cat .env) moon run --target native --release src/endpoint            # show status
-env (cat .env) moon run --target native --release src/endpoint -- set https://<worker>.workers.dev
-env (cat .env) moon run --target native --release src/endpoint -- clear   # back to the Gateway
+```sh
+env $(cat .env) moon run --target native --release src/endpoint            # show status
+env $(cat .env) moon run --target native --release src/endpoint -- set https://<worker>.workers.dev
+env $(cat .env) moon run --target native --release src/endpoint -- clear   # back to the Gateway
 ```
 
 Once an endpoint URL is configured, Discord sends interactions there instead
