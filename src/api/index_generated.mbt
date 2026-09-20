@@ -9323,7 +9323,7 @@ let entries_5 : Array[ApiEntry] = [
     pkg: "gaato/discord/http",
     name: "VERSION",
     kind: "const",
-    signature: "pub const VERSION : String = \"0.2.0\"",
+    signature: "pub const VERSION : String = \"0.3.0\"",
     doc: "Library version, sent in the User-Agent header.",
     file: "src/http/client.mbt",
     line: 24,
@@ -18568,15 +18568,6 @@ let entries_10 : Array[ApiEntry] = [
 
 ///|
 pub let entries : Array[ApiEntry] = [
-  ..entries_0,
-  ..entries_1,
-  ..entries_2,
-  ..entries_3,
-  ..entries_4,
-  ..entries_5,
-  ..entries_6,
-  ..entries_7,
-  ..entries_8,
-  ..entries_9,
-  ..entries_10,
+  ..entries_0, ..entries_1, ..entries_2, ..entries_3, ..entries_4, ..entries_5, ..entries_6,
+  ..entries_7, ..entries_8, ..entries_9, ..entries_10,
 ]

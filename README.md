@@ -40,8 +40,9 @@ handlers will work behind HTTP interactions or on serverless.
 
 ## Development
 
-discord.mbt is not published yet, so the module is resolved through the
-`moon.work` workspace, which expects a sibling checkout (the standard ghq
+The bot depends on the published `gaato/discord` package. Only the index
+generator reads a discord.mbt source checkout — the guide chapters and the
+generated interfaces — and it expects a sibling checkout (the standard ghq
 layout):
 
 ```
@@ -49,6 +50,9 @@ github.com/gaato/
 ├── discord.mbt/
 └── discord-mbt-docs-bot/
 ```
+
+Check out the tag that matches the `gaato/discord` version in `moon.mod`, so
+the indexed guide and API describe the library the bot is built against.
 
 Refresh discord.mbt's checked-in interfaces, then regenerate both indexes
 after guide or public API changes:
