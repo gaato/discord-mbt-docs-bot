@@ -28,7 +28,7 @@ async fn main {
   let files = @fs.readdir(guide_dir).filter(is_chapter_file)
   // String's Compare is shortlex (length first), so sort lexicographically
   // to keep chapter files in `01-`, `02-`, ... order.
-  files.sort_by(lex_compare)
+  files.sort_by(String::lexical_compare)
   let sections = []
   for file in files {
     let content = @fs.read_file("\{guide_dir}/\{file}").text()
@@ -51,17 +51,6 @@ async fn main {
   println(
     "inherited docs for \{api_index.inherited} API symbols; \{api_index.mismatches} remain unmatched (empty doc, line 1)",
   )
-}
-
-///|
-fn lex_compare(a : String, b : String) -> Int {
-  let n = if a.length() < b.length() { a.length() } else { b.length() }
-  for i in 0..<n {
-    if a[i] != b[i] {
-      return a[i].to_int() - b[i].to_int()
-    }
-  }
-  a.length() - b.length()
 }
 
 ///|
@@ -224,7 +213,7 @@ async fn load_api_index(lib_root : String) -> ApiIndex {
   let src_dir = "\{lib_root}/src"
   let mbti_files = ["src/pkg.generated.mbti"]
   let names = @fs.readdir(src_dir)
-  names.sort_by(lex_compare)
+  names.sort_by(String::lexical_compare)
   for name in names {
     let package_dir = "\{src_dir}/\{name}"
     if @fs.kind(package_dir) == Directory {
@@ -262,7 +251,7 @@ async fn load_api_index(lib_root : String) -> ApiIndex {
     let source_files = @fs.readdir("\{lib_root}/\{source_dir}").filter(
       is_source_file,
     )
-    source_files.sort_by(lex_compare)
+    source_files.sort_by(String::lexical_compare)
     let docs = load_source_docs(lib_root, source_dir, source_files, pkg)
     let fallback_file = match source_files.get(0) {
       Some(file) => "\{source_dir}/\{file}"
@@ -308,11 +297,11 @@ async fn load_api_index(lib_root : String) -> ApiIndex {
   let inherited = inherit_docs(entries)
   mismatches -= inherited
   entries.sort_by((a, b) => {
-    let package_order = lex_compare(a.pkg, b.pkg)
+    let package_order = a.pkg.lexical_compare(b.pkg)
     if package_order != 0 {
       package_order
     } else {
-      lex_compare(a.name, b.name)
+      a.name.lexical_compare(b.name)
     }
   })
   { entries, package_count, inherited, mismatches, }
