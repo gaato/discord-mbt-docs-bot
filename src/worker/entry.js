@@ -8,7 +8,7 @@
 let workerModule;
 function loadWorkerModule() {
   workerModule ??= import(
-    "../../_build/js/debug/build/gaato/discord-mbt-docs-bot/worker/worker.js"
+    "../../_build/js/debug/build/worker/worker.js"
   );
   return workerModule;
 }
