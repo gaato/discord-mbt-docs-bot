@@ -2,3 +2,6 @@ _build/
 .mooncakes/
 .repos/
 .env
+.wrangler/
+.dev.vars
+node_modules/
