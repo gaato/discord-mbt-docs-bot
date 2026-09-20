@@ -58,6 +58,11 @@ async fn run_interaction(
   responses : @aqueue.Queue[WorkerResponse],
 ) -> Unit {
   let mut response_sent = false
+  // async 0.22: cancellation bypasses `catch`, so the fallback reply lives in
+  // `errdefer`, which also runs when the request is cancelled.
+  errdefer (if !response_sent {
+    responses.put(WorkerResponse("NoResponse", ""))
+  })
   @async.with_task_group(group => {
     let interaction : @model.Interaction = @json.from_json(@json.parse(body))
     let client = @discord.Client(token)
@@ -66,18 +71,10 @@ async fn run_interaction(
       group,
       client~,
       application_id=interaction.application_id,
-      sync=false,
     )
     responses.put(encode_outcome(endpoint.handle_interaction(interaction)))
     response_sent = true
-  }) catch {
-    error => {
-      if !response_sent {
-        responses.put(WorkerResponse("NoResponse", ""))
-      }
-      raise error
-    }
-  }
+  })
 }
 
 ///|
@@ -114,6 +111,13 @@ pub fn verify_signature(
   body : String,
 ) -> @js_async.Promise[Bool] {
   @js_async.Promise::from_async(() => {
-    @discord.verify_signature(public_key~, signature~, timestamp~, body~)
+    // Discord signs the raw request bytes; the body arrives as the UTF-8 text
+    // entry.js read, so re-encoding it reproduces them.
+    @discord.verify_signature(
+      public_key~,
+      signature~,
+      timestamp~,
+      body=@utf8.encode(body),
+    )
   })
 }

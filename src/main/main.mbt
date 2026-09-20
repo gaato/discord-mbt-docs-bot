@@ -1,5 +1,5 @@
 ///|
-fn command_sync() -> @discord.CommandSync raise {
+fn command_scope() -> @discord.CommandScope raise {
   match @env.get_env_var("DISCORD_GUILD_ID") {
     Some(id) => Guild(@model.Id::parse(id))
     None => Global
@@ -14,8 +14,7 @@ async fn main {
       println("DISCORD_TOKEN is not set")
       return
     }
-    let app = @app.build(sync=command_sync())
-    let bot = @discord.Bot(app, token~)
+    let bot = @discord.Bot(@app.build(), token~, sync=command_scope())
     bot.on(@discord.Events::ready(), (_, ready) => {
       println(
         "ready as \{ready.user.username} (\{@docs.sections.length()} sections indexed)",
@@ -23,8 +22,7 @@ async fn main {
     })
     bot.run()
   } catch {
-    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
-      ()
+    _ if @async.is_being_cancelled() => ()
     error => raise error
   }
   println("[bot] shutting down")

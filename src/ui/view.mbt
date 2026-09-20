@@ -3,20 +3,25 @@
 /// `<page>:<section key>`, so a click carries everything needed to
 /// rebuild the message: no per-conversation state, any process (or a
 /// restarted one) can serve it.
-pub let component_prefix : String = "docs:"
+pub let docs_route : @discord.ComponentRoute[(Int, String)] = page_route("docs")
 
 ///|
-pub fn custom_id(section : @docs.Section, page~ : Int) -> String {
-  "\{component_prefix}\{page}:\{section.key()}"
+/// A pagination route: `<id>:<page>:<key>`. The same value produces the
+/// button ids and registers the handler, so the two cannot drift; the decoded
+/// state is still untrusted input.
+fn page_route(id : String) -> @discord.ComponentRoute[(Int, String)] {
+  @discord.component_route(
+    id~,
+    state=@discord.CustomIdCodec::int().zip(@discord.CustomIdCodec::string()),
+  )
 }
 
 ///|
-/// Decode the state suffix of a pagination custom_id. The suffix is
-/// untrusted input; anything malformed is rejected with `None`.
-pub fn parse_suffix(suffix : String) -> (Int, String)? {
-  guard suffix.find(":") is Some(sep) else { return None }
-  let page = @string.parse_int(suffix[:sep]) catch { _ => return None }
-  Some((page, suffix[sep + 1:].to_owned()))
+pub fn custom_id(
+  section : @docs.Section,
+  page~ : Int,
+) -> String raise @discord.CustomIdError {
+  docs_route.custom_id((page, section.key()))
 }
 
 ///|
@@ -25,7 +30,7 @@ pub fn view(
   sections : Array[@docs.Section],
   section : @docs.Section,
   page~ : Int,
-) -> Array[@model.Component] {
+) -> Array[@model.Component] raise @discord.CustomIdError {
   let pages = section.pages()
   let last = pages.length() - 1
   let page = if page < 0 { 0 } else if page > last { last } else { page }
@@ -50,7 +55,7 @@ pub fn view(
           disabled=page == 0,
         ),
         @discord.button(
-          custom_id="\{component_prefix}indicator",
+          custom_id="docs:indicator",
           label="\{page + 1}/\{pages.length()}",
           style=Secondary,
           disabled=true,

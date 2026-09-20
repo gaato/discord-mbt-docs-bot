@@ -1,15 +1,21 @@
 ///|
-/// Handler prefix for symbol API pagination buttons.
-pub let api_component_prefix : String = "api:"
+/// Route for symbol API pagination buttons.
+pub let api_route : @discord.ComponentRoute[(Int, String)] = page_route("api")
 
 ///|
-fn api_custom_id(entry : @api.ApiEntry, page~ : Int) -> String {
-  "\{api_component_prefix}\{page}:\{entry.key()}"
+fn api_custom_id(
+  entry : @api.ApiEntry,
+  page~ : Int,
+) -> String raise @discord.CustomIdError {
+  api_route.custom_id((page, entry.key()))
 }
 
 ///|
 /// The Components V2 layout for one API symbol page.
-pub fn api_view(entry : @api.ApiEntry, page~ : Int) -> Array[@model.Component] {
+pub fn api_view(
+  entry : @api.ApiEntry,
+  page~ : Int,
+) -> Array[@model.Component] raise @discord.CustomIdError {
   let pages = entry.pages()
   let last = pages.length() - 1
   let page = if page < 0 { 0 } else if page > last { last } else { page }
@@ -34,7 +40,7 @@ pub fn api_view(entry : @api.ApiEntry, page~ : Int) -> Array[@model.Component] {
           disabled=page == 0,
         ),
         @discord.button(
-          custom_id="\{api_component_prefix}indicator",
+          custom_id="api:indicator",
           label="\{page + 1}/\{pages.length()}",
           style=Secondary,
           disabled=true,

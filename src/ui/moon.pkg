@@ -3,7 +3,6 @@ import {
   "gaato/discord-mbt-docs-bot/api",
   "gaato/discord-mbt-docs-bot/docs",
   "gaato/discord/model",
-  "moonbitlang/core/string",
 }
 
 import {

@@ -14,12 +14,29 @@ pub let sections : Array[Section] = [
   {
     chapter: "Getting started",
     file: "01-getting-started.mbt.md",
+    title: "Prerequisites",
+    anchor: "prerequisites",
+    body: (
+      #|On a clean machine, install `git` and run `moon update` first; Moon clones its
+      #|package registry with `git` when resolving dependencies.
+      #|
+      #|All native builds compile the Gateway package's `zlib_stream.c`, which always
+      #|includes `<zlib.h>`, regardless of whether Gateway compression is enabled.
+      #|Install the zlib development headers (`zlib1g-dev` on Debian/Ubuntu or
+      #|`zlib-devel` on Fedora/openSUSE). The zlib shared library is also needed at
+      #|runtime if the bot enables zlib-stream compression.
+    ),
+  },
+  {
+    chapter: "Getting started",
+    file: "01-getting-started.mbt.md",
     title: "Install",
     anchor: "install",
     body: (
       #|From a MoonBit module root:
       #|
       #|```sh
+      #|moon update
       #|moon add gaato/discord
       #|moon add moonbitlang/async
       #|```
@@ -27,6 +44,7 @@ pub let sections : Array[Section] = [
       #|The resulting `moon.mod` contains module dependencies equivalent to:
       #|
       #|```mbt nocheck
+      #|///|
       #|import {
       #|  "gaato/discord",
       #|  "moonbitlang/async",
@@ -45,9 +63,7 @@ pub let sections : Array[Section] = [
       #|
       #|supported_targets = "native"
       #|
-      #|options(
-      #|  "is-main": true,
-      #|)
+      #|pkgtype(kind: "executable")
       #|```
     ),
   },
@@ -77,20 +93,17 @@ pub let sections : Array[Section] = [
       #|///|
       #|async fn getting_started_main() -> Unit {
       #|  @signal.set_global_cancellation_signals([SIGINT, SIGTERM])
-      #|  try {
+      #|  @async.handle_cancellation(() => {
       #|    let token = @env.get_env_var("DISCORD_TOKEN").unwrap_or("")
-      #|    let app = @discord.App(sync=Global)
+      #|    let app = @discord.App()
       #|    app.command(echo_command())
-      #|    let bot = @discord.Bot(app, token~)
+      #|    let bot = @discord.Bot(app, token~, sync=Global)
       #|    bot.on(@discord.Events::ready(), (_, ready) => {
       #|      println("ready as \{ready.user.username}")
       #|    })
       #|    bot.run()
-      #|  } catch {
-      #|    error if @async.is_being_cancelled() || @async.is_cancellation_error(error) =>
-      #|      ()
-      #|    error => raise error
-      #|  }
+      #|  })
+      #|  |> ignore
       #|  println("[bot] shutting down")
       #|}
       #|
@@ -101,9 +114,37 @@ pub let sections : Array[Section] = [
       #|```
       #|
       #|`App` owns the commands and interaction handlers. `Bot` adds the native
-      #|Gateway connection and dispatch loop. The default global synchronization uses
-      #|Discord's bulk overwrite endpoint; use `CommandSync::Guild(guild_id)` while
-      #|developing if the command should appear immediately in one guild.
+      #|Gateway connection and dispatch loop. Passing `sync=Global` opts into command
+      #|synchronization once after the first READY; omitting it performs no command
+      #|request. Use `CommandScope::Guild(guild_id)` while developing if the command
+      #|should appear immediately in one guild.
+      #|
+      #|Synchronization uses Discord's bulk overwrite endpoint and deletes commands
+      #|in that scope that this App does not declare, except that the Entry Point
+      #|command is always preserved. Pass `sync_unowned=Keep` to preserve other owners'
+      #|commands too.
+      #|
+      #|```mbt check
+      #|///|
+      #|async test "default sync deletes undeclared commands but preserves the entry point" {
+      #|  let (payload, report) = @framework.plan_command_sync(
+      #|    [],
+      #|    [
+      #|      { "id": "10", "name": "old" },
+      #|      { "id": "11", "type": 4, "name": "Launch", "handler": 2 },
+      #|    ],
+      #|    unowned=Delete,
+      #|  )
+      #|  assert_eq(report.deleted, ["old"])
+      #|  assert_eq(report.preserved, ["4:Launch"])
+      #|  assert_eq(
+      #|    payload,
+      #|    Some(
+      #|      Json::array([{ "id": "11", "type": 4, "name": "Launch", "handler": 2 }]),
+      #|    ),
+      #|  )
+      #|}
+      #|```
     ),
   },
   {
@@ -132,8 +173,10 @@ pub let sections : Array[Section] = [
       #|Pressing Ctrl-C or sending SIGTERM cancels the async runtime because the entry
       #|point calls `set_global_cancellation_signals`. Structured concurrency then
       #|unwinds the bot's task groups and completes their teardown before the process
-      #|exits. Signal handling is an entry-point concern; `Bot` does not install
-      #|process-global signal handlers implicitly.
+      #|exits. Cancellation is a signal rather than an error, so the entry point uses
+      #|`handle_cancellation` instead of `catch` when it needs to continue to the final
+      #|shutdown message. Signal handling is an entry-point concern; `Bot` does not
+      #|install process-global signal handlers implicitly.
       #|
       #|Continue with [Commands](02-commands.mbt.md), or use
       #|[HTTP interactions](06-http-interactions.mbt.md) when the application should
@@ -177,7 +220,7 @@ pub let sections : Array[Section] = [
       #|  @discord.arg_int(name="coats", description="Number of coats", min=1, max=5).with_default(
       #|    1L,
       #|  ),
-      #|  (color, coats) => { color, coats: coats.to_int() },
+      #|  (color, coats) => { color, coats: coats.to_int(), },
       #|)
       #|```
       #|
@@ -185,6 +228,52 @@ pub let sections : Array[Section] = [
       #|`.validate(check)` for application validation, and `.map(f)` for local type
       #|conversion. For more than eight arguments, compose `Args` values with `zip`
       #|and `map`.
+    ),
+  },
+  {
+    chapter: "Commands",
+    file: "02-commands.mbt.md",
+    title: "Localization",
+    anchor: "localization",
+    body: (
+      #|Commands, subcommands, and options accept name and description localization
+      #|maps. Choices accept name localizations. Locale keys use Discord's locale
+      #|strings, and the unlocalized name and description remain the fallback:
+      #|
+      #|```mbt check
+      #|///|
+      #|let localized_greeting : @discord.Command[String] = @discord.slash(
+      #|  name="greet",
+      #|  description="Send a greeting",
+      #|  name_localizations={ "ja": "あいさつ" },
+      #|  description_localizations={ "ja": "あいさつを送信します" },
+      #|  args=@discord.Args::of(
+      #|    @discord.arg_string(
+      #|      name="style",
+      #|      description="Greeting style",
+      #|      name_localizations={ "ja": "スタイル" },
+      #|      description_localizations={ "ja": "あいさつの種類" },
+      #|      choices=[
+      #|        @discord.string_choice("Friendly", "friendly", name_localizations={
+      #|          "ja": "フレンドリー",
+      #|        }),
+      #|      ],
+      #|    ),
+      #|  ),
+      #|  handler=Immediate((_, style) => {
+      #|    @discord.CommandReply::message(content="style=\{style}")
+      #|  }),
+      #|)
+      #|
+      #|///|
+      #|test "localized command declaration compiles" {
+      #|  ignore(localized_greeting.spec().to_json())
+      #|}
+      #|```
+      #|
+      #|Command synchronization fetches Discord's localization dictionaries, so an
+      #|unchanged localized declaration remains in sync rather than being rewritten
+      #|on every startup.
     ),
   },
   {
@@ -262,7 +351,7 @@ pub let sections : Array[Section] = [
       #|
       #|```mbt check
       #|///|
-      #|let wave : @discord.Command[@discord.TargetUser] = @discord.user_command(
+      #|let wave : @discord.Command[@framework.TargetUser] = @discord.user_command(
       #|  name="Wave",
       #|  handler=Immediate((_, target) => {
       #|    @discord.CommandReply::message(
@@ -297,14 +386,66 @@ pub let sections : Array[Section] = [
     title: "Handler modes",
     anchor: "handler-modes",
     body: (
+      #|App-level contexts expose a validated guild bundle. `guild_scope()` returns
+      #|both the guild id and invoking member; in a DM it raises
+      #|`HandlerError::GuildOnly`, which the error policy renders like any other
+      #|expected handler failure:
+      #|
+      #|```mbt check
+      #|///|
+      #|let guild_info : @discord.Command[Unit] = @discord.slash(
+      #|  name="guild-info",
+      #|  description="Show the invoking guild",
+      #|  args=@discord.Args::unit(),
+      #|  handler=Immediate((ctx, _) => {
+      #|    let guild = ctx.guild_scope()
+      #|    @discord.CommandReply::message(
+      #|      content="guild=\{guild.guild_id}, user=\{guild.user().username}",
+      #|    )
+      #|  }),
+      #|)
+      #|
+      #|///|
+      #|test "guild command declaration compiles" {
+      #|  ignore(guild_info.spec())
+      #|}
+      #|```
+      #|
       #|- `Immediate((ctx, value) => CommandReply)` returns the initial response.
       #|- `Deferred(ephemeral=..., (ctx, value) => Unit)` acknowledges first; use
       #|  `ctx.edit_original`, `ctx.followup`, or `ctx.wait_for_component` afterward.
-      #|- `Raw(ctx => Unit)` exposes the lower-level `framework.CommandCtx`.
+      #|  Component waits default to the invoking user; pass `from=Anyone` only for a
+      #|  flow such as a public poll, or `from=User(user_id)` for a different user.
+      #|- `Raw(ctx => Unit)` exposes the lower-level `framework.CommandCtx`; see
+      #|  [The framework layer](11-framework.mbt.md) for its full response surface.
+      #|  Error policies follow the gate's real state, so a Raw handler that responds
+      #|  and then raises receives an error followup through `respond_error`.
       #|
-      #|Register every command with `app.command(command)`. Command synchronization is
-      #|controlled by `App(sync=...)`: `Global`, `Guild(id)`, `Guilds(ids)`, or
-      #|`Disabled`.
+      #|`edit_original` and `followup` return the resulting message; append
+      #|`|> ignore` when the handler does not need it.
+      #|
+      #|Register every command with `app.command(command)`. To synchronize the
+      #|declarations, pass a `CommandScope` to `Bot(sync=...)` or call
+      #|`app.sync_commands(client, application_id, scope~)` from a one-shot program.
+      #|The call returns a sync report. Both paths default to deleting undeclared
+      #|commands in the selected scope, while always preserving the Entry Point
+      #|command. Use `unowned=Keep` on `sync_commands` or `sync_unowned=Keep` on `Bot`
+      #|for a scope shared with other command owners.
+      #|
+      #|```mbt check
+      #|///|
+      #|async test "command sync keeps the entry point under either ownership policy" {
+      #|  for unowned in [@framework.UnownedCommands::Delete, Keep] {
+      #|    let (_, report) = @framework.plan_command_sync(
+      #|      [],
+      #|      [{ "id": "11", "type": 4, "name": "Launch" }],
+      #|      unowned~,
+      #|    )
+      #|    assert_eq(report.preserved, ["4:Launch"])
+      #|    assert_eq(report.deleted, [])
+      #|  }
+      #|}
+      #|```
     ),
   },
   {
@@ -313,10 +454,20 @@ pub let sections : Array[Section] = [
     title: "Checks and app middleware",
     anchor: "checks-and-app-middleware",
     body: (
-      #|A command check is a per-command gate, and cooldown state is also per-command.
+      #|A command check is a per-command gate. Cooldown keys include command type,
+      #|command name, and the selected User, Guild, or Global bucket. `App()` keeps
+      #|windows in a fresh in-memory store; pass `App(cooldown_store=...)` to share them
+      #|between Apps or processes. See [Shared cooldowns](08-scaling-processes.mbt.md#shared-cooldowns).
       #|App middleware is application-global and wraps checks, cooldowns, and handler
       #|dispatch for commands, components, and modals. It does not run for
       #|autocomplete. Use checks for command-specific permissions and preconditions.
+      #|Checks may call async services such as Discord REST through
+      #|`ctx.app().http()`. The command path is middleware, checks in registration
+      #|order, cooldown, argument decoding, then the handler. Checks run before the
+      #|handler can defer, so they spend Discord's three-second initial-response budget;
+      #|keep them fast or cache their results. A cooldown store is called only after
+      #|all checks pass, and commands without a cooldown never call it. Remote cooldown
+      #|acquisitions also spend that initial-response budget.
       #|Use middleware for policy that spans interaction kinds, or inspect its routed
       #|target to keep the policy scoped. See [Middleware](09-middleware.mbt.md) for
       #|ordering, short-circuiting, and error-policy behavior.
@@ -328,17 +479,39 @@ pub let sections : Array[Section] = [
     title: "Components and modals",
     anchor: "",
     body: (
-      #|Component handlers are routed by a `custom_id` prefix. Put handler identity in
-      #|the prefix and compact state in the suffix:
+      #|Define a `component_route` once and use it both to produce a button or select's
+      #|`custom_id` and to register its handler. The route owns an id and a
+      #|`CustomIdCodec[A]`; the handler receives decoded state of type `A`:
       #|
       #|```text
-      #|ticket:close:123456789012345678
-      #|^^^^^^^^^^^^ handler prefix
-      #|             ^^^^^^^^^^^^^^^^^^ state suffix
+      #|ticket-close:42
+      #|^^^^^^^^^^^^ route id
+      #|             ^^ encoded state
       #|```
       #|
-      #|Keep the complete ID within Discord's 100-character limit. Treat suffixes as
-      #|untrusted input and authorize the user again in the handler.
+      #|`route.custom_id(state)` enforces Discord's 100-character limit, measured
+      #|conservatively in UTF-16 units. Treat decoded state as untrusted input and
+      #|authorize the user again in the handler.
+      #|
+      #|`route.decode(custom_id)` is the inverse: it reads the state back from an id
+      #|the route produced, and raises `HandlerError::InvalidArgument` for an id that
+      #|belongs to another route or whose state does not decode. Typed handlers
+      #|receive the state already decoded, so reach for it where an id arrives
+      #|undecoded — the `ComponentCtx` returned by `wait_for_component`, or a test
+      #|that pins your id format:
+      #|
+      #|```mbt check
+      #|///|
+      #|test "a route reads back the ids it produces" {
+      #|  let close_ticket = @discord.component_route(
+      #|    id="ticket-close",
+      #|    state=@discord.CustomIdCodec::int(),
+      #|  )
+      #|  let id = close_ticket.custom_id(42)
+      #|  assert_eq(id, "ticket-close:42")
+      #|  assert_eq(close_ticket.decode(id), 42)
+      #|}
+      #|```
     ),
   },
   {
@@ -351,46 +524,60 @@ pub let sections : Array[Section] = [
       #|
       #|```mbt check
       #|///|
-      #|let controls : Array[@model.Component] = [
-      #|  @discord.action_row([
-      #|    @discord.button(
-      #|      custom_id="ticket:close:123456789012345678",
-      #|      label="Close",
-      #|      style=Danger,
-      #|    ),
-      #|    @discord.string_select(
-      #|      custom_id="ticket:priority:123456789012345678",
-      #|      placeholder="Priority",
-      #|      options=[
-      #|        @discord.select_option(label="Low", value="low"),
-      #|        @discord.select_option(label="High", value="high"),
-      #|      ],
-      #|    ),
-      #|  ]),
-      #|]
+      #|let close_ticket : @discord.ComponentRoute[Int] = @discord.component_route(
+      #|  id="ticket-close",
+      #|  state=@discord.CustomIdCodec::int(),
+      #|)
+      #|
+      #|///|
+      #|let ticket_priority : @discord.ComponentRoute[Int] = @discord.component_route(
+      #|  id="ticket-priority",
+      #|  state=@discord.CustomIdCodec::int(),
+      #|)
+      #|
+      #|///|
+      #|fn ticket_controls(ticket : Int) -> Array[@model.Component] raise {
+      #|  [
+      #|    @discord.action_row([
+      #|      @discord.button(
+      #|        custom_id=close_ticket.custom_id(ticket),
+      #|        label="Close",
+      #|        style=Danger,
+      #|      ),
+      #|      @discord.string_select(
+      #|        custom_id=ticket_priority.custom_id(ticket),
+      #|        placeholder="Priority",
+      #|        options=[
+      #|          @discord.select_option(label="Low", value="low"),
+      #|          @discord.select_option(label="High", value="high"),
+      #|        ],
+      #|      ),
+      #|    ]),
+      #|  ]
+      #|}
       #|```
       #|
-      #|Register one handler per prefix. `suffix()` removes the registered prefix;
-      #|`values()` returns string-select values.
+      #|Register the same route values. `values()` returns string-select values;
+      #|the second handler argument is the ticket carried in the custom id.
       #|
       #|```mbt check
       #|///|
       #|fn register_ticket_handlers(app : @discord.App) -> Unit {
       #|  app.on_component(
-      #|    prefix="ticket:close:",
-      #|    Immediate(ctx => {
+      #|    close_ticket,
+      #|    Immediate((_, ticket) => {
       #|      @discord.ComponentReply::update_message(
-      #|        content="Closed ticket \{ctx.suffix()}",
+      #|        content="Closed ticket \{ticket}",
       #|        components=[],
       #|      )
       #|    }),
       #|  )
       #|  app.on_component(
-      #|    prefix="ticket:priority:",
-      #|    Immediate(ctx => {
+      #|    ticket_priority,
+      #|    Immediate((ctx, ticket) => {
       #|      let priority = ctx.values().get(0).unwrap_or("none")
       #|      @discord.ComponentReply::message(
-      #|        content="Priority: \{priority}",
+      #|        content="Ticket \{ticket} priority: \{priority}",
       #|        ephemeral=true,
       #|      )
       #|    }),
@@ -400,6 +587,22 @@ pub let sections : Array[Section] = [
       #|
       #|Component interaction contexts expose a non-optional `message()`, plus
       #|`scope()` and `user()` for the invoker.
+      #|
+      #|`CustomIdCodec::unit()` produces the bare route id; `string()`, `int()`, and
+      #|`id()` carry strings, integers, and typed snowflakes. `zip` joins two codecs
+      #|with `:` and splits at the first separator; only the final segment may contain
+      #|`:`. `imap` and `custom` support application types. Encoding ambiguous segments
+      #|raises `CustomIdError::SeparatorInSegment`; oversized ids raise `TooLong`.
+      #|Decode failures reach the error policy as `HandlerError::InvalidArgument`.
+      #|
+      #|Typed routes match the exact id or that id followed by `:` and state, so
+      #|`ticket-closeish` does not match `ticket-close`. Route ids must be nonempty,
+      #|contain no `:`, and fit within 100 UTF-16 units. `App::validate` also rejects
+      #|duplicate effective prefixes: typed `ticket-close` collides with raw
+      #|`ticket-close:`. `on_component_raw(prefix~, handler)` and `on_modal_raw`
+      #|retain literal-prefix routing for advanced handlers. Strict prefix overlaps
+      #|are legal; the longest effective prefix wins, with registration order breaking
+      #|ties in the low-level Framework.
     ),
   },
   {
@@ -444,7 +647,7 @@ pub let sections : Array[Section] = [
       #|
       #|```mbt check
       #|///|
-      #|async fn edit_to_components_v2(ctx : @discord.CommandCtx) -> Unit {
+      #|async fn edit_to_components_v2(ctx : @framework.CommandCtx) -> Unit {
       #|  ctx.defer_response()
       #|  ctx.edit_response(components=components_v2) |> ignore
       #|}
@@ -478,25 +681,48 @@ pub let sections : Array[Section] = [
       #|  custom_id="feedback",
       #|  title="Feedback",
       #|  fields=@discord.ModalFields::map2(
-      #|    @discord.text_field(custom_id="topic", label="Topic"),
+      #|    @discord.text_field(
+      #|      custom_id="topic",
+      #|      label="Topic",
+      #|      value="General feedback",
+      #|    ),
       #|    @discord.text_field(custom_id="details", label="Details", style=Paragraph).optional(),
-      #|    (topic, details) => { topic, details },
+      #|    (topic, details) => { topic, details, },
       #|  ),
       #|)
       #|
       #|///|
+      #|let feedback_state : @discord.CustomIdCodec[Int] = @discord.CustomIdCodec::int()
+      #|
+      #|///|
+      #|let open_feedback : @discord.ComponentRoute[Int] = @discord.component_route(
+      #|  id="open-feedback",
+      #|  state=feedback_state,
+      #|)
+      #|
+      #|///|
+      #|fn feedback_button(ticket : Int) -> @model.Component raise {
+      #|  @discord.button(custom_id=open_feedback.custom_id(ticket), label="Feedback")
+      #|}
+      #|
+      #|///|
       #|fn register_feedback(app : @discord.App) -> Unit {
       #|  app.on_component(
-      #|    prefix="feedback:",
-      #|    Immediate(ctx => {
-      #|      @discord.ComponentReply::ShowModal(feedback.show(state=ctx.suffix()))
+      #|    open_feedback,
+      #|    Immediate((_, ticket) => {
+      #|      ShowModal(
+      #|        feedback.show(state=feedback_state.encode(ticket), values={
+      #|          "topic": "Follow-up",
+      #|        }),
+      #|      )
       #|    }),
       #|  )
       #|  app.on_modal(
       #|    feedback,
       #|    Immediate((ctx, form) => {
+      #|      let ticket = feedback_state.decode(ctx.state().unwrap_or(""))
       #|      @discord.InitialResponse::message(
-      #|        content="topic=\{form.topic}; state=\{ctx.state().unwrap_or("none")}",
+      #|        content="ticket=\{ticket}; topic=\{form.topic}",
       #|        ephemeral=true,
       #|      )
       #|    }),
@@ -504,8 +730,47 @@ pub let sections : Array[Section] = [
       #|}
       #|```
       #|
+      #|`text_field(value=...)` sets the reusable static default.
+      #|`Modal::show(values=...)` overrides selected text inputs for one response and
+      #|does not mutate the modal definition, so later calls return to the static
+      #|default. Override keys are text-input `custom_id` values. An unknown key or a
+      #|key naming a non-text field raises `ModalPrefillError` instead of being
+      #|silently ignored.
+      #|
       #|`ModalImmediateCtx::origin()` distinguishes a modal opened from a component
       #|from one opened from a command. `state()` is the value passed to `show`.
+      #|Modal fields stay typed by `Modal[A]`; encode typed modal state with a codec
+      #|when calling `show`, then decode `ctx.state()` in the submission handler as
+      #|above. `show` checks the complete custom id, including state, against the same
+      #|100-unit limit and raises `CustomIdError::TooLong` if it is exceeded.
+      #|
+      #|### File uploads
+      #|
+      #|`file_field` adds a file upload input and decodes to the uploaded files'
+      #|`Attachment` objects, which Discord resolves alongside the submission.
+      #|`file_types` narrows the client's file picker to preset groups (`Image`,
+      #|`Video`, `Audio`) or dot-prefixed extensions; the same filter is available on
+      #|slash commands through `arg_attachment(file_types=...)`:
+      #|
+      #|```mbt check
+      #|///|
+      #|let upload_report : @discord.Modal[Array[@model.Attachment]] = @discord.modal(
+      #|  custom_id="upload-report",
+      #|  title="Report",
+      #|  fields=@discord.ModalFields::of(
+      #|    @discord.file_field(
+      #|      custom_id="proof",
+      #|      label="Screenshots or a PDF",
+      #|      max_values=3,
+      #|      file_types=[Image, Extension(".pdf")],
+      #|    ),
+      #|  ),
+      #|)
+      #|```
+      #|
+      #|Filters match file extensions only, so validate the attachment contents
+      #|before trusting them. `App::validate` rejects a filter with more than 10
+      #|entries or an extension without its leading dot.
     ),
   },
   {
@@ -514,8 +779,9 @@ pub let sections : Array[Section] = [
     title: "Waiting for one component",
     anchor: "waiting-for-one-component",
     body: (
-      #|A deferred handler can wait for an exact custom ID. Waiters take precedence
-      #|over prefix handlers.
+      #|A deferred handler can wait for an exact custom ID. By default, only the user
+      #|who invoked the command or component may satisfy the wait. Waiters take
+      #|precedence over registered component handlers.
       #|
       #|```mbt check
       #|///|
@@ -540,15 +806,62 @@ pub let sections : Array[Section] = [
       #|
       #|///|
       #|test "component and modal declarations compile" {
-      #|  ignore(controls)
-      #|  ignore(register_ticket_handlers)
-      #|  ignore(register_feedback)
+      #|  let app = @discord.App()
+      #|  register_ticket_handlers(app)
+      #|  register_feedback(app)
+      #|  app.validate()
+      #|  assert_eq(ticket_controls(42).length(), 1)
+      #|  guard feedback_button(42) is Button(button) else { fail("expected button") }
+      #|  assert_eq(button.custom_id, Some("open-feedback:42"))
+      #|  ignore(upload_report)
       #|  ignore(confirm_command)
       #|}
       #|```
       #|
-      #|Use a user- or interaction-specific value in the exact ID so another user
-      #|cannot satisfy the waiter accidentally.
+      #|For a public poll, opt out of the user filter explicitly with
+      #|`ctx.wait_for_component(custom_id~, from=Anyone, timeout_ms=30_000)`. Keep an
+      #|interaction-specific value in the exact ID when concurrent waits are possible;
+      #|the unique value prevents two waits from colliding, while the default
+      #|`Invoker` filter provides user safety.
+      #|
+      #|```mbt check
+      #|///|
+      #|fn component_wait_guide_interaction(
+      #|  user_id : String,
+      #|) -> @model.Interaction raise {
+      #|  let payload =
+      #|    #|{"id":"500000000000000050","application_id":"400000000000000001","type":3,"token":"interaction-token","version":1,"user":{"id":"USER_ID","username":"nelly","discriminator":"0","global_name":"Nelly","avatar":null},"message":{"id":"700000000000000001","channel_id":"800000000000000001","author":{"id":"200000000000000099","username":"bot","discriminator":"0","global_name":null,"avatar":null},"content":"confirm","timestamp":"2025-06-01T10:00:00.000000+00:00","edited_timestamp":null,"tts":false,"mention_everyone":false,"mentions":[],"mention_roles":[],"attachments":[],"embeds":[],"pinned":false,"type":0},"data":{"custom_id":"confirm:guide","component_type":2}}
+      #|  @json.from_json(@json.parse(payload.replace(old="USER_ID", new=user_id)))
+      #|}
+      #|
+      #|///|
+      #|async test "another user's click does not satisfy a component wait" {
+      #|  let client = @dhttp.Client("test-token")
+      #|  defer client.close()
+      #|  let fw = @framework.Framework(client, @model.Id::parse("400000000000000001"))
+      #|  let invoker : @model.UserId = @model.Id::parse("200000000000000001")
+      #|  @async.with_task_group((group : @async.TaskGroup[Unit]) => {
+      #|    let pending = group.spawn(no_wait=true, () => {
+      #|      fw.wait_for_component(
+      #|        custom_id="confirm:guide",
+      #|        user=invoker,
+      #|        timeout_ms=1000,
+      #|      )
+      #|    })
+      #|    @async.sleep(20)
+      #|    assert_false(
+      #|      fw.process(component_wait_guide_interaction("200000000000000002")),
+      #|    )
+      #|    assert_true(
+      #|      fw.process(component_wait_guide_interaction("200000000000000001")),
+      #|    )
+      #|    guard pending.wait() is Some(click) else {
+      #|      fail("expected the invoking user's click")
+      #|    }
+      #|    assert_true(click.user().id == invoker)
+      #|  })
+      #|}
+      #|```
     ),
   },
   {
@@ -581,7 +894,7 @@ pub let sections : Array[Section] = [
       #|  })
       #|  bot.on(@discord.Events::guild_member_add(), (_, event) => {
       #|    let joined = event.guild_member
-      #|    println("member joined guild \{event.guild_id}: \{to_repr(joined.user)}")
+      #|    println("member joined guild \{event.guild_id}: \{Repr(joined.user)}")
       #|  })
       #|}
       #|```
@@ -590,6 +903,81 @@ pub let sections : Array[Section] = [
       #|object. Their descriptors expose wrapper types such as `MessageCreateEvent`,
       #|`ThreadCreateEvent`, and `GuildMemberAddEvent`; access the embedded object
       #|through the wrapper field shown by `moon ide doc`.
+    ),
+  },
+  {
+    chapter: "Events and intents",
+    file: "04-events-intents.mbt.md",
+    title: "Gateway latency",
+    anchor: "gateway-latency",
+    body: (
+      #|Interaction handlers read the most recent heartbeat round-trip time through
+      #|`AppCtx`. With multiple shards this is the arithmetic mean of shards that
+      #|have received an acknowledgement; HTTP interaction executors and a Gateway
+      #|connection before its first acknowledgement return `None`:
+      #|
+      #|```mbt check
+      #|///|
+      #|fn latency_text(value : Int64?) -> String {
+      #|  match value {
+      #|    Some(milliseconds) => "\{milliseconds} ms"
+      #|    None => "measuring"
+      #|  }
+      #|}
+      #|
+      #|///|
+      #|let gateway_ping : @discord.Command[Unit] = @discord.slash(
+      #|  name="ping",
+      #|  description="Show Gateway latency",
+      #|  args=@discord.Args::unit(),
+      #|  handler=Immediate((ctx, _) => {
+      #|    @discord.CommandReply::message(content=latency_text(ctx.app().latency_ms()))
+      #|  }),
+      #|)
+      #|
+      #|///|
+      #|fn observe_shard_latency(bot : @discord.Bot) -> Unit {
+      #|  bot.on(@discord.Events::ready(), (ctx, _) => {
+      #|    println("this shard: \{latency_text(ctx.latency_ms())}")
+      #|  })
+      #|}
+      #|```
+      #|
+      #|`GatewayCtx::latency_ms()` is the exact value for the shard that delivered
+      #|the event, while `AppCtx::latency_ms()` is the application-wide mean described
+      #|above.
+    ),
+  },
+  {
+    chapter: "Events and intents",
+    file: "04-events-intents.mbt.md",
+    title: "Message updates and edits",
+    anchor: "message-updates-and-edits",
+    body: (
+      #|Discord sends `MESSAGE_UPDATE` for more than user edits, including link
+      #|unfurls and pin changes. Gate edit-only work with `is_edit()`:
+      #|
+      #|```mbt check
+      #|///|
+      #|fn register_message_edits(bot : @discord.Bot) -> Unit {
+      #|  bot.on(@discord.Events::message_update(), (_, event) => {
+      #|    if event.is_edit() {
+      #|      match event.before {
+      #|        Some(previous) =>
+      #|          println("\{previous.content} -> \{event.message.content}")
+      #|        None => println("edited message: \{event.message.content}")
+      #|      }
+      #|    }
+      #|  })
+      #|}
+      #|```
+      #|
+      #|`before` is available only when an attached cache retains messages with
+      #|`CacheResources(messages=true)` and the previous revision is still within
+      #|its retention window. Without `before`, `is_edit()` falls back to checking
+      #|whether `edited_timestamp` has a value. That heuristic can misclassify an
+      #|unfurl or pin update to an already-edited message, so applications needing
+      #|exact edit detection should enable the messages cache.
     ),
   },
   {
@@ -623,7 +1011,7 @@ pub let sections : Array[Section] = [
       #|  app : @discord.App,
       #|  token : String,
       #|) -> @discord.Bot {
-      #|  @discord.Bot(app, token~, intents=explicit_intents)
+      #|  Bot(app, token~, intents=explicit_intents)
       #|}
       #|
       #|///|
@@ -672,6 +1060,31 @@ pub let sections : Array[Section] = [
   {
     chapter: "Events and intents",
     file: "04-events-intents.mbt.md",
+    title: "Obfuscated channels",
+    anchor: "obfuscated-channels",
+    body: (
+      #|From 2026-11-16 Discord obfuscates guild channels the bot cannot view: they
+      #|still arrive in `GUILD_CREATE` and channel events, but only `id`, `typ`,
+      #|`position`, and `parent_id` are reliable (the name becomes `"___hidden___"`).
+      #|Check `Channel::is_obfuscated()` before using any other field; a
+      #|`CHANNEL_UPDATE` with the full data follows once the bot gains access. Until
+      #|the cut-over, opt in to test with the Identify capability:
+      #|
+      #|```mbt check
+      #|///|
+      #|fn obfuscation_test_bot(app : @discord.App, token : String) -> @discord.Bot {
+      #|  @discord.Bot(
+      #|    app,
+      #|    token~,
+      #|    capabilities=@discord.GatewayCapabilities::channel_obfuscation(),
+      #|  )
+      #|}
+      #|```
+    ),
+  },
+  {
+    chapter: "Events and intents",
+    file: "04-events-intents.mbt.md",
     title: "Gateway event middleware",
     anchor: "gateway-event-middleware",
     body: (
@@ -683,14 +1096,13 @@ pub let sections : Array[Section] = [
       #|fn filter_and_tag(bot : @discord.Bot) -> Unit {
       #|  bot.middleware((_, event, next) => {
       #|    match event {
-      #|      @model.Event::MessageCreate(created) if created.message.author.bot
-      #|        is Some(true) => ()
-      #|      @model.Event::MessageCreate(created) => {
+      #|      MessageCreate(created) if created.message.author.bot is Some(true) => ()
+      #|      MessageCreate(created) => {
       #|        let message = {
       #|          ..created.message,
       #|          content: "[gateway] \{created.message.content}",
       #|        }
-      #|        next(@model.Event::MessageCreate({ ..created, message, }))
+      #|        next(MessageCreate({ ..created, message, }))
       #|      }
       #|      _ => next(event)
       #|    }
@@ -727,6 +1139,7 @@ pub let sections : Array[Section] = [
       #|  ignore(register_handlers)
       #|  ignore(bot_with_explicit_intents)
       #|  ignore(observe_decode_errors)
+      #|  ignore(obfuscation_test_bot)
       #|  ignore(filter_and_tag)
       #|  ignore(sharded_bots)
       #|}
@@ -738,6 +1151,135 @@ pub let sections : Array[Section] = [
       #|allowance cannot cover the selected shards. For multiple processes, use the
       #|bundled coordinator described in
       #|[Scaling across processes](08-scaling-processes.mbt.md).
+    ),
+  },
+  {
+    chapter: "Events and intents",
+    file: "04-events-intents.mbt.md",
+    title: "Gateway compression",
+    anchor: "gateway-compression",
+    body: (
+      #|Gateway `zlib-stream` transport compression is opt-in. Pass `compress=true`
+      #|to `Bot(...)` (or `Shard::start` at the lower level):
+      #|
+      #|```mbt check
+      #|///|
+      #|fn compressed_bot(app : @discord.App, token : String) -> @discord.Bot {
+      #|  Bot(app, token~, compress=true)
+      #|}
+      #|```
+      #|
+      #|Each Gateway connection then requests `compress=zlib-stream` and retains one
+      #|inflate context for that connection, including across consecutive Gateway
+      #|messages. Only server-to-client binary messages are decompressed; identify,
+      #|heartbeat, and other client-to-server payloads remain uncompressed text.
+      #|
+      #|The zlib shared library is loaded at runtime (like the async runtime loads
+      #|OpenSSL), so neither this library nor applications using it need extra link
+      #|flags; building only requires the zlib header. If the shared library is
+      #|missing at runtime, enabling compression raises before any connection is
+      #|attempted. A successful compressed connection emits `ShardCompressionEnabled`
+      #|telemetry.
+    ),
+  },
+  {
+    chapter: "Events and intents",
+    file: "04-events-intents.mbt.md",
+    title: "Opt-in cache",
+    anchor: "opt-in-cache",
+    body: (
+      #|`gaato/discord/cache` is a portable, gateway-driven in-memory cache. Attach
+      #|it to a `Bot` to apply every decoded event before event handlers run:
+      #|
+      #|```mbt check
+      #|///|
+      #|fn install_cache(bot : @discord.Bot) -> @cache.InMemoryCache {
+      #|  let cache = @cache.InMemoryCache(
+      #|    resources=CacheResources(presences=true, messages=true),
+      #|    limits=CacheLimits(
+      #|      presences=CacheLimit(max_entries=5_000, ttl_ms=300_000L),
+      #|      messages=CacheLimit(max_entries=100, ttl_ms=900_000L),
+      #|    ),
+      #|  )
+      #|  bot.attach_cache(cache)
+      #|  cache
+      #|}
+      #|
+      #|///|
+      #|fn can_send_in(
+      #|  cache : @cache.InMemoryCache,
+      #|  guild_id : @model.GuildId,
+      #|  channel_id : @model.ChannelId,
+      #|  user_id : @model.UserId,
+      #|) -> Bool {
+      #|  match cache.permissions_in(guild_id, channel_id, user_id) {
+      #|    Some(permissions) =>
+      #|      permissions.contains(@model.Permissions::send_messages())
+      #|    None => false
+      #|  }
+      #|}
+      #|
+      #|///|
+      #|test "compression and cache declarations compile" {
+      #|  ignore(compressed_bot)
+      #|  ignore(install_cache)
+      #|  ignore(can_send_in)
+      #|  ignore(register_message_edits)
+      #|  ignore(gateway_ping)
+      #|  ignore(observe_shard_latency)
+      #|}
+      #|```
+      #|
+      #|Guilds, channels, roles, members, users, and voice states are cached by
+      #|default. Presences and messages are opt-in because of their volume; enable
+      #|only the resources the application reads. The cache only sees events allowed
+      #|by the bot's configured intents. Entity getters return shared read-only model
+      #|values, while list getters return fresh outer arrays.
+      #|
+      #|`CacheLimits` can set an entry cap, TTL, or both for each resource. Guild,
+      #|channel, and user limits are global; role, member, voice-state, and presence
+      #|limits are per guild; message limits are per channel. Entry caps evict in
+      #|FIFO insertion order, and re-storing an entity refreshes its position. TTLs
+      #|use fixed, non-sliding deadlines set at write time: reads do not extend them,
+      #|and lazy expiry requires no background timer. Messages default to 100 entries
+      #|per channel when enabled.
+      #|
+      #|Limit guilds, roles, or voice states only when degraded derived-state accuracy
+      #|is acceptable. Missing required guild or role data makes `permissions()`
+      #|return `None`, and missing voice states can hide occupancy. Evicted members,
+      #|users, presences, and messages otherwise behave as ordinary cache misses.
+      #|
+      #|Gateway handlers can access the attached cache directly and resolve a channel
+      #|with a cache-first lookup. This is useful because
+      #|`MessageCreateEvent.channel_type` is commonly absent:
+      #|
+      #|```mbt check
+      #|///|
+      #|fn register_channel_resolution(bot : @discord.Bot) -> Unit {
+      #|  bot.on(@discord.Events::message_create(), (ctx, event) => {
+      #|    if ctx.cache() is Some(cache) {
+      #|      ignore(cache.channel(event.message.channel_id))
+      #|    }
+      #|    let channel = ctx.resolve_channel(event.message.channel_id)
+      #|    match channel.typ {
+      #|      AnnouncementThread | PublicThread | PrivateThread =>
+      #|        println("message arrived in a thread")
+      #|      _ => ()
+      #|    }
+      #|  })
+      #|}
+      #|
+      #|///|
+      #|test "cache-aware channel resolution compiles" {
+      #|  ignore(register_channel_resolution)
+      #|}
+      #|```
+      #|
+      #|`GatewayCtx::cache()` is `None` when no cache was attached. `resolve_channel`
+      #|falls back to `channel_ref(id).fetch()` on a miss or when channel retention is
+      #|disabled, and deliberately does not write REST results into the gateway-owned
+      #|cache. Call `channel_ref(id).fetch()` directly when freshness matters more
+      #|than cache-first speed.
     ),
   },
   {
@@ -772,7 +1314,7 @@ pub let sections : Array[Section] = [
       #|```mbt check
       #|///|
       #|fn make_client(token : String) -> @dhttp.Client {
-      #|  @dhttp.Client(token, max_connections=4)
+      #|  Client(token, max_connections=4)
       #|}
       #|```
       #|
@@ -780,6 +1322,174 @@ pub let sections : Array[Section] = [
       #|`DiscordHttpError`: validation failures are raised before I/O, Discord error
       #|responses use `Api`, and transport, deserialization, and rate-limit failures
       #|have separate variants.
+    ),
+  },
+  {
+    chapter: "REST client",
+    file: "05-rest.mbt.md",
+    title: "Handles",
+    anchor: "handles",
+    body: (
+      #|Client-bound handles organize resource APIs into two levels. A parent ref uses
+      #|collection verbs such as `roles`, `members`, or `create_role`; a child ref
+      #|binds the returned resource id and uses individual verbs such as `fetch`,
+      #|`edit`, or `delete`. Handles do not cache values or defer requests: each verb
+      #|delegates immediately to the corresponding typed `Client` method.
+      #|
+      #|```mbt check
+      #|///|
+      #|async fn rename_guild_role(
+      #|  client : @dhttp.Client,
+      #|  guild_id : @model.GuildId,
+      #|  role_id : @model.RoleId,
+      #|) -> @model.Role {
+      #|  let guild = client.guild_ref(guild_id)
+      #|  let current_roles = guild.roles()
+      #|  ignore(current_roles)
+      #|  guild.role_ref(role_id).edit(name="moderator", reason="role cleanup")
+      #|}
+      #|
+      #|///|
+      #|async fn fetch_member(
+      #|  client : @dhttp.Client,
+      #|  guild_id : @model.GuildId,
+      #|  user_id : @model.UserId,
+      #|) -> @model.GuildMember {
+      #|  client.guild_ref(guild_id).member_ref(user_id).fetch()
+      #|}
+      #|```
+      #|
+      #|`fetch()` is the uniform name for retrieving the individual resource bound by
+      #|a ref. Stateful `Paginator` values are returned by
+      #|`ChannelRef::messages`, `GuildRef::members`, `GuildRef::bans`,
+      #|`GuildRef::audit_log`, `ScheduledEventRef::users`, and
+      #|`MessageRef::poll_answer_voters`; their cursors advance through `next_page`,
+      #|`collect`, or `each` just like the direct paginator constructors.
+      #|
+      #|```mbt check
+      #|///|
+      #|fn channel_history(
+      #|  client : @dhttp.Client,
+      #|  channel_id : @model.ChannelId,
+      #|) -> @dhttp.Paginator[@model.Message] raise @dhttp.DiscordHttpError {
+      #|  client.channel_ref(channel_id).messages(page_size=100)
+      #|}
+      #|
+      #|///|
+      #|test "handle declarations compile" {
+      #|  ignore(rename_guild_role)
+      #|  ignore(fetch_member)
+      #|  ignore(channel_history)
+      #|}
+      #|```
+      #|
+      #|### Typing during long operations
+      #|
+      #|`ChannelRef::with_typing` sends a typing request immediately, refreshes it
+      #|every eight seconds while the body runs, then stops when the body returns or
+      #|raises. The initial typing failure is propagated; a later refresh failure only
+      #|stops the keepalive loop.
+      #|
+      #|```mbt check
+      #|///|
+      #|async fn produce_slow_answer(prompt : String) -> String {
+      #|  @async.sleep(1)
+      #|  "answer to: \{prompt}"
+      #|}
+      #|
+      #|///|
+      #|async fn send_slow_answer(
+      #|  channel : @dhttp.ChannelRef,
+      #|  prompt : String,
+      #|) -> @model.Message {
+      #|  let answer = channel.with_typing(() => produce_slow_answer(prompt))
+      #|  channel.send(content=answer)
+      #|}
+      #|
+      #|///|
+      #|test "typing keepalive declaration compiles" {
+      #|  ignore(send_slow_answer)
+      #|}
+      #|```
+      #|
+      #|Discord expires a typing indicator after about ten seconds, which is why the
+      #|keepalive interval is eight seconds. Structured concurrency ensures the
+      #|background refresh task does not survive the wrapped operation.
+      #|
+      #|Endpoints that support audit-log reasons expose `reason?`; the handle forwards
+      #|it as the request's URL-encoded `X-Audit-Log-Reason` header. Webhook
+      #|authentication is encoded in the handle type: `WebhookRef` performs bot-token
+      #|management, while `WebhookTokenRef` is created with `with_token` and executes
+      #|through the webhook URL token without bot authentication. Add the URL token
+      #|before executing, then bind the returned message for later edits:
+      #|
+      #|```mbt check
+      #|///|
+      #|async fn send_and_edit_webhook(
+      #|  client : @dhttp.Client,
+      #|  webhook_id : @model.WebhookId,
+      #|  token : String,
+      #|) -> @model.Message {
+      #|  let webhook = client.webhook_ref(webhook_id).with_token(token)
+      #|  let sent = webhook.send(content="hello")
+      #|  webhook.message_ref(sent.id).edit(content="hello again")
+      #|}
+      #|
+      #|///|
+      #|test "webhook handle declarations compile" {
+      #|  ignore(send_and_edit_webhook)
+      #|}
+      #|```
+      #|
+      #|Every REST endpoint with a resource anchor is available from the
+      #|corresponding ref verb. The entry points:
+      #|
+      #|| Ref | Entry points | Representative verbs |
+      #||---|---|---|
+      #|| `ChannelRef` | `Client::channel_ref`, `GatewayCtx::channel_ref` | `fetch`, `send`, `messages`, `edit`, `start_thread` |
+      #|| `MessageRef` | `Client::message_ref`, `Client::ref_of_message`, `ChannelRef::message_ref`, `GatewayCtx::message_ref` | `fetch`, `reply`, `edit`, `react`, `poll_answer_voters` |
+      #|| `MemberRef` | `Client::member_ref`, `GuildRef::member_ref`, `GatewayCtx::member_ref` | `fetch`, `edit`, `ban`, `unban`, `edit_voice_state` |
+      #|| `UserRef` | `Client::user_ref`, `GatewayCtx::user_ref` | `fetch`, `dm` |
+      #|| `GuildRef` | `Client::guild_ref`, `GatewayCtx::guild_ref` | `fetch`, `edit`, `members`, `channels`, `search_messages` |
+      #|| `RoleRef` | `Client::role_ref`, `GuildRef::role_ref` | `fetch`, `edit`, `delete` |
+      #|| `EmojiRef` | `Client::emoji_ref`, `GuildRef::emoji_ref` | `fetch`, `edit`, `delete` |
+      #|| `StickerRef` | `Client::sticker_ref`, `GuildRef::sticker_ref` | `fetch`, `edit`, `delete` |
+      #|| `SoundboardSoundRef` | `Client::soundboard_sound_ref`, `GuildRef::soundboard_sound_ref` | `fetch`, `edit`, `delete` |
+      #|| `ScheduledEventRef` | `Client::scheduled_event_ref`, `GuildRef::scheduled_event_ref` | `fetch`, `edit`, `delete`, `users` |
+      #|| `AutoModerationRuleRef` | `Client::auto_moderation_rule_ref`, `GuildRef::auto_moderation_rule_ref` | `fetch`, `edit`, `delete` |
+      #|| `TemplateRef` | `Client::guild_template_ref`, `GuildRef::template_ref` | `fetch`, `sync`, `edit`, `create_guild` |
+      #|| `InviteRef` | `Client::invite_ref` | `fetch`, `delete`, `update_target_users` |
+      #|| `WebhookRef` | `Client::webhook_ref` | `fetch`, `edit`, `delete`, `with_token` |
+      #|| `WebhookTokenRef` | `Client::webhook_token_ref`, `WebhookRef::with_token` | `fetch`, `edit`, `send`, `message_ref` |
+      #|| `WebhookMessageRef` | `WebhookTokenRef::message_ref` | `fetch`, `edit`, `delete` |
+      #|| `ApplicationRef` | `Client::application_ref`, `AppCtx::application_ref` | `emojis`, `global_commands`, `entitlements`, `skus` |
+      #|| `ApplicationEmojiRef` | `Client::application_emoji_ref`, `ApplicationRef::emoji_ref` | `fetch`, `edit`, `delete` |
+      #|| `GlobalCommandRef` | `Client::global_command_ref`, `ApplicationRef::global_command_ref` | `fetch`, `edit`, `delete` |
+      #|| `GuildCommandRef` | `Client::guild_command_ref`, `ApplicationRef::guild_command_ref` | `fetch`, `edit`, `permissions`, `edit_permissions` |
+      #|| `EntitlementRef` | `Client::entitlement_ref`, `ApplicationRef::entitlement_ref` | `fetch`, `consume`, `delete_test` |
+      #|| `SkuRef` | `Client::sku_ref`, `ApplicationRef::sku_ref` | `subscriptions`, `subscription` |
+      #|
+      #|The following endpoints remain direct `Client` methods because they do not
+      #|have a stable resource-id anchor compatible with a ref:
+      #|
+      #|| Client method | Why it remains direct |
+      #||---|---|
+      #|| `get_current_user` | The authenticated bot user is selected by the `/users/@me` route. |
+      #|| `modify_current_user` | The authenticated bot user is selected by the `/users/@me` route. |
+      #|| `get_current_user_guilds` | The guild list belongs to the authenticated `/users/@me` identity. |
+      #|| `get_current_authorization_information` | It uses a user OAuth bearer token instead of the bot client's authentication model. |
+      #|| `get_current_user_connections` | It uses a user OAuth bearer token instead of the bot client's authentication model. |
+      #|| `get_current_user_guild_member` | It uses a user OAuth bearer token instead of the bot client's authentication model. |
+      #|| `get_current_user_application_role_connection` | It uses a user OAuth bearer token instead of the bot client's authentication model. |
+      #|| `update_current_user_application_role_connection` | It uses a user OAuth bearer token instead of the bot client's authentication model. |
+      #|| `delete_current_user_application_role_connection` | It uses a user OAuth bearer token instead of the bot client's authentication model. |
+      #|| `edit_current_application` | The bot application is selected by an `@me` route rather than an application id. |
+      #|| `get_current_bot_application_information` | The bot application is selected by an `@me` route rather than an application id. |
+      #|| `get_sticker` | This is a global catalog lookup without a guild or application anchor. |
+      #|| `get_sticker_pack` | This is a global catalog lookup without a guild or application anchor. |
+      #|| `list_sticker_packs` | This is a global catalog listing without a resource anchor. |
+      #|| `list_default_soundboard_sounds` | This is a global catalog listing without a guild anchor. |
+      #|| `list_voice_regions` | This is a global catalog listing without a guild anchor. |
     ),
   },
   {
@@ -826,6 +1536,35 @@ pub let sections : Array[Section] = [
   {
     chapter: "REST client",
     file: "05-rest.mbt.md",
+    title: "File uploads",
+    anchor: "file-uploads",
+    body: (
+      #|The client sends attachments as `multipart/form-data`. Pass `files` to any
+      #|message-shaped call — `create_message`, interaction responses and followups,
+      #|and webhook sends:
+      #|
+      #|```mbt check
+      #|///|
+      #|async fn send_report(
+      #|  client : @dhttp.Client,
+      #|  channel_id : @model.ChannelId,
+      #|) -> @model.Message {
+      #|  let report = @fs.read_file("report.png").binary()
+      #|  client.create_message(channel_id, content="Here you go", files=[
+      #|    FileUpload("report.png", report, content_type="image/png"),
+      #|  ])
+      #|}
+      #|
+      #|///|
+      #|test "file upload declaration compiles" {
+      #|  ignore(send_report)
+      #|}
+      #|```
+    ),
+  },
+  {
+    chapter: "REST client",
+    file: "05-rest.mbt.md",
     title: "Pagination",
     anchor: "pagination",
     body: (
@@ -843,7 +1582,7 @@ pub let sections : Array[Section] = [
       #|  let newest_250 = history.collect(max=250)
       #|  ignore(newest_250)
       #|  let members = client.paginate_guild_members(guild_id, page_size=1000)
-      #|  members.each(guild_member => println("\{to_repr(guild_member.user)}"))
+      #|  members.each(guild_member => println("\{Repr(guild_member.user)}"))
       #|}
       #|```
       #|
@@ -865,7 +1604,7 @@ pub let sections : Array[Section] = [
       #|///|
       #|test "custom routes derive stable metadata" {
       #|  let route = @dhttp.Route::custom(
-      #|    request_method=@dhttp.RequestMethod::Get,
+      #|    request_method=Get,
       #|    path="/guilds/123/widgets/456",
       #|    bucket="GET:/guilds/123/widgets/{}",
       #|  )
@@ -906,6 +1645,43 @@ pub let sections : Array[Section] = [
       #|headers and retries 429 responses after the declared delay. Typed and custom
       #|routes use the same request path, so no separate limiter integration is
       #|required. A custom limiter can be passed through `Client(limiter=...)`.
+      #|
+      #|`Client(request_timeout_ms=30000)` bounds each single network attempt,
+      #|including reading its response body. Rate-limit waits, 429 back-off, and user
+      #|HTTP middleware are not bounded by it. Command sync can legitimately wait
+      #|about a minute for the bulk-overwrite-commands bucket. A timed-out attempt
+      #|raises `DiscordHttpError::Timeout` and is not retried: Discord may already
+      #|have received it, so retrying a non-idempotent POST could duplicate it.
+      #|
+      #|For a whole-operation deadline, compose `@async.with_timeout` around the
+      #|call. This also bounds middleware and rate-limit waiting. The example uses a
+      #|synthetic response to demonstrate both deadlines without contacting Discord:
+      #|
+      #|```mbt check
+      #|///|
+      #|async test "an overall REST deadline includes middleware" {
+      #|  let client = @dhttp.Client("test-token", request_timeout_ms=10)
+      #|  defer client.close()
+      #|  let cancelled = Ref(false)
+      #|  client.middleware((_, _) => {
+      #|    defer {
+      #|      cancelled.val = @async.is_being_cancelled()
+      #|    }
+      #|    @async.sleep(60)
+      #|    { status: 200, headers: Map([]), body: { "ok": true }, }
+      #|  })
+      #|  let response = @async.with_timeout(1000, () => client.request(GetGateway))
+      #|  json_inspect(response, content={ "ok": true })
+      #|  assert_false(cancelled.val)
+      #|  try @async.with_timeout(10, () => client.request(GetGateway)) catch {
+      #|    @async.TimeoutError => ()
+      #|    error => fail("unexpected error: \{Repr(error)}")
+      #|  } noraise {
+      #|    _ => fail("expected the overall deadline to cancel slow middleware")
+      #|  }
+      #|  assert_true(cancelled.val)
+      #|}
+      #|```
     ),
   },
   {
@@ -914,14 +1690,15 @@ pub let sections : Array[Section] = [
     title: "Request middleware",
     anchor: "request-middleware",
     body: (
-      #|`Client::middleware` wraps each logical REST call. The rate limiter, wire
-      #|exchange, and bounded 429 retries all run inside `next`:
+      #|`Client::middleware` wraps each logical REST call, outside the per-attempt
+      #|timeout. The rate limiter, wire exchange, and bounded 429 retries all run
+      #|inside `next`:
       #|
       #|```mbt check
       #|///|
       #|fn wire_logging(client : @dhttp.Client) -> Unit {
       #|  client.middleware((request, next) => {
-      #|    let req_method = to_repr(request.route.method_())
+      #|    let req_method = Repr(request.route.method_())
       #|    let path = request.route.path()
       #|    println("http -> \{req_method} \{path}")
       #|    let response = next(request)
@@ -968,14 +1745,13 @@ pub let sections : Array[Section] = [
       #|  token : String,
       #|  body : Json,
       #|) -> Json? {
-      #|  let endpoint = app.serve(group, token~, sync=false)
+      #|  let endpoint = app.serve(group, token~)
       #|  endpoint.handle(body)
       #|}
       #|```
       #|
       #|`App::serve` accepts either `token` or an existing `client`. Supplying both
-      #|`client` and `application_id` avoids startup HTTP requests when synchronization
-      #|is disabled:
+      #|`client` and `application_id` avoids startup HTTP requests:
       #|
       #|```mbt check
       #|///|
@@ -985,13 +1761,80 @@ pub let sections : Array[Section] = [
       #|  client : @dhttp.Client,
       #|  application_id : @model.ApplicationId,
       #|) -> @discord.InteractionEndpoint {
-      #|  app.serve(group, client~, application_id~, sync=false)
+      #|  app.serve(group, client~, application_id~)
       #|}
       #|```
       #|
-      #|Set `sync=true` only when this process should perform the configured
-      #|`CommandSync`. Synchronization uses bulk overwrite and can remove commands not
-      #|declared by this `App`.
+      #|Command registration is a separate deploy-time step. Run a one-shot program
+      #|that builds the same App and calls `app.sync_commands(client, application_id,
+      #|scope~)` before starting or updating the HTTP deployment. The call returns an
+      #|`@app.SyncReport`; print it to see each scope's changes and `overwritten` flag:
+      #|
+      #|```mbt check
+      #|///|
+      #|async fn register_commands(
+      #|  app : @app.App,
+      #|  client : @dhttp.Client,
+      #|  application_id : @model.ApplicationId,
+      #|  scope : @app.CommandScope,
+      #|) -> Unit {
+      #|  let report = app.sync_commands(client, application_id, scope~)
+      #|  println("\{Repr(report)}")
+      #|}
+      #|```
+      #|
+      #|The default `unowned=Delete` removes undeclared commands, while `unowned=Keep`
+      #|retains them. The Entry Point command is always preserved. A matching catalog
+      #|sends no overwrite PUT (the GET still runs). Do not synchronize per request.
+      #|
+      #|```mbt check
+      #|///|
+      #|async test "registration reports an unchanged catalog with an entry point" {
+      #|  let spec = @interaction.CommandSpec::slash("echo", "Echo")
+      #|  let (payload, report) = @framework.plan_command_sync(
+      #|    [spec],
+      #|    [spec.to_json(), { "id": "11", "type": 4, "name": "Launch" }],
+      #|    unowned=Delete,
+      #|  )
+      #|  assert_true(payload is None)
+      #|  assert_false(report.overwritten)
+      #|  assert_eq(report.unchanged, ["echo"])
+      #|  assert_eq(report.preserved, ["4:Launch"])
+      #|  ignore(register_commands)
+      #|}
+      #|```
+    ),
+  },
+  {
+    chapter: "HTTP interactions",
+    file: "06-http-interactions.mbt.md",
+    title: "Configure the Discord endpoint",
+    anchor: "configure-the-discord-endpoint",
+    body: (
+      #|Set the public interactions URL on the current application, then fetch the
+      #|`verify_key` used to validate signed requests. Discord verifies the URL with a
+      #|PING while setting it; interactions are no longer delivered over the Gateway
+      #|while the endpoint remains configured.
+      #|
+      #|```mbt check
+      #|///|
+      #|async fn configure_interactions_endpoint(client : @dhttp.Client) -> String? {
+      #|  ignore(
+      #|    client.edit_current_application(
+      #|      interactions_endpoint_url="https://bot.example.com/interactions",
+      #|    ),
+      #|  )
+      #|  client.get_current_application().verify_key
+      #|}
+      #|
+      #|///|
+      #|async fn restore_gateway_interactions(client : @dhttp.Client) -> Unit {
+      #|  ignore(client.edit_current_application(clear_interactions_endpoint_url=true))
+      #|}
+      #|```
+      #|
+      #|Clearing `interactions_endpoint_url` removes the HTTP endpoint and restores
+      #|interaction delivery over the Gateway.
     ),
   },
   {
@@ -1039,27 +1882,26 @@ pub let sections : Array[Section] = [
       #|
       #|```mbt check
       #|///|
-      #|async fn parse_verified(
-      #|  public_key : String,
+      #|fn parse_verified(
+      #|  verifier : @discord.InteractionVerifier,
       #|  signature : String,
       #|  timestamp : String,
-      #|  raw_body : String,
-      #|) -> Json? {
-      #|  let verified = @discord.verify_signature(
-      #|    public_key~,
-      #|    signature~,
-      #|    timestamp~,
-      #|    body=raw_body,
-      #|  )
+      #|  raw_body : BytesView,
+      #|) -> Json? raise {
+      #|  let verified = verifier.verify(signature~, timestamp~, body=raw_body)
       #|  if !verified {
       #|    return None
       #|  }
-      #|  Some(@json.parse(raw_body))
+      #|  Some(@json.parse(@utf8.decode(raw_body)))
       #|}
       #|```
       #|
-      #|`verify_signature` uses WebCrypto on JavaScript and runtime-loaded libcrypto on
-      #|native. It returns `false` for malformed hex input or verification failures.
+      #|Construct `InteractionVerifier` once from the application's hexadecimal public
+      #|key and reuse it across requests. Verification is synchronous and implemented
+      #|entirely in MoonBit on both JavaScript and native. Invalid public-key
+      #|configuration raises `InteractionVerifierError`; malformed request signatures
+      #|and verification failures return `false`. The one-shot `verify_signature`
+      #|helper is available when retaining a verifier is impractical.
     ),
   },
   {
@@ -1084,7 +1926,6 @@ pub let sections : Array[Section] = [
       #|      addr="127.0.0.1:8080",
       #|      public_key~,
       #|      token~,
-      #|      sync=true,
       #|    )
       #|    println("listening on \{server.addr()}")
       #|  })
@@ -1094,15 +1935,19 @@ pub let sections : Array[Section] = [
       #|test "http interaction declarations compile" {
       #|  ignore(dispatch_interaction)
       #|  ignore(serve_with_existing_client)
+      #|  ignore(configure_interactions_endpoint)
+      #|  ignore(restore_gateway_interactions)
       #|  ignore(route_outcome)
       #|  ignore(parse_verified)
       #|  ignore(run_server)
       #|}
       #|```
       #|
-      #|The server verifies signatures against the raw body, handles Discord PINGs,
-      #|dispatches through `App::serve`, returns 404 for `NoRoute`, and returns 202 for
-      #|`NoResponse` or `TimedOut`. Use a reverse proxy for public HTTPS termination.
+      #|The server validates and expands the public key before binding its socket, then
+      #|reuses that verifier for every request. It verifies signatures against the raw
+      #|body, handles Discord PINGs, dispatches through `App::serve`, returns 404 for
+      #|`NoRoute`, and returns 202 for `NoResponse` or `TimedOut`. Use a reverse proxy
+      #|for public HTTPS termination.
     ),
   },
   {
@@ -1111,6 +1956,14 @@ pub let sections : Array[Section] = [
     title: "Cloudflare Workers",
     anchor: "cloudflare-workers",
     body: (
+      #|On per-request runtimes such as Workers, constructing `App()` for every request
+      #|also rebuilds its in-memory cooldown store. Those cooldowns are therefore inert
+      #|across requests. Implement `gaato/discord/cooldown.CooldownStore` over KV or a
+      #|Durable Object and inject it with `App(cooldown_store=...)` to enforce real
+      #|cooldowns. The implementation must own its clock and atomically acquire each
+      #|key's window; account for the storage service's consistency and atomicity
+      #|guarantees. The TCP `RemoteCooldownStore` is native-only.
+      #|
       #|The `src/examples/workers_echo` adapter exports two promises:
       #|
       #|1. A response promise resolves when the initial Discord callback is known.
@@ -1120,13 +1973,27 @@ pub let sections : Array[Section] = [
       #|The adapter should preserve the raw body for verification, answer Discord
       #|PING requests through the endpoint, return a JSON callback with HTTP 200, and
       #|map `NoRoute`, `NoResponse`, and `TimedOut` according to its deployment policy.
+      #|The example maps malformed interaction payloads to 400, `NoRoute` to 404,
+      #|`NoResponse` to 202, internal dispatch failures to 500, and `TimedOut` to 504.
       #|
-      #|> **Known issue**: on the JavaScript target, `moonbitlang/async` can stop
-      #|> running scheduler rounds after `Promise::from_async` resolves, so pending
-      #|> tasks may never resume. The upstream fix is
-      #|> [moonbitlang/async#500](https://github.com/moonbitlang/async/pull/500)
-      #|> (not yet merged); until it is released, Workers deployments need that patch
-      #|> applied to the vendored dependency.
+      #|Replies containing `FileUpload` values become a multipart callback body. The
+      #|adapter exposes a Web `ReadableStream` that emits the existing multipart text
+      #|and `Bytes` chunks in order, without concatenating them. Cancelling that stream
+      #|drops unsent chunks and does not leave a MoonBit producer task behind.
+      #|
+      #|Run its signed endpoint tests in Cloudflare's local runtime with:
+      #|
+      #|```fish
+      #|cd src/examples/workers_echo
+      #|npm ci
+      #|env WRANGLER_SEND_METRICS=false npm test
+      #|```
+      #|
+      #|Gateway and Voice transports remain native-only. The JavaScript backend is for
+      #|the REST client, signature verification, and gateway-free HTTP interactions.
+      #|With `moonbitlang/async@0.22.1`, the JS Fetch transport also completes
+      #|null-body 204 responses. The `workers_echo` suite covers this with a deferred
+      #|interaction-response deletion that runs to completion under `waitUntil`.
     ),
   },
   {
@@ -1171,14 +2038,37 @@ pub let sections : Array[Section] = [
       #|///|
       #|fn compose(
       #|  token : String,
-      #|  command_sync : @discord.CommandSync,
+      #|  command_scope : @discord.CommandScope,
       #|  feedback_config : FeedbackConfig,
       #|  starboard_config : StarboardConfig,
       #|) -> Unit {
-      #|  let app = @discord.App(sync=command_sync)
-      #|  let bot = @discord.Bot(app, token~)
+      #|  let app = @discord.App()
+      #|  let bot = @discord.Bot(app, token~, sync=command_scope)
       #|  install_feedback(app, config=feedback_config)
       #|  install_starboard(app, bot, config=starboard_config)
+      #|}
+      #|```
+      #|
+      #|`sync=command_scope` uses the combined declarations from all installers.
+      #|If another process owns commands in that scope, add `sync_unowned=Keep` to
+      #|the Bot constructor to preserve them. The Entry Point command is preserved
+      #|under either policy.
+      #|
+      #|```mbt check
+      #|///|
+      #|async test "feature owners can keep commands from another process" {
+      #|  for unowned in [@framework.UnownedCommands::Delete, Keep] {
+      #|    let (_, report) = @framework.plan_command_sync(
+      #|      [],
+      #|      [
+      #|        { "id": "10", "name": "other" },
+      #|        { "id": "11", "type": 4, "name": "Launch" },
+      #|      ],
+      #|      unowned~,
+      #|    )
+      #|    assert_true(report.preserved.contains("4:Launch"))
+      #|    assert_eq(report.preserved.contains("other"), unowned == Keep)
+      #|  }
       #|}
       #|```
       #|
@@ -1222,7 +2112,7 @@ pub let sections : Array[Section] = [
       #|    name="feedback",
       #|    description="Send feedback",
       #|    args=@discord.Args::unit(),
-      #|    handler=Immediate((_, _) => @discord.CommandReply::ShowModal(modal.show())),
+      #|    handler=Immediate((_, _) => ShowModal(modal.show())),
       #|  )
       #|}
       #|
@@ -1308,7 +2198,7 @@ pub let sections : Array[Section] = [
       #|pub fn FeedbackFeature::FeedbackFeature(
       #|  config : FeedbackConfig,
       #|) -> FeedbackFeature {
-      #|  { config_: config, stored_: 0 }
+      #|  { config_: config, stored_: 0, }
       #|}
       #|
       #|///|
@@ -1420,7 +2310,7 @@ pub let sections : Array[Section] = [
       #|///|
       #|test "multi-guild configuration resolves destinations" {
       #|  let config = MultiGuildFeedbackConfig::{
-      #|    destinations: [{ guild_id: Id(10UL), channel_id: Id(20UL) }],
+      #|    destinations: [{ guild_id: Id(10UL), channel_id: Id(20UL), }],
       #|    cooldown_seconds: 30,
       #|  }
       #|  assert_true(config.destination(Id(10UL)) is Some(_))
@@ -1428,9 +2318,10 @@ pub let sections : Array[Section] = [
       #|}
       #|```
       #|
-      #|The handler reads `ctx.guild_id()` and rejects an unconfigured guild with a
-      #|user-facing `HandlerError`. One feature instance can then serve the configured
-      #|guilds and keep shared state where needed.
+      #|The handler uses `let guild = ctx.guild_scope()` and looks up
+      #|`guild.guild_id`; a DM raises `GuildOnly`, while an unconfigured guild can be
+      #|rejected with a user-facing `HandlerError`. One feature instance can then
+      #|serve the configured guilds and keep shared state where needed.
     ),
   },
   {
@@ -1452,7 +2343,7 @@ pub let sections : Array[Section] = [
       #|      name="feedback",
       #|      description="Send feedback",
       #|      args=@discord.Args::unit(),
-      #|      handler=Immediate((_, _) => @discord.CommandReply::ShowModal(modal.show())),
+      #|      handler=Immediate((_, _) => ShowModal(modal.show())),
       #|    )
       #|    .check(@discord.guild_only())
       #|    .cooldown(seconds=config.cooldown_seconds, bucket=User)
@@ -1469,8 +2360,18 @@ pub let sections : Array[Section] = [
       #|```
       #|
       #|Call `.check` more than once when a command needs several guards. The App runs
-      #|them in registration order. Cooldown failures use the same error policy as
-      #|handler failures.
+      #|them in registration order. The complete command path is middleware, checks,
+      #|cooldown, argument decoding, then the handler. A check may use `ctx.app()` for
+      #|async I/O, but checks run before the handler can defer and therefore spend
+      #|Discord's three-second initial-response budget; keep them fast or cache their
+      #|results. Cooldown failures use the same error policy as handler failures.
+      #|
+      #|Cooldown storage belongs to the App, with a fresh `InMemoryCooldownStore` by
+      #|default. Command type, name, and bucket are included in each storage key, so
+      #|features sharing a store do not collide. Supply `App(cooldown_store=...)` when
+      #|windows must be shared across Apps or processes; the portable `CooldownStore`
+      #|trait and native `RemoteCooldownStore` are described under
+      #|[Shared cooldowns](08-scaling-processes.mbt.md#shared-cooldowns).
     ),
   },
   {
@@ -1497,7 +2398,8 @@ pub let sections : Array[Section] = [
     body: (
       #|The native `gaato/discord/coordinator` package provides a small TCP service for
       #|deployments that split Gateway shards between processes. It centralizes the
-      #|existing `InMemoryQueue` Identify buckets and `InMemoryRateLimiter` REST state;
+      #|existing `InMemoryQueue` Identify buckets, `InMemoryRateLimiter` REST state,
+      #|and `InMemoryCooldownStore` command windows;
       #|no Redis or external database is required.
     ),
   },
@@ -1574,10 +2476,75 @@ pub let sections : Array[Section] = [
       #|coordinator-backed REST limiter.
       #|
       #|Connections are persistent and requests on one connection are ordered. After
-      #|a transport failure, an in-flight request reconnects with bounded exponential
+      #|a transport failure, Identify and REST requests reconnect with bounded exponential
       #|backoff. Protocol errors from the server remain fatal and are not retried. If
       #|a process disconnects after acquiring a REST bucket, the server releases that
       #|bucket during connection cleanup.
+    ),
+  },
+  {
+    chapter: "Scaling across processes",
+    file: "08-scaling-processes.mbt.md",
+    title: "Shared cooldowns",
+    anchor: "shared-cooldowns",
+    body: (
+      #|`App()` creates a fresh `InMemoryCooldownStore`. To enforce the same command
+      #|cooldown across processes, inject a shared store into **every process that
+      #|serves interactions**, including HTTP interaction workers:
+      #|
+      #|```mbt check
+      #|///|
+      #|async test "shared cooldown store wiring" {
+      #|  @async.with_task_group(group => {
+      #|    let coordinator = @coordinator.Coordinator::serve(group, addr="127.0.0.1:0")
+      #|    defer coordinator.close()
+      #|    let cooldown = @coordinator.RemoteCooldownStore::connect(
+      #|      coordinator.addr(),
+      #|      timeout_ms=1000,
+      #|      on_error=error => println("cooldown coordinator: \{error}"),
+      #|    )
+      #|    defer cooldown.close()
+      #|    let app = @app.App(cooldown_store=(cooldown : &@cooldown.CooldownStore))
+      #|    app.command(
+      #|      @app.slash(
+      #|        name="limited",
+      #|        description="Shared cooldown",
+      #|        args=@interaction.Args::unit(),
+      #|        handler=Raw(_ => ()),
+      #|      ).cooldown(seconds=10, bucket=User),
+      #|    )
+      #|    app.validate()
+      #|    cooldown.ping()
+      #|  })
+      #|}
+      #|```
+      #|
+      #|Use the coordinator's configured address in each worker and keep the remote
+      #|store alive for the lifetime of its App. Keys include command type, command
+      #|name, and bucket identity, so commands sharing a store have independent
+      #|windows. The coordinator owns the clock and keeps windows in memory; restarting
+      #|it clears those windows.
+      #|
+      #|The `gaato/discord/cooldown` trait is portable to JS and native, while
+      #|`RemoteCooldownStore` is native-only. Other deployments can implement
+      #|`CooldownStore` over shared storage and pass it through the same App parameter.
+      #|
+      #|The remote store defaults to `when_unreachable=FailOpen`. A timeout or disconnect
+      #|calls `on_error` and admits the command: cooldowns damp abuse, and an outage
+      #|should not take every command offline. Use `when_unreachable=FailClosed` to deny the
+      #|attempt with `retry_after_ms` equal to the requested window instead. The
+      #|default error hook does nothing, so install it to observe outages. Initial
+      #|connection outages also call the hook and return a store that can reconnect.
+      #|Cancellation always propagates, as do protocol errors. `ping()` reports errors
+      #|directly instead of applying the admission policy.
+      #|
+      #|Each cooldown store has its own connection, independent of blocking
+      #|`http_acquire` requests. Acquisition makes one attempt with no retries;
+      #|`timeout_ms` (default 1000) bounds the entire operation, including connection
+      #|queueing and reconnect time. This work runs before the handler can defer and
+      #|spends Discord's three-second initial-response budget. Identify and REST retain
+      #|their existing retry policy; `RemoteRateLimiter` remains fail-closed because
+      #|avoiding Discord's 429 bans is a correctness concern.
     ),
   },
   {
@@ -1595,10 +2562,16 @@ pub let sections : Array[Section] = [
       #|| `{"op":"identify_acquire","shard_id":N}` | Returns success after the shard's Identify bucket and spacing permit it. |
       #|| `{"op":"http_acquire","bucket":"...","global_exempt":false}` | Returns success when the REST request may start. |
       #|| `{"op":"http_release","bucket":"...","status":N,"headers":{...}}` | Applies lowercase Discord rate-limit headers, releases the bucket, then returns success. |
+      #|| `{"op":"cooldown_acquire","key":"...","window_ms":"10000"}` | Immediately returns `{"ok":true,"retry_after_ms":"0"}` when acquired, or the remaining window in milliseconds. |
+      #|
+      #|Cooldown `window_ms` and `retry_after_ms` are decimal strings, preserving Int64
+      #|precision through JSON. `"0"` means acquired. Other operations retain their
+      #|existing numeric fields.
       #|
       #|Unknown or malformed operations return `{"ok":false,"error":"..."}`. The
       #|server keeps the connection open after these protocol-level errors. Transport
-      #|failures close the connection and trigger the bounded reconnect policy.
+      #|failures close the connection. Identify and REST use bounded retries; cooldown
+      #|acquisition applies its unreachable policy and tries to reconnect on the next call.
     ),
   },
   {
@@ -1661,13 +2634,21 @@ pub let sections : Array[Section] = [
       #|returns the final `HttpResponse` after any internal 429 retries and before a
       #|Discord error status becomes `DiscordHttpError::Api`.
       #|
+      #|`request_timeout_ms` bounds each network attempt inside `next`, including
+      #|reading its response body. User middleware before and after `next`, rate-limit
+      #|waits, and 429 back-off are outside that timeout. Timed-out attempts raise
+      #|`DiscordHttpError::Timeout` without retrying. For a whole-operation deadline,
+      #|compose `@async.with_timeout` around the call; see the tested example in
+      #|[REST client](05-rest.mbt.md#rate-limit-behavior). Allow for legitimate waits:
+      #|command sync may wait about a minute for the bulk-overwrite-commands bucket.
+      #|
       #|This middleware logs the logical call and adds an extra wire header:
       #|
       #|```mbt check
       #|///|
       #|fn http_logging() -> @dhttp.HttpMiddleware {
       #|  (request, next) => {
-      #|    let req_method = to_repr(request.route.method_())
+      #|    let req_method = Repr(request.route.method_())
       #|    let path = request.route.path()
       #|    println("http -> \{req_method} \{path}")
       #|    request.headers["x-client-feature"] = "example-bot"
@@ -1694,8 +2675,8 @@ pub let sections : Array[Section] = [
       #|fn mock_gateway(body : Json) -> @dhttp.HttpMiddleware {
       #|  (request, next) => {
       #|    match request.route {
-      #|      @dhttp.Route::GetGateway =>
-      #|        { status: 200, headers: { "x-middleware-cache": "hit" }, body }
+      #|      GetGateway =>
+      #|        { status: 200, headers: { "x-middleware-cache": "hit" }, body, }
       #|      _ => next(request)
       #|    }
       #|  }
@@ -1719,7 +2700,8 @@ pub let sections : Array[Section] = [
     body: (
       #|`App::middleware` is application-global. It runs for commands, components,
       #|and modals, but not autocomplete. `InteractionCtx` exposes the routed target,
-      #|interaction, user, invocation scope, and guild ID.
+      #|interaction, user, invocation scope, optional guild ID, and `guild_scope()`
+      #|for a validated guild id/member bundle (raising `GuildOnly` in DMs).
       #|
       #|A ban list can reject an interaction with the same error used by a failed
       #|command check:
@@ -1787,6 +2769,79 @@ pub let sections : Array[Section] = [
   {
     chapter: "Middleware",
     file: "09-middleware.mbt.md",
+    title: "Rich error-policy responses",
+    anchor: "rich-error-policy-responses",
+    body: (
+      #|The error policy receives the invoking user and, for interaction failures, an
+      #|optional raw context. Prefer `respond_error` for replies because it selects an
+      #|initial response or followup from the gate's real state. `response_state()`
+      #|reads that state on demand, including responses sent through `raw()`:
+      #|
+      #|- `Some(Pending)` sends an initial callback. A definitively rejected callback
+      #|  returns the gate to this state so the policy can send a different payload.
+      #|- `Some(Sent(type))` or `Some(Unconfirmed(type))` attempts a followup. The latter
+      #|  means the sink raised and delivery may have succeeded; followup failures go
+      #|  to the existing warning hook.
+      #|- `Some(Expired)` warns with a payload summary because the executor closed the
+      #|  callback window.
+      #|- `None` also warns: event, service, and autocomplete failures have no raw
+      #|  response context.
+      #|
+      #|```mbt check
+      #|///|
+      #|fn install_rich_error_policy(app : @discord.App) -> Unit {
+      #|  app.error_policy((failure, error) => {
+      #|    let username = match failure.user() {
+      #|      Some(user) => user.username
+      #|      None => "unknown user"
+      #|    }
+      #|    let source = match failure.raw() {
+      #|      Some(RawCommand(_)) => "command"
+      #|      Some(RawComponent(_)) => "component"
+      #|      Some(RawModal(_)) => "modal"
+      #|      None => "event, service, or autocomplete"
+      #|    }
+      #|    failure.respond_error(
+      #|      embeds=[
+      #|        Embed(
+      #|          title="Request failed",
+      #|          description="source: \{source}\nuser: \{username}\nstate: \{Repr(failure.response_state())}\n\{Repr(error)}",
+      #|          color=0xED4245,
+      #|        ),
+      #|      ],
+      #|      components=[
+      #|        @discord.action_row([
+      #|          @discord.button(
+      #|            custom_id="error:dismiss",
+      #|            label="Dismiss",
+      #|            style=Danger,
+      #|          ),
+      #|        ]),
+      #|      ],
+      #|      ephemeral=true,
+      #|    )
+      #|  })
+      #|}
+      #|
+      #|///|
+      #|test "rich error policy declaration compiles" {
+      #|  ignore(install_rich_error_policy)
+      #|}
+      #|```
+      #|
+      #|`FailureCtx::user()` and `raw()` return `None` for Gateway event, service, and autocomplete
+      #|failures. In that case `respond_error` sends a summary to the warning hook
+      #|because there is no interaction response target. The raw command, component,
+      #|and modal contexts are escape hatches; responding through them directly can
+      #|attempt a second initial callback, so ordinary policies should continue to use
+      #|`respond_error`. Its optional `content`, `embeds`, `components`, `files`, and
+      #|`allowed_mentions` parameters are passed through for both initial responses
+      #|and followups.
+    ),
+  },
+  {
+    chapter: "Middleware",
+    file: "09-middleware.mbt.md",
     title: "Gateway event middleware",
     anchor: "gateway-event-middleware",
     body: (
@@ -1801,8 +2856,7 @@ pub let sections : Array[Section] = [
       #|fn ignore_bot_messages() -> @bot.EventMiddleware {
       #|  (_, event, next) => {
       #|    match event {
-      #|      @model.Event::MessageCreate(created) if created.message.author.bot
-      #|        is Some(true) => ()
+      #|      MessageCreate(created) if created.message.author.bot is Some(true) => ()
       #|      _ => next(event)
       #|    }
       #|  }
@@ -1817,12 +2871,12 @@ pub let sections : Array[Section] = [
       #|fn tag_message_content() -> @bot.EventMiddleware {
       #|  (_, event, next) => {
       #|    match event {
-      #|      @model.Event::MessageCreate(created) => {
+      #|      MessageCreate(created) => {
       #|        let message = {
       #|          ..created.message,
       #|          content: "[gateway] \{created.message.content}",
       #|        }
-      #|        next(@model.Event::MessageCreate({ ..created, message, }))
+      #|        next(MessageCreate({ ..created, message, }))
       #|      }
       #|      _ => next(event)
       #|    }
@@ -1854,12 +2908,67 @@ pub let sections : Array[Section] = [
     title: "Before and after `next`",
     anchor: "before-and-after-next",
     body: (
-      #|Use the onion boundary deliberately: raise or short-circuit before `next`, and
-      #|observe or clean up after it returns. This matters most for interaction
-      #|middleware. An error raised after `next()` returns is reported to the error
-      #|policy with phase `BeforeInitial`. If the inner handler already sent an
-      #|initial response, the policy cannot replace it and the failure may degrade to
-      #|a warning.
+      #|Interaction middleware can raise before or after `next()`. The error policy
+      #|reads the same gate used by the handler, so an error after the handler sends
+      #|its initial response produces a followup through `respond_error`.
+      #|
+      #|```mbt check
+      #|///|
+      #|async test "middleware failure after next uses the handler's sent state" {
+      #|  let client = @dhttp.Client("test-token")
+      #|  defer client.close()
+      #|  let routes : Array[String] = []
+      #|  client.middleware((request, _) => {
+      #|    assert_true(request.route.method_() is Post)
+      #|    routes.push(request.route.path())
+      #|    {
+      #|      status: 200,
+      #|      headers: Map([]),
+      #|      body: @json.parse(
+      #|        (
+      #|          #|{"id":"700000000000000001","channel_id":"800000000000000001","author":{"id":"200000000000000002","username":"bot","discriminator":"0","global_name":null,"avatar":null},"content":"policy reply","timestamp":"2025-06-01T10:00:00Z","edited_timestamp":null,"tts":false,"mention_everyone":false,"mentions":[],"mention_roles":[],"attachments":[],"embeds":[],"pinned":false,"type":0}
+      #|        ),
+      #|      ),
+      #|    }
+      #|  })
+      #|  let app = @discord.App()
+      #|  let warnings : Array[String] = []
+      #|  let states : Array[@framework.ResponseState?] = []
+      #|  app.on_warn(message => warnings.push(message))
+      #|  app.middleware((_, next) => {
+      #|    next()
+      #|    raise @app.HandlerError::UserMessage(message="after next", ephemeral=true)
+      #|  })
+      #|  app.command(
+      #|    @discord.slash(
+      #|      name="ping",
+      #|      description="Reply before middleware raises",
+      #|      args=@discord.Args::unit(),
+      #|      handler=Immediate((_, _) => @discord.CommandReply::message(content="pong")),
+      #|    ),
+      #|  )
+      #|  app.error_policy((failure, _) => {
+      #|    states.push(failure.response_state())
+      #|    failure.respond_error(content="policy reply")
+      #|  })
+      #|  let application_id = @model.Id::parse("400000000000000001")
+      #|  let framework = @framework.Framework(client, application_id)
+      #|  app.attach(framework, client~, application_id~) |> ignore
+      #|  let interaction : @model.Interaction = @json.from_json(
+      #|    @json.parse(
+      #|      (
+      #|        #|{"id":"500000000000000001","application_id":"400000000000000001","type":2,"token":"interaction-token","version":1,"user":{"id":"200000000000000001","username":"nelly","discriminator":"0","global_name":null,"avatar":null},"data":{"id":"600000000000000001","name":"ping","type":1}}
+      #|      ),
+      #|    ),
+      #|  )
+      #|  let (gate, capture) = @framework.ResponseGate::capture(interaction)
+      #|  assert_true(framework.process_with(interaction, gate~))
+      #|  assert_eq(capture.get().response.typ, ChannelMessageWithSource)
+      #|  assert_eq(states, [Some(Sent(ChannelMessageWithSource))])
+      #|  assert_eq(routes, ["/webhooks/400000000000000001/interaction-token"])
+      #|  assert_eq(warnings, [])
+      #|}
+      #|```
       #|
       #|HTTP middleware can inspect the final wire status, headers, and body after
       #|`next(request)`. Event middleware can inspect only the completion of handler
@@ -1944,6 +3053,50 @@ pub let sections : Array[Section] = [
     ),
   },
   {
+    chapter: "Middleware",
+    file: "09-middleware.mbt.md",
+    title: "Telemetry",
+    anchor: "telemetry",
+    body: (
+      #|Middleware wraps work; telemetry observes it. `Client` and `Bot` expose
+      #|dependency-free structured telemetry callbacks through `on_telemetry`. `Bot`
+      #|aggregates its shard, dispatch, decode-error, and REST client events, and
+      #|shard-scoped events carry the shard id:
+      #|
+      #|```mbt check
+      #|///|
+      #|fn install_telemetry(bot : @discord.Bot) -> Unit {
+      #|  bot.on_telemetry(event => {
+      #|    match event {
+      #|      HttpRequest(route_bucket~, status~, duration_ms~, retries~, ..) =>
+      #|        println("http \{route_bucket} \{status} \{duration_ms}ms x\{retries}")
+      #|      ShardHeartbeatLatency(shard_id~, latency_ms~) =>
+      #|        println("shard \{shard_id} heartbeat \{latency_ms}ms")
+      #|      DecodeError(marker~) => println(marker)
+      #|      _ => ()
+      #|    }
+      #|  })
+      #|}
+      #|
+      #|///|
+      #|test "telemetry declarations compile" {
+      #|  ignore(install_telemetry)
+      #|}
+      #|```
+      #|
+      #|Callbacks run synchronously in the request or dispatch path — enqueue or
+      #|record values promptly rather than perform blocking work, the same contract
+      #|event middleware has. Unlike HTTP middleware, which returns once per logical
+      #|call, HTTP telemetry reports per-attempt values such as `HttpRateLimited`.
+      #|
+      #|Telemetry is an additional channel: `App::on_warn` and `Bot::on_decode_error`
+      #|retain their behavior, and a telemetry callback failure is reported through
+      #|the warning hook instead of being silently discarded. Standalone clients
+      #|install the same observer with `client.on_telemetry` and configure the
+      #|warning sink with `client.on_warn`.
+    ),
+  },
+  {
     chapter: "Voice",
     file: "10-voice.mbt.md",
     title: "Voice",
@@ -1951,34 +3104,78 @@ pub let sections : Array[Section] = [
     body: (
       #|Voice support is native-only and experimental. It implements voice gateway
       #|v8, Discord's DAVE end-to-end encryption, Opus playback, and raw Opus receive
-      #|events. The accepted design and its milestones are documented in
-      #|[`src/voice/DESIGN.md`](../voice/DESIGN.md).
+      #|events. DAVE MLS and media crypto come from the native-only `gaato/dave`
+      #|binding to Discord's official `libdave`; the repository's Rust shim handles
+      #|RTP transport AEAD only. The accepted design and its milestones are
+      #|documented in [`src/voice/DESIGN.md`](../voice/DESIGN.md).
     ),
   },
   {
     chapter: "Voice",
     file: "10-voice.mbt.md",
-    title: "Install the native shim",
-    anchor: "install-the-native-shim",
+    title: "Install the native dependencies",
+    anchor: "install-the-native-dependencies",
     body: (
-      #|Build the voice shim with cargo (prebuilt libraries will be attached to
-      #|[GitHub Releases](https://github.com/gaato/discord.mbt/releases) once
-      #|releases start):
+      #|`gaato/discord` pins transport shim release `voice-shim-v0.1.0` and depends on
+      #|`gaato/dave`, which pins official `libdave` `v1.2.0/cpp`. Bootstrap both
+      #|verified native runtimes from a native build:
       #|
-      #|```sh
+      #|```fish
+      #|env DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon build --target native --release
+      #|```
+      #|
+      #|The two prebuild hooks download their matching release archives, verify pinned
+      #|archive sizes and SHA-256 digests, verify the extracted libraries again, and
+      #|cache the complete extractions. Moon invocations without the corresponding
+      #|opt-in variable, including JavaScript builds, do not provision host libraries.
+      #|Node.js is required for the hooks; transport archive extraction uses `tar` on
+      #|Linux and macOS or PowerShell on Windows, while `gaato/dave` also requires
+      #|`unzip` on Linux and macOS. The libraries are loaded at runtime rather than
+      #|embedded in the Mooncake or installed system-wide.
+      #|
+      #|The pinned upstream release provides `libdave` for Linux x86-64/ARM64, macOS
+      #|x86-64/ARM64, and Windows x86-64. A native MoonBit toolchain and the transport
+      #|shim must also be available for the same host. The current MoonBit installer
+      #|does not provide a macOS x86-64 toolchain, and upstream provides no Windows
+      #|ARM64 asset. Cross-compilation is not supported by the host-selected
+      #|bootstrap. Upstream's Linux binaries require glibc 2.38 and GLIBCXX 3.4.32.
+      #|
+      #|For offline builds, verified extractions can be selected with
+      #|`DISCORD_VOICE_SHIM_ROOT` and `MBT_DAVE_NATIVE_ROOT`;
+      #|`DISCORD_VOICE_SHIM_OFFLINE=1` and `MBT_DAVE_NATIVE_OFFLINE=1` forbid
+      #|downloads. `DISCORD_VOICE_SHIM_CACHE_DIR` and `MBT_DAVE_NATIVE_CACHE_DIR`
+      #|override their cache bases and must be absolute paths. Set
+      #|`DISCORD_VOICE_SHIM_PATH` or `MBT_DAVE_NATIVE_LIB` to the absolute path of an
+      #|ABI-compatible self-built library when a published binary cannot run on the
+      #|host. See
+      #|[`gaato/dave`'s native runtime guide](https://github.com/gaato/dave.mbt/blob/main/docs/native-runtime.md)
+      #|for the cache layout and all overrides.
+      #|
+      #|Media E2EE is supported, but pairwise identity verification is intentionally
+      #|not exposed. The official prebuilt libdave v1.2.0 C ABI rotates its ephemeral
+      #|signing identity on every `Init` and provides no reusable identity handle; the
+      #|API can be added once upstream exposes one.
+      #|
+      #|To develop the transport component itself or support another host, build it
+      #|with Cargo:
+      #|
+      #|```fish
       #|cd voice-shim
       #|cargo build --release
       #|```
       #|
-      #|Point the runtime at the built library:
+      #|Point the runtime at that development build:
       #|
-      #|```sh
-      #|set -x DISCORD_VOICE_SHIM_PATH "$PWD/voice-shim/target/release/libdiscord_voice_shim.so"
+      #|```fish
+      #|set -gx DISCORD_VOICE_SHIM_PATH "$PWD/target/release/libdiscord_voice_shim.so"
       #|```
       #|
       #|macOS uses `libdiscord_voice_shim.dylib`; Windows uses
-      #|`discord_voice_shim.dll`. The loader also checks the platform library path
-      #|when `DISCORD_VOICE_SHIM_PATH` is unset.
+      #|`discord_voice_shim.dll`. When the explicit path is unset, the loader checks
+      #|`DISCORD_VOICE_SHIM_ROOT`, the deterministic `v0.1.0` cache, and finally the
+      #|platform library path. `DISCORD_VOICE_SHIM_*` configures only transport AEAD;
+      #|the `MBT_DAVE_NATIVE_*` variables configure the separate official libdave
+      #|runtime.
     ),
   },
   {
@@ -1996,7 +3193,7 @@ pub let sections : Array[Section] = [
       #|///|
       #|fn voice_bot(app : @discord.App, token : String) -> @discord.Bot {
       #|  let intents = @model.Intents::guilds() | @model.Intents::guild_voice_states()
-      #|  @discord.Bot(app, token~, intents~)
+      #|  Bot(app, token~, intents~)
       #|}
       #|```
       #|
@@ -2020,7 +3217,7 @@ pub let sections : Array[Section] = [
       #|`OggOpusSource` passes encoded Opus packets through without decoding. Create a
       #|48 kHz, stereo stream with one 20 ms packet per Ogg packet:
       #|
-      #|```sh
+      #|```fish
       #|ffmpeg -i input.mp3 -c:a libopus -ar 48000 -ac 2 -frame_duration 20 -f ogg out.ogg
       #|```
       #|
@@ -2054,7 +3251,7 @@ pub let sections : Array[Section] = [
       #|      OpusReceived(user_id~, ssrc~, sequence~, timestamp~, opus~) =>
       #|        consume_opus(user_id, ssrc, sequence, timestamp, opus)
       #|      PacketsLost(user_id~, ssrc~, count~) =>
-      #|        println("lost \{count} packet(s) from \{to_repr(user_id)} / \{ssrc}")
+      #|        println("lost \{count} packet(s) from \{Repr(user_id)} / \{ssrc}")
       #|      _ => ()
       #|    }
       #|  }
@@ -2087,6 +3284,872 @@ pub let sections : Array[Section] = [
       #|
       #|See `src/examples/voice_player` for an executable that reads configuration
       #|from `DISCORD_TOKEN`, `GUILD_ID`, `CHANNEL_ID`, and `AUDIO_FILE`.
+    ),
+  },
+  {
+    chapter: "Voice",
+    file: "10-voice.mbt.md",
+    title: "Verify DAVE against a live channel",
+    anchor: "verify-dave-against-a-live-channel",
+    body: (
+      #|`src/examples/dave_probe` joins an existing channel, waits for
+      #|`DaveMediaContextActivated(protocol_version=1)`, sends one second of canonical
+      #|Opus silence through the active libdave encryptor, and disconnects. It does
+      #|not create or delete Discord resources. Keep a normal DAVE-capable Discord
+      #|client in the channel while testing: the gateway sends an initial Add proposal
+      #|to the other pending members, so a bot alone cannot establish the group. Set
+      #|`DISCORD_TOKEN`, `GUILD_ID`, and `CHANNEL_ID`, then run:
+      #|
+      #|```fish
+      #|env DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release src/examples/dave_probe
+      #|```
+      #|
+      #|With no other announced participant, the probe reports an inconclusive result.
+      #|It fails if a peer is present but DAVE v1 does not activate within 30 seconds,
+      #|or if the control or encryption paths emit a DAVE diagnostic. A successful run proves
+      #|the local client completed the server-driven MLS transition and encrypted its
+      #|outbound frames. It does not prove that another participant decrypted them;
+      #|that final interoperability check requires a second Discord client in the
+      #|channel.
+      #|
+      #|For that final outbound interoperability check, explicitly enable the audible
+      #|mode with a short, low-volume Ogg/Opus file. The probe still waits for DAVE v1
+      #|activation before playback and clips the input at three seconds. For example:
+      #|
+      #|```fish
+      #|ffmpeg -y -hide_banner -loglevel error -f lavfi -i 'sine=frequency=880:duration=1.5' -filter:a 'volume=0.7' -c:a libopus -ar 48000 -ac 2 -frame_duration 20 /tmp/discord-dave-tone.ogg
+      #|env DAVE_PROBE_AUDIBLE=1 DAVE_PROBE_AUDIO_FILE=/tmp/discord-dave-tone.ogg DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release src/examples/dave_probe
+      #|```
+      #|
+      #|Have the other participant confirm hearing the short tone, and also
+      #|require the probe to report no DAVE diagnostics and a clean disconnect. This
+      #|is an opt-in manual live test, not a CI test. Hearing the tone confirms the
+      #|outbound bot-to-client decrypt/decode/render path; validating the reverse path
+      #|requires speaking from the client and observing decrypted `OpusReceived`
+      #|events separately. To perform that reverse check without recording the audio,
+      #|set `DAVE_PROBE_RECEIVE=1`, run the same probe, and speak from the other client
+      #|when the receive probe starts. It waits up to 20 seconds for ten decrypted Opus
+      #|frames and stores only the frame count:
+      #|
+      #|```fish
+      #|env DAVE_PROBE_RECEIVE=1 DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release src/examples/dave_probe
+      #|```
+      #|
+      #|UDP can arrive before the voice gateway's initial Speaking event establishes
+      #|the SSRC-to-user mapping. The probe reports those pre-mapping frames as a
+      #|warning; it passes the receive check only after ten later frames have a mapped
+      #|sender and decrypt successfully. Other DAVE decrypt failures remain fatal.
+      #|
+      #|For a content-level manual check, `DAVE_PROBE_ECHO=1` implies receive mode,
+      #|waits for a peer Speaking event, discards five warm-up frames, holds the next
+      #|100 frames (about two seconds) from that peer in memory, then plays them back
+      #|once through the active DAVE encryptor. Speak for about three seconds and stop;
+      #|the probe does not write the audio to disk and does not echo while recording,
+      #|so it cannot create a continuous feedback loop. It logs only Opus packet-size
+      #|statistics, not the sender ID or audio content:
+      #|
+      #|```fish
+      #|env DAVE_PROBE_ECHO=1 DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release src/examples/dave_probe
+      #|```
+      #|
+      #|When explicit recording is acceptable, set `DAVE_PROBE_RECORD_PATH` to an Ogg
+      #|output path. This also uses the Speaking-gated two-second capture, but does not
+      #|enable echo unless `DAVE_PROBE_ECHO=1` is set separately:
+      #|
+      #|```fish
+      #|env DAVE_PROBE_RECORD_PATH=/tmp/discord-dave-receive-check.ogg DISCORD_VOICE_REQUIRE_SHIM=1 MBT_DAVE_REQUIRE_NATIVE=1 moon run --target native --release src/examples/dave_probe
+      #|```
+    ),
+  },
+  {
+    chapter: "The framework layer",
+    file: "11-framework.mbt.md",
+    title: "The framework layer",
+    anchor: "",
+    body: (
+      #|`gaato/discord/framework` sits between raw `@model.Interaction` values and the
+      #|typed `App` declarations. It does two things: route one interaction to a
+      #|registered handler, and enforce Discord's single initial callback through a
+      #|`ResponseGate`. `App` is built on it, so most applications never construct a
+      #|`Framework` — they meet this layer through `Raw` handler mode, which passes
+      #|the contexts documented here. Reach the framework directly when:
+      #|
+      #|- a handler needs the full imperative response surface (`Raw` handlers in
+      #|  `App` receive these contexts),
+      #|- the executor is custom — your own gateway loop or HTTP adapter — and
+      #|  nothing else calls `process` for you,
+      #|- handlers should be exercised in tests without any network access.
+      #|
+      #|Code blocks marked `mbt check` in this chapter compile and run as part of the
+      #|test suite (`moon test --target native`).
+    ),
+  },
+  {
+    chapter: "The framework layer",
+    file: "11-framework.mbt.md",
+    title: "Routing",
+    anchor: "routing",
+    body: (
+      #|A `Framework` binds a REST client and an application id. Registration methods
+      #|return `self` for chaining, and each interaction kind has its own routing key:
+      #|
+      #|```mbt check
+      #|///|
+      #|async fn greet_handler(ctx : @framework.CommandCtx) -> Unit {
+      #|  let name = ctx.options.string("name")
+      #|  ctx.respond(content="Hello, \{name}!")
+      #|}
+      #|
+      #|///|
+      #|fn build_router(
+      #|  client : @dhttp.Client,
+      #|  application_id : @model.ApplicationId,
+      #|) -> @framework.Framework {
+      #|  @framework.Framework(client, application_id)
+      #|  .command(
+      #|    @interaction.CommandSpec::slash("greet", "Greet somebody", options=[
+      #|      @interaction.string_option("name", "Who to greet", required=true),
+      #|    ]),
+      #|    greet_handler,
+      #|  )
+      #|  .component("confirm:", ctx => ctx.update_message(content="Confirmed."))
+      #|  .modal("feedback:", ctx => {
+      #|    ctx.respond(
+      #|      content=ctx.text_value("note").unwrap_or("(empty)"),
+      #|      ephemeral=true,
+      #|    )
+      #|  })
+      #|  .on_error((label, error) => println("\{label} failed: \{Repr(error)}"))
+      #|}
+      #|```
+      #|
+      #|- **Commands** route by command type and top-level name, so a slash command
+      #|  and a user command may share a name. Subcommands do not register separately;
+      #|  dispatch on `ctx.options.path()` inside the handler.
+      #|- **Components** and **modals** use literal prefixes via `component` / `modal`,
+      #|  or exact ids with optional `:state` via `component_id` / `modal_id`.
+      #|  The longest effective prefix wins (`id + ":"` for id routes), with ties
+      #|  retaining registration order. Component waiters (below) take precedence.
+      #|  Framework accepts duplicate and empty routes; `App::validate` rejects them.
+      #|
+      #|```mbt check
+      #|///|
+      #|async test "longest prefix wins regardless of registration order" {
+      #|  let client = @dhttp.Client("test-token")
+      #|  defer client.close()
+      #|  let interaction : @model.Interaction = @json.from_json(
+      #|    @json.parse(
+      #|      (
+      #|        #|{"id":"500000000000000001","application_id":"400000000000000001","type":5,"token":"test-token","version":1,"user":{"id":"200000000000000001","username":"test","discriminator":"0","avatar":null},"data":{"custom_id":"ticket:close:42","components":[]}}
+      #|      ),
+      #|    ),
+      #|  )
+      #|  for longer_first in [false, true] {
+      #|    let fw = @framework.Framework(
+      #|      client,
+      #|      @model.Id::parse("400000000000000001"),
+      #|    )
+      #|    let routed = Ref("")
+      #|    if longer_first {
+      #|      fw.modal("ticket:close:", _ => routed.val = "long") |> ignore
+      #|      fw.modal("ticket:", _ => routed.val = "short") |> ignore
+      #|    } else {
+      #|      fw.modal("ticket:", _ => routed.val = "short") |> ignore
+      #|      fw.modal("ticket:close:", _ => routed.val = "long") |> ignore
+      #|    }
+      #|    assert_true(fw.process(interaction))
+      #|    assert_eq(routed.val, "long")
+      #|  }
+      #|}
+      #|```
+      #|
+      #|- **Autocomplete** routes by command name via `autocomplete(name, handler)`.
+      #|- **Ping** interactions are answered with `Pong` automatically.
+      #|
+      #|`process` returns `false` when nothing matched, and the interaction is left
+      #|unanswered — the executor decides whether that is worth logging. Handler
+      #|errors propagate out of `process` unless an `on_error` hook is installed;
+      #|the hook receives a `kind:name` label such as `command:greet` and the error.
+      #|
+      #|The registration payload for every declared command is available as
+      #|`command_specs()`. `sync_global()` and `sync_guild(guild_id)` fetch the catalog,
+      #|compare it with the declarations, and return a `@framework.ScopeSyncReport`.
+      #|Only a changed catalog sends a bulk-overwrite PUT; an unchanged one still
+      #|needs the GET. The default `unowned=Delete` removes undeclared commands;
+      #|`unowned=Keep` retains them. The Entry Point command is always preserved.
+      #|
+      #|```mbt check
+      #|///|
+      #|async test "framework planning preserves the entry point without an overwrite" {
+      #|  let spec = @interaction.CommandSpec::slash("greet", "Greet somebody")
+      #|  let (payload, report) = @framework.plan_command_sync(
+      #|    [spec],
+      #|    [spec.to_json(), { "id": "11", "type": 4, "name": "Launch" }],
+      #|    unowned=Delete,
+      #|  )
+      #|  assert_true(payload is None)
+      #|  assert_false(report.overwritten)
+      #|  assert_eq(report.unchanged, ["greet"])
+      #|  assert_eq(report.preserved, ["4:Launch"])
+      #|}
+      #|```
+      #|
+      #|A `CommandSpec` serializes to exactly the JSON Discord's registration
+      #|endpoints expect:
+      #|
+      #|```mbt check
+      #|///|
+      #|test "command specs serialize to the registration payload" {
+      #|  let spec = @interaction.CommandSpec::slash("echo", "Echo your text back", options=[
+      #|    @interaction.string_option("text", "What to echo", required=true),
+      #|    @interaction.integer_option(
+      #|      "times",
+      #|      "How many times",
+      #|      min_value=1,
+      #|      max_value=5,
+      #|    ),
+      #|  ])
+      #|  json_inspect(spec, content={
+      #|    "name": "echo",
+      #|    "description": "Echo your text back",
+      #|    "options": [
+      #|      {
+      #|        "type": 3,
+      #|        "name": "text",
+      #|        "description": "What to echo",
+      #|        "required": true,
+      #|      },
+      #|      {
+      #|        "type": 4,
+      #|        "name": "times",
+      #|        "description": "How many times",
+      #|        "min_value": 1,
+      #|        "max_value": 5,
+      #|      },
+      #|    ],
+      #|  })
+      #|}
+      #|```
+    ),
+  },
+  {
+    chapter: "The framework layer",
+    file: "11-framework.mbt.md",
+    title: "Driving it from an executor",
+    anchor: "driving-it-from-an-executor",
+    body: (
+      #|An executor is anything that feeds `InteractionCreate` payloads to `process`.
+      #|The gateway version constructs the `Framework` after READY (which carries the
+      #|application id) and routes from the shard loop:
+      #|
+      #|```mbt nocheck
+      #|let shard = @gateway.Shard::start(group, token~, intents~, gateway_url~)
+      #|let mut framework : @framework.Framework? = None
+      #|for ;; {
+      #|  match shard.next() {
+      #|    Dispatch(Ready(ready)) => {
+      #|      let fw = @framework.Framework(client, ready.application.id).command(
+      #|        echo_spec(),
+      #|        handle_echo,
+      #|      )
+      #|      fw.sync_guild(guild_id) |> ignore
+      #|      framework = Some(fw)
+      #|    }
+      #|    Dispatch(InteractionCreate(interaction)) => {
+      #|      guard framework is Some(fw) else { continue }
+      #|      fw.process(interaction) |> ignore
+      #|    }
+      #|    FatallyClosed(code~) => break
+      #|    _ => ()
+      #|  }
+      #|}
+      #|```
+      #|
+      #|`src/examples/low_level` is the complete runnable version. HTTP executors
+      #|should not call `process` — it acknowledges through REST, while an HTTP
+      #|adapter must return the initial callback in the HTTP response body. Use
+      #|`process_with` and a capture gate (below), or better, the finished HTTP
+      #|executor in [HTTP interactions](06-http-interactions.mbt.md).
+    ),
+  },
+  {
+    chapter: "The framework layer",
+    file: "11-framework.mbt.md",
+    title: "Handler contexts",
+    anchor: "handler-contexts",
+    body: (
+      #|Each interaction kind gets its own context type. All four expose the bound
+      #|`client`, the `application_id`, the raw `interaction`, and the decoded `data`
+      #|payload for that kind:
+      #|
+      #|| Context | Routed from | Kind-specific surface |
+      #||---|---|---|
+      #|| `CommandCtx` | slash and context-menu commands | `options`, `model()`, `show_modal` |
+      #|| `ComponentCtx` | buttons and select menus | `message()`, `update_message`, `defer_update`, `show_modal` |
+      #|| `ModalCtx` | modal submits | `text_value(custom_id)`, `origin()` |
+      #|| `AutocompleteCtx` | focused autocomplete options | `suggest(choices)` |
+      #|
+      #|`CommandCtx`, `ComponentCtx`, and `ModalCtx` share the response lifecycle:
+      #|exactly one initial callback (`respond`, `defer_response`, or a kind-specific
+      #|callback such as `update_message` or `show_modal`), then any number of
+      #|token-authenticated REST calls — `edit_response`, `followup`,
+      #|`original_response`, `delete_response`, and `get_followup` /
+      #|`edit_followup` / `delete_followup`. The initial callback goes through the
+      #|response gate; everything after it is an ordinary REST call against the
+      #|interaction token, which Discord keeps valid for 15 minutes.
+      #|
+      #|`edit_response`, `followup`, and `edit_followup` return the resulting
+      #|`@model.Message`; for a followup, that return value is the only way to obtain
+      #|the id needed by a later `edit_followup` or `delete_followup`. When the message
+      #|is not needed, explicitly discard it with `|> ignore`, the idiom used
+      #|throughout this library. `respond`, `defer_*`, and `delete_*` already return
+      #|`Unit`, so a handler that never edits its followups remains uncluttered.
+      #|
+      #|They also share invoker accessors. `user()` returns the invoking user, and
+      #|`scope()` distinguishes validated guild invocations (with both the guild id
+      #|and full member) from DMs. `guild_scope()` is the non-raising shortcut when
+      #|only the guild case matters:
+      #|
+      #|```mbt check
+      #|///|
+      #|async fn audit_scope(ctx : @framework.CommandCtx) -> Unit {
+      #|  match ctx.scope() {
+      #|    Guild(guild) =>
+      #|      ctx.respond(
+      #|        content="\{guild.user().username} invoked from guild \{guild.guild_id}",
+      #|      )
+      #|    Dm(user) => ctx.respond(content="from a DM with \{user.username}")
+      #|  }
+      #|}
+      #|```
+      #|
+      #|A payload that cannot satisfy these guarantees — no invoker, a guild member
+      #|without its user or guild id, a component interaction without its host
+      #|message — raises `InteractionContextError` (`MissingGuildId` for the missing
+      #|guild id case) from `process` before the handler runs. Inside a handler,
+      #|`user()`, `scope()`, and `ComponentCtx::message()` therefore never fail.
+      #|
+      #|`ModalCtx::origin()` reports what opened the modal: `FromComponent(message)`
+      #|carries the message that hosted the component, `FromCommand` means there is
+      #|no host message. `ModalCtx::text_value(custom_id)` finds a submitted text
+      #|input anywhere in the modal's component tree.
+      #|
+      #|`AutocompleteCtx` responds with `suggest`, which sends at most 25 choices:
+      #|
+      #|```mbt check
+      #|///|
+      #|async fn suggest_names(ctx : @framework.AutocompleteCtx) -> Unit {
+      #|  let query = ctx.options.string_opt("name").unwrap_or("").to_lower()
+      #|  ctx.suggest(
+      #|    ["Ada", "Grace", "Linus"]
+      #|    .filter(name => query.is_empty() || name.to_lower().has_prefix(query))
+      #|    .map(name => @interaction.string_choice(name, name)),
+      #|  )
+      #|}
+      #|```
+    ),
+  },
+  {
+    chapter: "The framework layer",
+    file: "11-framework.mbt.md",
+    title: "Typed option decoding",
+    anchor: "typed-option-decoding",
+    body: (
+      #|Submitted options decode through typed accessors on `CommandOptions`
+      #|(`ctx.options` in a handler). Required accessors raise, `_opt` accessors
+      #|return `None` when absent, and subcommand paths flatten. The same decoding
+      #|is available outside a handler through `CommandOptions::from_data`:
+      #|
+      #|```mbt check
+      #|///|
+      #|test "typed option decoding" {
+      #|  let data : @model.CommandData = @json.from_json(
+      #|    @json.parse(
+      #|      (
+      #|        #|{"id": "600000000000000001", "name": "echo", "type": 1,
+      #|        #| "options": [{"name": "text", "type": 3, "value": "hi"}]}
+      #|      ),
+      #|    ),
+      #|  )
+      #|  let options = @interaction.CommandOptions::from_data(data)
+      #|  inspect(options.string("text"), content="hi")
+      #|  debug_inspect(options.int_opt("times"), content="None")
+      #|}
+      #|```
+      #|
+      #|For more than a couple of options, implement `@interaction.CommandModel` once
+      #|and get a typed struct from `ctx.model()` in the handler:
+      #|
+      #|```mbt check
+      #|///|
+      #|struct Echo {
+      #|  text : String
+      #|  times : Int
+      #|}
+      #|
+      #|///|
+      #|impl @interaction.CommandModel for Echo with fn from_options(options) {
+      #|  {
+      #|    text: options.string("text"),
+      #|    times: options.int_opt("times").unwrap_or(1L).to_int(),
+      #|  }
+      #|}
+      #|
+      #|///|
+      #|async fn handle_echo(ctx : @framework.CommandCtx) -> Unit {
+      #|  let echo : Echo = ctx.model()
+      #|  ctx.respond(content=Array::make(echo.times, echo.text).join("\n"))
+      #|}
+      #|```
+      #|
+      #|The declarative `App` layer builds on the same accessors; its `Args` values
+      #|decode without a hand-written `CommandModel` — see
+      #|[Commands](02-commands.mbt.md).
+    ),
+  },
+  {
+    chapter: "The framework layer",
+    file: "11-framework.mbt.md",
+    title: "The response gate",
+    anchor: "the-response-gate",
+    body: (
+      #|Discord accepts exactly one initial callback per interaction, and only some
+      #|callback types are valid for each interaction type. `ResponseGate` enforces
+      #|both at the library boundary instead of leaving them to a REST 400: a second
+      #|initial callback raises `ResponseGateError::AlreadyResponded`, and a callback
+      #|type Discord would reject raises `ResponseGateError::InvalidCallback` before
+      #|any I/O.
+      #|
+      #|| Interaction | Allowed initial callbacks |
+      #||---|---|
+      #|| Ping | `Pong` |
+      #|| Application command | `ChannelMessageWithSource`, `DeferredChannelMessageWithSource`, `Modal`, `LaunchActivity` |
+      #|| Message component | `ChannelMessageWithSource`, `DeferredChannelMessageWithSource`, `DeferredUpdateMessage`, `UpdateMessage`, `Modal`, `LaunchActivity` |
+      #|| Autocomplete | `Autocomplete` |
+      #|| Modal submit | `ChannelMessageWithSource`, `DeferredChannelMessageWithSource`, `DeferredUpdateMessage`, `UpdateMessage` |
+      #|
+      #|An interaction of unknown type accepts any callback, so a new Discord
+      #|interaction kind stays usable through `process_with` before this library
+      #|learns its rules.
+      #|
+      #|A gate is constructed one of three ways:
+      #|
+      #|- `ResponseGate::rest(client, interaction)` delivers the callback through
+      #|  `POST /interactions/{id}/{token}/callback`. `process` builds this gate.
+      #|- `ResponseGate::capture(interaction)` returns the gate plus a
+      #|  `ResponseCapture`; the callback value is handed to the receiver instead of
+      #|  leaving the process. `App::serve` uses this shape so HTTP adapters can
+      #|  return the callback in the HTTP response.
+      #|- `ResponseGate::ResponseGate(kind, sink, rejected=...)` wraps any async sink
+      #|  for custom transports. The optional classifier defaults to `_ => false`.
+      #|
+      #|`process_with(interaction, gate~)` routes with a caller-provided gate;
+      #|`gate.state()` returns a `ResponseState`:
+      #|
+      #|- `Pending`: no initial callback has been accepted or attempted with an
+      #|  uncertain outcome.
+      #|- `Sent(type)`: the gate has accepted a callback of this type. It records the
+      #|  type before calling the sink, preventing concurrent initial callbacks.
+      #|- `Unconfirmed(type)`: the sink raised, and Discord may or may not have
+      #|  accepted the callback. The gate stays closed to further initial callbacks.
+      #|- `Expired`: the executor gave up the callback window before a callback was
+      #|  sent. A later send raises `ResponseGateError::Expired`.
+      #|
+      #|If the sink raises and `rejected(error)` is true, the gate returns to `Pending`
+      #|and re-raises the error. A different initial callback may then be sent.
+      #|The REST gate classifies client-side `DiscordHttpError::Validation` and HTTP
+      #|4xx API errors as definitive refusals, except status 429 and JSON error code
+      #|40060 (already acknowledged). Server errors, transport errors, and timeouts
+      #|remain unconfirmed. Cancellation always becomes `Unconfirmed` and never calls
+      #|the rejection classifier.
+      #|
+      #|`gate.expire()` changes only `Pending` to `Expired`; other states remain
+      #|unchanged. The HTTP interaction endpoint expires the gate on a callback
+      #|deadline, while preserving a callback that already won the capture race.
+      #|`gate.responded()` is true for every state except `Pending`, including expiry.
+      #|Command, component, and modal contexts expose the current state through
+      #|`ctx.response_state()` without exposing their gate. App error policies read
+      #|the same state through `FailureCtx::response_state()`.
+    ),
+  },
+  {
+    chapter: "The framework layer",
+    file: "11-framework.mbt.md",
+    title: "Testing handlers without a network",
+    anchor: "testing-handlers-without-a-network",
+    body: (
+      #|A capture gate turns handler tests into pure value tests: build an
+      #|interaction fixture, route it, and inspect the callback that would have been
+      #|sent. Nothing touches the network — the REST client is only dialed by
+      #|post-initial calls, which this handler does not make.
+      #|
+      #|```mbt check
+      #|///|
+      #|fn ping_command_interaction() -> @model.Interaction raise {
+      #|  let interaction : @model.Interaction = @json.from_json(
+      #|    @json.parse(
+      #|      (
+      #|        #|{"id": "500000000000000001",
+      #|        #| "application_id": "400000000000000001",
+      #|        #| "type": 2, "token": "interaction-token", "version": 1,
+      #|        #| "data": {"id": "600000000000000001", "name": "ping", "type": 1}}
+      #|      ),
+      #|    ),
+      #|  )
+      #|  let user : @model.User = @json.from_json(
+      #|    @json.parse(
+      #|      (
+      #|        #|{"id": "200000000000000001", "username": "nelly",
+      #|        #| "discriminator": "0", "global_name": "Nelly", "avatar": null}
+      #|      ),
+      #|    ),
+      #|  )
+      #|  { ..interaction, user: Some(user), }
+      #|}
+      #|
+      #|///|
+      #|async test "handlers can be exercised without any network access" {
+      #|  let client = @dhttp.Client("test-token")
+      #|  defer client.close()
+      #|  let fw = @framework.Framework(client, @model.Id::parse("400000000000000001"))
+      #|  fw.command(@interaction.CommandSpec::slash("ping", "Health check"), ctx => {
+      #|    ctx.respond(content="pong", ephemeral=true)
+      #|  })
+      #|  |> ignore
+      #|  let interaction = ping_command_interaction()
+      #|  let (gate, capture) = @framework.ResponseGate::capture(interaction)
+      #|  assert_true(fw.process_with(interaction, gate~))
+      #|  json_inspect(capture.get().response, content={
+      #|    "type": 4,
+      #|    "data": { "content": "pong", "flags": 64 },
+      #|  })
+      #|}
+      #|```
+      #|
+      #|`CapturedResponse` also carries any `files` the handler attached, so multipart
+      #|callbacks are testable the same way. For handlers that do make post-initial
+      #|REST calls, install a `Client::middleware` test double and assert on the
+      #|captured route and body — the [middleware guide](09-middleware.mbt.md) shows
+      #|the pattern.
+    ),
+  },
+  {
+    chapter: "The framework layer",
+    file: "11-framework.mbt.md",
+    title: "Component waiters",
+    anchor: "component-waiters",
+    body: (
+      #|`wait_for_component(custom_id~, user?, timeout_ms?)` suspends the current
+      #|handler until the next component interaction whose `custom_id` matches exactly
+      #|and, when supplied, comes from `user`. Omitting `user` accepts anyone at this
+      #|low-level layer. It returns `None` on timeout. Waiters win over registered
+      #|component handlers, which keeps a multi-step flow inside one handler:
+      #|
+      #|```mbt nocheck
+      #|///|
+      #|async fn handle_confirm(
+      #|  ctx : @framework.CommandCtx,
+      #|  fw : @framework.Framework,
+      #|) -> Unit {
+      #|  ctx.respond(content="Really?", components=[confirm_button()])
+      #|  match
+      #|    fw.wait_for_component(
+      #|      custom_id="confirm:yes",
+      #|      user=ctx.user().id,
+      #|      timeout_ms=30_000,
+      #|    ) {
+      #|    Some(click) => click.update_message(content="Done!", components=[])
+      #|    None => ctx.followup(content="Timed out.", ephemeral=true) |> ignore
+      #|  }
+      #|}
+      #|```
+      #|
+      #|The waiter is removed when it fires or times out. A click from a different user
+      #|does not remove a filtered waiter and falls through to registered routes. The
+      #|App layer exposes the same mechanism on its deferred contexts with a safe
+      #|`Invoker` default; see [Components and modals](03-components-modals.mbt.md).
+      #|
+      #|```mbt check
+      #|///|
+      #|test "framework guide declarations compile" {
+      #|  ignore(build_router)
+      #|  ignore(audit_scope)
+      #|  ignore(suggest_names)
+      #|  ignore(handle_echo)
+      #|  ignore(ping_command_interaction)
+      #|}
+      #|```
+    ),
+  },
+  {
+    chapter: "Models and utilities",
+    file: "12-models-utilities.mbt.md",
+    title: "Models and utilities",
+    anchor: "",
+    body: (
+      #|`gaato/discord/model` is the pure data layer: ~24 entity domains and the
+      #|gateway payloads, with zero IO, usable on both native and JavaScript. Every
+      #|entity decodes from real API payloads. `gaato/discord/util` adds pure helpers
+      #|over those values — permissions, mentions, timestamps, and CDN URLs — and
+      #|depends only on `model`.
+      #|
+      #|Code blocks marked `mbt check` in this chapter compile and run as part of the
+      #|test suite (`moon test --target native`).
+    ),
+  },
+  {
+    chapter: "Models and utilities",
+    file: "12-models-utilities.mbt.md",
+    title: "Decoding entities",
+    anchor: "decoding-entities",
+    body: (
+      #|Model types decode from JSON with `@json.from_json`:
+      #|
+      #|```mbt check
+      #|///|
+      #|test "decode a user payload" {
+      #|  let user : @model.User = @json.from_json(
+      #|    @json.parse(
+      #|      (
+      #|        #|{"id": "80351110224678912", "username": "nelly",
+      #|        #| "discriminator": "0", "global_name": "Nelly", "avatar": null}
+      #|      ),
+      #|    ),
+      #|  )
+      #|  inspect(user.username, content="nelly")
+      #|  debug_inspect(user.id.value(), content="80351110224678912")
+      #|}
+      #|```
+      #|
+      #|Unknown enum values and unknown JSON keys round-trip through `Unknown(...)`
+      #|variants instead of failing, so a new Discord feature does not break an
+      #|application built on an older model. Serializing the value back produces the
+      #|original wire form, unknown parts included.
+    ),
+  },
+  {
+    chapter: "Models and utilities",
+    file: "12-models-utilities.mbt.md",
+    title: "Typed snowflakes",
+    anchor: "typed-snowflakes",
+    body: (
+      #|IDs are phantom-typed: a `UserId` (`Id[UserMarker]`) cannot be passed where a
+      #|`ChannelId` is expected. Values above 2^53 keep full precision on every
+      #|target, and the snowflake creation time is one call away:
+      #|
+      #|```mbt check
+      #|///|
+      #|test "snowflakes are typed and precise" {
+      #|  let id : @model.MessageId = @model.Id::parse("175928847299117063")
+      #|  debug_inspect(id.timestamp_ms(), content="1462015105796")
+      #|}
+      #|```
+    ),
+  },
+  {
+    chapter: "Models and utilities",
+    file: "12-models-utilities.mbt.md",
+    title: "Optional and nullable fields",
+    anchor: "optional-and-nullable-fields",
+    body: (
+      #|Discord's wire models use `T?` for optional fields (the key may be absent)
+      #|and `Nullable[T]` for nullable fields (the key is present but may be `null`).
+      #|PATCH methods expose plain optional arguments: omit one to leave the field
+      #|unchanged, pass `[]` to clear an array, or use the corresponding
+      #|`clear_<field>=true` flag to clear a nullable scalar.
+      #|
+      #|Use `@model.flatten` when reading a `Nullable[T]?` field and both absence and
+      #|JSON `null` should mean `None`:
+      #|
+      #|```mbt check
+      #|///|
+      #|test "read an optional nullable guild nickname" {
+      #|  let fixtures = [
+      #|    (
+      #|      #|{"roles":[],"joined_at":null}
+      #|    ),
+      #|    (
+      #|      #|{"roles":[],"joined_at":null,"nick":null}
+      #|    ),
+      #|    (
+      #|      #|{"roles":[],"joined_at":null,"nick":"Moon"}
+      #|    ),
+      #|  ]
+      #|  let nicknames = fixtures.map(fixture => {
+      #|    let decoded : @model.GuildMember = @json.from_json(@json.parse(fixture))
+      #|    @model.flatten(decoded.nick)
+      #|  })
+      #|  debug_inspect(
+      #|    nicknames,
+      #|    content=(
+      #|      #|[None, None, Some("Moon")]
+      #|    ),
+      #|  )
+      #|}
+      #|```
+      #|
+      #|`flatten` is deliberately lossy. Keep the original `Nullable[T]?` when a
+      #|PATCH body, cache merge, or other operation must distinguish a missing key
+      #|from an explicit `null`.
+    ),
+  },
+  {
+    chapter: "Models and utilities",
+    file: "12-models-utilities.mbt.md",
+    title: "Mentions and timestamps",
+    anchor: "mentions-and-timestamps",
+    body: (
+      #|Mention helpers format the `<...>` forms Discord renders in message content:
+      #|
+      #|```mbt check
+      #|///|
+      #|test "format Discord mentions" {
+      #|  let user_id : @model.UserId = @model.Id::parse("80351110224678912")
+      #|  let channel_id : @model.ChannelId = @model.Id::parse("103735883630395392")
+      #|  inspect(@util.user_mention(user_id), content="<@80351110224678912>")
+      #|  inspect(@util.channel_mention(channel_id), content="<#103735883630395392>")
+      #|}
+      #|```
+      #|
+      #|`role_mention`, `slash_command_mention`, and `custom_emoji_mention` follow
+      #|the same shape. `timestamp` formats Unix seconds as a Discord timestamp with
+      #|an optional display style:
+      #|
+      #|```mbt check
+      #|///|
+      #|test "format timestamps" {
+      #|  inspect(@util.timestamp(1462015105L), content="<t:1462015105>")
+      #|  inspect(
+      #|    @util.timestamp(1462015105L, style=Relative),
+      #|    content="<t:1462015105:R>",
+      #|  )
+      #|}
+      #|```
+    ),
+  },
+  {
+    chapter: "Models and utilities",
+    file: "12-models-utilities.mbt.md",
+    title: "Safe message content",
+    anchor: "safe-message-content",
+    body: (
+      #|Escape user-controlled markdown and mentions before including them in a
+      #|message, then split the result to Discord's 2000 UTF-16-code-unit content
+      #|limit:
+      #|
+      #|```mbt check
+      #|///|
+      #|test "escape and split user content" {
+      #|  let source = "**hello** @everyone https://example.test/a_b"
+      #|  let safe = @util.escape_mentions(@util.escape_markdown(source))
+      #|  assert_false(safe.contains("@everyone"))
+      #|  let chunks = @util.split_content(safe, limit=20)
+      #|  assert_eq(chunks.join(""), safe)
+      #|  for chunk in chunks {
+      #|    assert_true(chunk.length() <= 20)
+      #|  }
+      #|}
+      #|```
+      #|
+      #|`escape_markdown` preserves HTTP, HTTPS, and Steam URLs and markdown-link
+      #|destinations while escaping markdown syntax elsewhere. `escape_mentions`
+      #|neutralizes `@everyone`, `@here`, and user or role mentions by inserting a
+      #|zero-width space. `split_content` preserves every code unit, prefers newline
+      #|and space boundaries, and never splits a surrogate pair or CRLF sequence.
+    ),
+  },
+  {
+    chapter: "Models and utilities",
+    file: "12-models-utilities.mbt.md",
+    title: "Outgoing embeds",
+    anchor: "outgoing-embeds",
+    body: (
+      #|The model constructors accept only fields Discord permits in outgoing
+      #|payloads, so receive-only fields do not need to be filled with `None`:
+      #|
+      #|```mbt check
+      #|///|
+      #|let build_complete_embed : @model.Embed = Embed(
+      #|  title="Build complete",
+      #|  description="All checks passed.",
+      #|  color=0x57F287,
+      #|  author=EmbedAuthor("CI", icon_url="https://example.test/ci.png"),
+      #|  footer=EmbedFooter("discord.mbt"),
+      #|  image=EmbedImage("https://example.test/result.png"),
+      #|  thumbnail=EmbedThumbnail("https://example.test/status.png"),
+      #|  fields=[
+      #|    EmbedField("Target", "native", inline=true),
+      #|    EmbedField("Tests", "1273 passed", inline=true),
+      #|  ],
+      #|)
+      #|
+      #|///|
+      #|test "outgoing embed constructor compiles" {
+      #|  let encoded = build_complete_embed.to_json()
+      #|  assert_true(encoded.stringify().contains("Build complete"))
+      #|  assert_false(encoded.stringify().contains("proxy_url"))
+      #|}
+      #|```
+      #|
+      #|Unspecified optional fields are omitted from JSON. The `fields` array is
+      #|copied by `Embed(...)`, so mutating the caller's array later does not alter the
+      #|embed.
+    ),
+  },
+  {
+    chapter: "Models and utilities",
+    file: "12-models-utilities.mbt.md",
+    title: "CDN URLs",
+    anchor: "cdn-urls",
+    body: (
+      #|CDN helpers build image URLs from an entity id and its `ImageHash`. Animated
+      #|hashes (an `a_` prefix) default to GIF, other hashes to PNG; pass `format` to
+      #|override and `size` for a power-of-two size:
+      #|
+      #|```mbt check
+      #|///|
+      #|test "build CDN URLs" {
+      #|  let user_id : @model.UserId = @model.Id::parse("80351110224678912")
+      #|  inspect(
+      #|    @util.user_avatar_url(user_id, ImageHash("deadbeef"), size=128),
+      #|    content="https://cdn.discordapp.com/avatars/80351110224678912/deadbeef.png?size=128",
+      #|  )
+      #|}
+      #|```
+      #|
+      #|`guild_icon_url`, `guild_banner_url`, `emoji_url`, `sticker_url`, and the
+      #|default-avatar helpers cover the other CDN routes. An invalid `size` or a
+      #|format the asset cannot have raises `CdnUrlError` before any IO.
+    ),
+  },
+  {
+    chapter: "Models and utilities",
+    file: "12-models-utilities.mbt.md",
+    title: "Permissions",
+    anchor: "permissions",
+    body: (
+      #|`base_permissions` follows Discord's official permission pseudocode: owners
+      #|and administrators receive all permissions, otherwise `@everyone` permissions
+      #|combine with every member role:
+      #|
+      #|```mbt check
+      #|///|
+      #|test "compute base permissions" {
+      #|  let permissions = @util.base_permissions(
+      #|    is_owner=false,
+      #|    everyone_permissions=@model.Permissions::view_channel(),
+      #|    role_permissions=[@model.Permissions::send_messages()],
+      #|  )
+      #|  assert_true(permissions.contains(@model.Permissions::view_channel()))
+      #|  assert_true(permissions.contains(@model.Permissions::send_messages()))
+      #|}
+      #|```
+      #|
+      #|Chain it with `channel_permissions` (and `apply_communication_timeout`) to
+      #|compute effective channel permissions without a cache, supplying role and
+      #|overwrite data from events or REST. The opt-in cache wraps this computation
+      #|as `InMemoryCache::permissions_in` — see
+      #|[Events and intents](04-events-intents.mbt.md).
     ),
   },
 ]

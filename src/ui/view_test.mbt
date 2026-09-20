@@ -26,20 +26,22 @@ fn fixture() -> Array[@docs.Section] {
 }
 
 ///|
-test "suffix roundtrip and malformed input" {
+test "custom id roundtrip and malformed input" {
   let sections = fixture()
   let id = @ui.custom_id(sections[1], page=3)
   inspect(id, content="docs:3:02-two.mbt.md#long")
-  let suffix = id["docs:".length():].to_owned()
   debug_inspect(
-    @ui.parse_suffix(suffix),
+    @ui.docs_route.decode(id),
     content=(
-      #|Some((3, "02-two.mbt.md#long"))
+      #|(3, "02-two.mbt.md#long")
     ),
   )
-  assert_true(@ui.parse_suffix("indicator") is None)
-  assert_true(@ui.parse_suffix(":missing-page") is None)
-  assert_true(@ui.parse_suffix("") is None)
+  for malformed in ["docs:indicator", "docs::missing-page", "docs", "api:0:x"] {
+    let decoded : (Int, String)? = Some(@ui.docs_route.decode(malformed)) catch {
+      _ => None
+    }
+    assert_true(decoded is None, msg="decoded \{malformed}")
+  }
 }
 
 ///|
@@ -205,10 +207,9 @@ test "out-of-range pages clamp instead of failing" {
 
 ///|
 test "every generated custom_id fits Discord's 100-char limit" {
+  // `custom_id` raises `CustomIdError::TooLong` past the limit, so producing
+  // every id is the whole assertion.
   for section in @docs.sections {
-    assert_true(
-      @ui.custom_id(section, page=99).length() <= 100,
-      msg="custom_id too long: \{section.key()}",
-    )
+    @ui.custom_id(section, page=99) |> ignore
   }
 }

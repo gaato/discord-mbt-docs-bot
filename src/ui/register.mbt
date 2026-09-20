@@ -8,33 +8,27 @@ pub fn register(
   app.command(docs_command(sections))
   app.command(api_command(entries))
   app.on_component(
-    prefix=component_prefix,
-    Immediate(ctx => {
-      match parse_suffix(ctx.suffix()) {
-        Some((page, key)) =>
-          match @docs.find_by_key(sections, key) {
-            Some(section) => {
-              let components = view(sections, section, page~)
-              @discord.ComponentReply::update_message(embeds=[], components~)
-            }
-            None => docs_stale_reply()
-          }
+    docs_route,
+    Immediate((_, state) => {
+      let (page, key) = state
+      match @docs.find_by_key(sections, key) {
+        Some(section) => {
+          let components = view(sections, section, page~)
+          @discord.ComponentReply::update_message(embeds=[], components~)
+        }
         None => docs_stale_reply()
       }
     }),
   )
   app.on_component(
-    prefix=api_component_prefix,
-    Immediate(ctx => {
-      match parse_suffix(ctx.suffix()) {
-        Some((page, key)) =>
-          match @api.find_by_key(entries, key) {
-            Some(entry) => {
-              let components = api_view(entry, page~)
-              @discord.ComponentReply::update_message(embeds=[], components~)
-            }
-            None => api_stale_reply()
-          }
+    api_route,
+    Immediate((_, state) => {
+      let (page, key) = state
+      match @api.find_by_key(entries, key) {
+        Some(entry) => {
+          let components = api_view(entry, page~)
+          @discord.ComponentReply::update_message(embeds=[], components~)
+        }
         None => api_stale_reply()
       }
     }),

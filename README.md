@@ -108,10 +108,3 @@ Once an endpoint URL is configured, Discord sends interactions there instead
 of the Gateway, so the native `src/main` bot stops receiving them. `clear`
 removes the endpoint and returns interaction delivery to Gateway operation
 (`src/main`).
-
-Known issue: `moonbitlang/async` on the JS target needs the one-line
-`js_async` scheduler fix from
-[moonbitlang/async#500](https://github.com/moonbitlang/async/pull/500) until
-it is released upstream. It is applied to `.mooncakes/` in this checkout;
-re-fetching dependencies reverts it, so re-apply the patch if deferred
-handlers stop resuming on Workers.
