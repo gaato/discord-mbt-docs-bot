@@ -54,7 +54,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn arg_attachment(name~ : String, description~ : String, file_types? : Array[@model.FileTypeFilter], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @interaction.Arg[@model.Attachment]",
     doc: "Define a required attachment option resolved to its attachment object.\n`file_types` restricts which files the client lets the user pick (by\nextension only; still validate the contents).",
     file: "src/interaction/args.mbt",
-    line: 268,
+    line: 336,
   },
   {
     pkg: "gaato/discord",
@@ -63,7 +63,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn arg_bool(name~ : String, description~ : String, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @interaction.Arg[Bool]",
     doc: "Define a required boolean option.",
     file: "src/interaction/args.mbt",
-    line: 164,
+    line: 232,
   },
   {
     pkg: "gaato/discord",
@@ -72,7 +72,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn arg_channel(name~ : String, description~ : String, channel_types? : Array[@model.ChannelType], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @interaction.Arg[@model.Id[@model.ChannelMarker]]",
     doc: "Define a required channel option.",
     file: "src/interaction/args.mbt",
-    line: 204,
+    line: 272,
   },
   {
     pkg: "gaato/discord",
@@ -85,12 +85,21 @@ let entries_0 : Array[ApiEntry] = [
   },
   {
     pkg: "gaato/discord",
+    name: "arg_int32",
+    kind: "fn",
+    signature: "pub fn arg_int32(name~ : String, description~ : String, min? : Int, max? : Int, choices? : Array[@model.CommandOptionChoice], suggest? : async (@interaction.SuggestCtx, Int) -> Array[@model.CommandOptionChoice], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @interaction.Arg[Int]",
+    doc: "Define a required integer option that decodes to `Int`.\n\nDiscord integers span the 53-bit safe range, so `arg_int` yields `Int64`.\nThis variant keeps the narrowing safe instead of leaving a wrapping\n`to_int()` to the caller: a missing `min` or `max` is registered as the\n`Int` bound, so Discord rejects wider input before it is sent, and a\nreceived value outside the range fails decoding with\n`ArgsDecodeError::Validation`. With `choices`, only explicit bounds are\nregistered, because the choices already close the value set.",
+    file: "src/interaction/args.mbt",
+    line: 155,
+  },
+  {
+    pkg: "gaato/discord",
     name: "arg_mentionable",
     kind: "fn",
     signature: "pub fn arg_mentionable(name~ : String, description~ : String, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @interaction.Arg[@model.Id[@model.GenericMarker]]",
     doc: "Define a required mentionable option.",
     file: "src/interaction/args.mbt",
-    line: 246,
+    line: 314,
   },
   {
     pkg: "gaato/discord",
@@ -99,7 +108,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn arg_number(name~ : String, description~ : String, min? : Double, max? : Double, choices? : Array[@model.CommandOptionChoice], suggest? : async (@interaction.SuggestCtx, Double) -> Array[@model.CommandOptionChoice], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @interaction.Arg[Double]",
     doc: "Define a required floating-point number option.",
     file: "src/interaction/args.mbt",
-    line: 130,
+    line: 198,
   },
   {
     pkg: "gaato/discord",
@@ -108,7 +117,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn arg_role(name~ : String, description~ : String, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @interaction.Arg[@model.Id[@model.RoleMarker]]",
     doc: "Define a required role option.",
     file: "src/interaction/args.mbt",
-    line: 226,
+    line: 294,
   },
   {
     pkg: "gaato/discord",
@@ -126,7 +135,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn arg_user(name~ : String, description~ : String, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> @interaction.Arg[@model.Id[@model.UserMarker]]",
     doc: "Define a required user option.",
     file: "src/interaction/args.mbt",
-    line: 184,
+    line: 252,
   },
   {
     pkg: "gaato/discord",
@@ -1793,6 +1802,10 @@ let entries_0 : Array[ApiEntry] = [
     file: "src/app/modal.mbt",
     line: 676,
   },
+]
+
+///|
+let entries_1 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/app",
     name: "ModalDeferredCtx::raw",
@@ -1802,10 +1815,6 @@ let entries_0 : Array[ApiEntry] = [
     file: "src/app/modal.mbt",
     line: 708,
   },
-]
-
-///|
-let entries_1 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/app",
     name: "ModalDeferredCtx::scope",
@@ -3597,6 +3606,10 @@ let entries_1 : Array[ApiEntry] = [
     file: "src/cooldown/cooldown.mbt",
     line: 3,
   },
+]
+
+///|
+let entries_2 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/cooldown",
     name: "CooldownStore",
@@ -3606,10 +3619,6 @@ let entries_1 : Array[ApiEntry] = [
     file: "src/cooldown/cooldown.mbt",
     line: 10,
   },
-]
-
-///|
-let entries_2 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/cooldown",
     name: "InMemoryCooldownStore",
@@ -5401,6 +5410,10 @@ let entries_2 : Array[ApiEntry] = [
     file: "src/http/handles_channel.mbt",
     line: 209,
   },
+]
+
+///|
+let entries_3 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/http",
     name: "ChannelRef::private_archived_threads",
@@ -5410,10 +5423,6 @@ let entries_2 : Array[ApiEntry] = [
     file: "src/http/handles_channel.mbt",
     line: 434,
   },
-]
-
-///|
-let entries_3 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/http",
     name: "ChannelRef::public_archived_threads",
@@ -7205,6 +7214,10 @@ let entries_3 : Array[ApiEntry] = [
     file: "src/http/api_monetization.mbt",
     line: 184,
   },
+]
+
+///|
+let entries_4 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/http",
     name: "Client::list_skus",
@@ -7214,10 +7227,6 @@ let entries_3 : Array[ApiEntry] = [
     file: "src/http/api_monetization.mbt",
     line: 172,
   },
-]
-
-///|
-let entries_4 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/http",
     name: "Client::list_sticker_packs",
@@ -9009,6 +9018,10 @@ let entries_4 : Array[ApiEntry] = [
     file: "src/http/route.mbt",
     line: 18,
   },
+]
+
+///|
+let entries_5 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/http",
     name: "Route::bucket",
@@ -9018,10 +9031,6 @@ let entries_4 : Array[ApiEntry] = [
     file: "src/http/route.mbt",
     line: 1085,
   },
-]
-
-///|
-let entries_5 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/http",
     name: "Route::custom",
@@ -9323,7 +9332,7 @@ let entries_5 : Array[ApiEntry] = [
     pkg: "gaato/discord/http",
     name: "VERSION",
     kind: "const",
-    signature: "pub const VERSION : String = \"0.3.0\"",
+    signature: "pub const VERSION : String = \"0.3.1\"",
     doc: "Library version, sent in the User-Agent header.",
     file: "src/http/client.mbt",
     line: 24,
@@ -9506,7 +9515,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub fn[A, B] Arg::map(Self[A], (A) -> B) -> Self[B]",
     doc: "Transform one decoded argument without changing its registration definition.",
     file: "src/interaction/args.mbt",
-    line: 360,
+    line: 428,
   },
   {
     pkg: "gaato/discord/interaction",
@@ -9515,7 +9524,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub fn[A] Arg::optional(Self[A]) -> Self[A?]",
     doc: "Make an argument optional. A missing submitted option decodes to `None`.\n\n```mbt\ntest \"make a command option optional\" {\n  let args = @interaction.Args::of(\n    @interaction.arg_string(name=\"note\", description=\"Optional note\").optional(),\n  )\n  json_inspect(args.definitions(), content=[\n    {\n      \"type\": 3,\n      \"name\": \"note\",\n      \"description\": \"Optional note\",\n      \"required\": false,\n    },\n  ])\n}\n```",
     file: "src/interaction/args.mbt",
-    line: 306,
+    line: 374,
   },
   {
     pkg: "gaato/discord/interaction",
@@ -9524,7 +9533,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub fn[A] Arg::validate(Self[A], (A) -> String?) -> Self[A]",
     doc: "Validate a decoded argument. Returning `Some(message)` rejects the value.",
     file: "src/interaction/args.mbt",
-    line: 343,
+    line: 411,
   },
   {
     pkg: "gaato/discord/interaction",
@@ -9533,7 +9542,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub fn[A] Arg::with_default(Self[A], A) -> Self[A]",
     doc: "Make an argument optional in the registration payload and use a default\nvalue when it is absent from a submitted command.",
     file: "src/interaction/args.mbt",
-    line: 325,
+    line: 393,
   },
   {
     pkg: "gaato/discord/interaction",
@@ -9551,7 +9560,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub fn[A] Args::custom(definitions~ : Array[@model.CommandOption], decode~ : (CommandOptions) -> A raise) -> Self[A]",
     doc: "Build an argument collection from custom definitions and a custom decoder.",
     file: "src/interaction/args.mbt",
-    line: 458,
+    line: 526,
   },
   {
     pkg: "gaato/discord/interaction",
@@ -9560,7 +9569,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub fn[A] Args::decode(Self[A], CommandOptions) -> A raise",
     doc: "Decode submitted command options into the composed value.",
     file: "src/interaction/args.mbt",
-    line: 382,
+    line: 450,
   },
   {
     pkg: "gaato/discord/interaction",
@@ -9569,7 +9578,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub fn[A] Args::definitions(Self[A]) -> Array[@model.CommandOption]",
     doc: "Return the option definitions in registration order.",
     file: "src/interaction/args.mbt",
-    line: 370,
+    line: 438,
   },
   {
     pkg: "gaato/discord/interaction",
@@ -9578,7 +9587,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub fn[A, B] Args::map(Self[A], (A) -> B) -> Self[B]",
     doc: "Transform the result of a composed argument collection.",
     file: "src/interaction/args.mbt",
-    line: 423,
+    line: 491,
   },
   {
     pkg: "gaato/discord/interaction",
@@ -9587,7 +9596,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub fn[A, Z] Args::map1(Arg[A], (A) -> Z) -> Self[Z]",
     doc: "Build a command's argument decoder from one option. The option is\nregistered from `a`'s definition and `f` maps its decoded value\ninto the handler's argument type.",
     file: "src/interaction/args.mbt",
-    line: 469,
+    line: 537,
   },
   {
     pkg: "gaato/discord/interaction",
@@ -9596,7 +9605,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub fn[A, B, Z] Args::map2(Arg[A], Arg[B], (A, B) -> Z) -> Self[Z]",
     doc: "Build a command's argument decoder from two options, combining\ntheir decoded values with the final function argument.",
     file: "src/interaction/args.mbt",
-    line: 476,
+    line: 544,
   },
   {
     pkg: "gaato/discord/interaction",
@@ -9605,7 +9614,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub fn[A, B, C, Z] Args::map3(Arg[A], Arg[B], Arg[C], (A, B, C) -> Z) -> Self[Z]",
     doc: "Build a command's argument decoder from three options, combining\ntheir decoded values with the final function argument.",
     file: "src/interaction/args.mbt",
-    line: 491,
+    line: 559,
   },
   {
     pkg: "gaato/discord/interaction",
@@ -9614,7 +9623,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub fn[A, B, C, D, Z] Args::map4(Arg[A], Arg[B], Arg[C], Arg[D], (A, B, C, D) -> Z) -> Self[Z]",
     doc: "Build a command's argument decoder from four options, combining\ntheir decoded values with the final function argument.",
     file: "src/interaction/args.mbt",
-    line: 512,
+    line: 580,
   },
   {
     pkg: "gaato/discord/interaction",
@@ -9623,7 +9632,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub fn[A, B, C, D, E, Z] Args::map5(Arg[A], Arg[B], Arg[C], Arg[D], Arg[E], (A, B, C, D, E) -> Z) -> Self[Z]",
     doc: "Build a command's argument decoder from five options, combining\ntheir decoded values with the final function argument.",
     file: "src/interaction/args.mbt",
-    line: 535,
+    line: 603,
   },
   {
     pkg: "gaato/discord/interaction",
@@ -9632,7 +9641,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub fn[A, B, C, D, E, F, Z] Args::map6(Arg[A], Arg[B], Arg[C], Arg[D], Arg[E], Arg[F], (A, B, C, D, E, F) -> Z) -> Self[Z]",
     doc: "Build a command's argument decoder from six options, combining\ntheir decoded values with the final function argument.",
     file: "src/interaction/args.mbt",
-    line: 572,
+    line: 640,
   },
   {
     pkg: "gaato/discord/interaction",
@@ -9641,7 +9650,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub fn[A, B, C, D, E, F, G, Z] Args::map7(Arg[A], Arg[B], Arg[C], Arg[D], Arg[E], Arg[F], Arg[G], (A, B, C, D, E, F, G) -> Z) -> Self[Z]",
     doc: "Build a command's argument decoder from seven options, combining\ntheir decoded values with the final function argument.",
     file: "src/interaction/args.mbt",
-    line: 613,
+    line: 681,
   },
   {
     pkg: "gaato/discord/interaction",
@@ -9650,7 +9659,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub fn[A, B, C, D, E, F, G, H, Z] Args::map8(Arg[A], Arg[B], Arg[C], Arg[D], Arg[E], Arg[F], Arg[G], Arg[H], (A, B, C, D, E, F, G, H) -> Z) -> Self[Z]",
     doc: "Build a command's argument decoder from eight options, combining\ntheir decoded values with the final function argument.",
     file: "src/interaction/args.mbt",
-    line: 658,
+    line: 726,
   },
   {
     pkg: "gaato/discord/interaction",
@@ -9659,7 +9668,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub fn[A] Args::of(Arg[A]) -> Self[A]",
     doc: "Lift one argument into a composable argument collection.\n\n```mbt\ntest \"compose defaulting and validation into an argument spec\" {\n  let args = @interaction.Args::of(\n    @interaction.arg_int(\n      name=\"times\",\n      description=\"Repeat count\",\n      min=1L,\n      max=5L,\n    )\n    .with_default(1L)\n    .validate(value => if value <= 5L { None } else { Some(\"too large\") }),\n  )\n  json_inspect(args.definitions(), content=[\n    {\n      \"type\": 4,\n      \"name\": \"times\",\n      \"description\": \"Repeat count\",\n      \"required\": false,\n      \"min_value\": 1,\n      \"max_value\": 5,\n    },\n  ])\n}\n```",
     file: "src/interaction/args.mbt",
-    line: 413,
+    line: 481,
   },
   {
     pkg: "gaato/discord/interaction",
@@ -9668,7 +9677,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub fn[A] Args::suggestions(Self[A]) -> Array[SuggestHandler]",
     doc: "Return the type-erased autocomplete handlers carried by these arguments.",
     file: "src/interaction/args.mbt",
-    line: 376,
+    line: 444,
   },
   {
     pkg: "gaato/discord/interaction",
@@ -9677,7 +9686,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub fn Args::unit() -> Self[Unit]",
     doc: "Define a command with no options.",
     file: "src/interaction/args.mbt",
-    line: 452,
+    line: 520,
   },
   {
     pkg: "gaato/discord/interaction",
@@ -9686,7 +9695,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub fn[A, B] Args::zip(Self[A], Self[B]) -> Self[(A, B)]",
     doc: "Combine two argument collections, preserving left-to-right definition and\ndecoding order.",
     file: "src/interaction/args.mbt",
-    line: 434,
+    line: 502,
   },
   {
     pkg: "gaato/discord/interaction",
@@ -10073,7 +10082,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub fn arg_attachment(name~ : String, description~ : String, file_types? : Array[@model.FileTypeFilter], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> Arg[@model.Attachment]",
     doc: "Define a required attachment option resolved to its attachment object.\n`file_types` restricts which files the client lets the user pick (by\nextension only; still validate the contents).",
     file: "src/interaction/args.mbt",
-    line: 268,
+    line: 336,
   },
   {
     pkg: "gaato/discord/interaction",
@@ -10082,7 +10091,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub fn arg_bool(name~ : String, description~ : String, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> Arg[Bool]",
     doc: "Define a required boolean option.",
     file: "src/interaction/args.mbt",
-    line: 164,
+    line: 232,
   },
   {
     pkg: "gaato/discord/interaction",
@@ -10091,7 +10100,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub fn arg_channel(name~ : String, description~ : String, channel_types? : Array[@model.ChannelType], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> Arg[@model.Id[@model.ChannelMarker]]",
     doc: "Define a required channel option.",
     file: "src/interaction/args.mbt",
-    line: 204,
+    line: 272,
   },
   {
     pkg: "gaato/discord/interaction",
@@ -10104,12 +10113,21 @@ let entries_5 : Array[ApiEntry] = [
   },
   {
     pkg: "gaato/discord/interaction",
+    name: "arg_int32",
+    kind: "fn",
+    signature: "pub fn arg_int32(name~ : String, description~ : String, min? : Int, max? : Int, choices? : Array[@model.CommandOptionChoice], suggest? : async (SuggestCtx, Int) -> Array[@model.CommandOptionChoice], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> Arg[Int]",
+    doc: "Define a required integer option that decodes to `Int`.\n\nDiscord integers span the 53-bit safe range, so `arg_int` yields `Int64`.\nThis variant keeps the narrowing safe instead of leaving a wrapping\n`to_int()` to the caller: a missing `min` or `max` is registered as the\n`Int` bound, so Discord rejects wider input before it is sent, and a\nreceived value outside the range fails decoding with\n`ArgsDecodeError::Validation`. With `choices`, only explicit bounds are\nregistered, because the choices already close the value set.",
+    file: "src/interaction/args.mbt",
+    line: 155,
+  },
+  {
+    pkg: "gaato/discord/interaction",
     name: "arg_mentionable",
     kind: "fn",
     signature: "pub fn arg_mentionable(name~ : String, description~ : String, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> Arg[@model.Id[@model.GenericMarker]]",
     doc: "Define a required mentionable option.",
     file: "src/interaction/args.mbt",
-    line: 246,
+    line: 314,
   },
   {
     pkg: "gaato/discord/interaction",
@@ -10118,7 +10136,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub fn arg_number(name~ : String, description~ : String, min? : Double, max? : Double, choices? : Array[@model.CommandOptionChoice], suggest? : async (SuggestCtx, Double) -> Array[@model.CommandOptionChoice], name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> Arg[Double]",
     doc: "Define a required floating-point number option.",
     file: "src/interaction/args.mbt",
-    line: 130,
+    line: 198,
   },
   {
     pkg: "gaato/discord/interaction",
@@ -10127,7 +10145,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub fn arg_role(name~ : String, description~ : String, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> Arg[@model.Id[@model.RoleMarker]]",
     doc: "Define a required role option.",
     file: "src/interaction/args.mbt",
-    line: 226,
+    line: 294,
   },
   {
     pkg: "gaato/discord/interaction",
@@ -10145,7 +10163,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub fn arg_user(name~ : String, description~ : String, name_localizations? : Map[String, String], description_localizations? : Map[String, String]) -> Arg[@model.Id[@model.UserMarker]]",
     doc: "Define a required user option.",
     file: "src/interaction/args.mbt",
-    line: 184,
+    line: 252,
   },
   {
     pkg: "gaato/discord/interaction",
@@ -10804,6 +10822,10 @@ let entries_5 : Array[ApiEntry] = [
     file: "src/model/application.mbt",
     line: 91,
   },
+]
+
+///|
+let entries_6 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "ApplicationEventWebhookStatus::to_int",
@@ -10822,10 +10844,6 @@ let entries_5 : Array[ApiEntry] = [
     file: "src/model/application.mbt",
     line: 123,
   },
-]
-
-///|
-let entries_6 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "ApplicationFlags::application_auto_moderation_rule_create_badge",
@@ -12608,6 +12626,10 @@ let entries_6 : Array[ApiEntry] = [
     file: "src/model/channel.mbt",
     line: 196,
   },
+]
+
+///|
+let entries_7 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "ForumLayoutType::to_int",
@@ -12626,10 +12648,6 @@ let entries_6 : Array[ApiEntry] = [
     file: "src/model/channel.mbt",
     line: 322,
   },
-]
-
-///|
-let entries_7 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "ForumTagRequest",
@@ -14412,6 +14430,10 @@ let entries_7 : Array[ApiEntry] = [
     file: "src/model/message.mbt",
     line: 567,
   },
+]
+
+///|
+let entries_8 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "MessageFlags::should_show_link_not_discord_warning",
@@ -14430,10 +14452,6 @@ let entries_7 : Array[ApiEntry] = [
     file: "src/model/message.mbt",
     line: 642,
   },
-]
-
-///|
-let entries_8 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "MessageFlags::suppress_embeds",
@@ -16216,6 +16234,10 @@ let entries_8 : Array[ApiEntry] = [
     file: "src/model/sticker.mbt",
     line: 109,
   },
+]
+
+///|
+let entries_9 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "StickerMarker",
@@ -16234,10 +16256,6 @@ let entries_8 : Array[ApiEntry] = [
     file: "src/model/sticker.mbt",
     line: 117,
   },
-]
-
-///|
-let entries_9 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "StickerPackId",
@@ -18020,6 +18038,10 @@ let entries_9 : Array[ApiEntry] = [
     file: "src/voice/crypto.mbt",
     line: 162,
   },
+]
+
+///|
+let entries_10 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/voice",
     name: "TransportCipher::seal",
@@ -18038,10 +18060,6 @@ let entries_9 : Array[ApiEntry] = [
     file: "src/voice/connection.mbt",
     line: 43,
   },
-]
-
-///|
-let entries_10 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/voice",
     name: "VoiceConnection::disconnect",
