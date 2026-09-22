@@ -8,7 +8,11 @@ source = "src"
 
 preferred_target = "native"
 
+// Trait methods are never promoted to regular methods implicitly.
+
+warnings = "-implicit_impl_as_method"
+
 import {
-  "gaato/discord@0.3.1",
+  "gaato/discord@0.4.1",
   "moonbitlang/async@0.22.1",
 }

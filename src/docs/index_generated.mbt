@@ -20,6 +20,12 @@ pub let sections : Array[Section] = [
       #|On a clean machine, install `git` and run `moon update` first; Moon clones its
       #|package registry with `git` when resolving dependencies.
       #|
+      #|Node.js must be on `PATH` for every build, even for a bot that never uses
+      #|voice. `gaato/discord` and its `gaato/dave` dependency declare prebuild hooks
+      #|that Moon runs with `node`; they do nothing unless voice is opted into (see
+      #|[Voice](10-voice.mbt.md)), but `moon build` fails when `node` is missing.
+      #|`moon check` does not run the hooks.
+      #|
       #|All native builds compile the Gateway package's `zlib_stream.c`, which always
       #|includes `<zlib.h>`, regardless of whether Gateway compression is enabled.
       #|Install the zlib development headers (`zlib1g-dev` on Debian/Ubuntu or
@@ -600,8 +606,12 @@ pub let sections : Array[Section] = [
       #|Decode failures reach the error policy as `HandlerError::InvalidArgument`.
       #|
       #|Typed routes match the exact id or that id followed by `:` and state, so
-      #|`ticket-closeish` does not match `ticket-close`. Route ids must be nonempty,
-      #|contain no `:`, and fit within 100 UTF-16 units. `App::validate` also rejects
+      #|`ticket-closeish` does not match `ticket-close`. Route ids must be nonempty
+      #|and fit within 100 UTF-16 units. An id may contain `:` — a bot that adopts
+      #|typed routes can keep ids already attached to posted messages, such as
+      #|`bot:rolemenu` — but two typed ids may not nest at a `:` boundary: `ticket`
+      #|beside `ticket:close` is rejected, because state encoded for `ticket` could
+      #|reach the `ticket:close` handler. `App::validate` also rejects
       #|duplicate effective prefixes: typed `ticket-close` collides with raw
       #|`ticket-close:`. `on_component_raw(prefix~, handler)` and `on_modal_raw`
       #|retain literal-prefix routing for advanced handlers. Strict prefix overlaps
@@ -739,7 +749,23 @@ pub let sections : Array[Section] = [
       #|does not mutate the modal definition, so later calls return to the static
       #|default. Override keys are text-input `custom_id` values. An unknown key or a
       #|key naming a non-text field raises `ModalPrefillError` instead of being
-      #|silently ignored.
+      #|silently ignored, and so does a value over Discord's 4000-unit text-input
+      #|limit: check the length before calling `show` when the prefill comes from
+      #|longer content such as an embed description (4096).
+      #|
+      #|Discord documents hard limits for everything in this chapter — 45 units for a
+      #|modal title or label, 4000 for a text input, 80 for a button label, 25 select
+      #|options, 40 components in a Components V2 message — and rejects the whole
+      #|request with 400 Invalid Form Body when one is exceeded. The library checks
+      #|them locally: typed send helpers raise `DiscordHttpError::Validation` naming the
+      #|offending path (such as `components[0].components[2].label`), and
+      #|`App::validate` applies the modal limits to registered modals at startup, so a
+      #|bad declaration fails before the first interaction. The same checks are
+      #|available as `@model.message_component_limit_violations`,
+      #|`@model.modal_limit_violations`, and `@model.embed_limit_violations`.
+      #|
+      #|Raw `Client::request` and raw interaction callback JSON remain escape hatches;
+      #|they do not promise complete outgoing model validation.
       #|
       #|`ModalImmediateCtx::origin()` distinguishes a modal opened from a component
       #|from one opened from a command. `state()` is the value passed to `show`.
@@ -1723,6 +1749,56 @@ pub let sections : Array[Section] = [
     ),
   },
   {
+    chapter: "REST client",
+    file: "05-rest.mbt.md",
+    title: "Offline client",
+    anchor: "offline-client",
+    body: (
+      #|`Client::offline` replaces the innermost step of that chain with a function
+      #|and removes the network entirely: no token, base URL, rate limiter, timeout,
+      #|or retry. Validation, installed middleware, status-code-to-error mapping, and
+      #|typed decoding still run, so code under test sees the same `DiscordHttpError`
+      #|values it would see online. The handler receives the logical `HttpRequest`
+      #|and answers by matching on the typed route:
+      #|
+      #|```mbt check
+      #|///|
+      #|async test "offline client" {
+      #|  let requests : Array[@dhttp.HttpRequest] = []
+      #|  let client = @dhttp.Client::offline(request => {
+      #|    requests.push(request)
+      #|    match request.route {
+      #|      GetChannel(channel_id~) =>
+      #|        {
+      #|          status: 200,
+      #|          headers: {},
+      #|          body: { "id": channel_id.to_string(), "type": 0 },
+      #|        }
+      #|      _ =>
+      #|        {
+      #|          status: 404,
+      #|          headers: {},
+      #|          body: { "code": 10003, "message": "Unknown Channel" },
+      #|        }
+      #|    }
+      #|  })
+      #|  let channel = client.get_channel(Id(7UL))
+      #|  assert_eq(channel.id, Id(7UL))
+      #|  try client.get_gateway() catch {
+      #|    @dhttp.DiscordHttpError::Api(status=404, ..) => ()
+      #|    error => raise error
+      #|  } noraise {
+      #|    _ => fail("expected Api")
+      #|  }
+      #|  assert_eq(requests.length(), 2)
+      #|}
+      #|```
+      #|
+      #|The [testkit](../testkit/README.mbt.md) shows the same client driving a full
+      #|App dispatch with interaction fixtures.
+    ),
+  },
+  {
     chapter: "HTTP interactions",
     file: "06-http-interactions.mbt.md",
     title: "HTTP interactions",
@@ -2688,7 +2764,10 @@ pub let sections : Array[Section] = [
       #|```
       #|
       #|The synthetic response still passes through outer middleware and normal
-      #|status-code mapping. It does not enter the rate limiter or transport.
+      #|status-code mapping. It does not enter the rate limiter or transport. When
+      #|every call should be answered this way, `Client::offline` takes the innermost
+      #|step as a function and has no network to fall back to; see
+      #|[REST client](05-rest.mbt.md#offline-client).
       #|
       #|HTTP middleware runs once per logical call, not once per attempt. A 429
       #|followed by a successful retry produces one return from `next`, containing the
@@ -4121,9 +4200,42 @@ pub let sections : Array[Section] = [
       #|}
       #|```
       #|
-      #|`guild_icon_url`, `guild_banner_url`, `emoji_url`, `sticker_url`, and the
-      #|default-avatar helpers cover the other CDN routes. An invalid `size` or a
+      #|Every image route in Discord's CDN endpoint table whose hash the models carry
+      #|has a builder: user avatars and banners, guild icons, banners, splashes,
+      #|discovery splashes and tag badges, guild member avatars and banners, avatar
+      #|decorations, role icons, scheduled event covers, application icons and covers,
+      #|team icons, emoji, stickers, and sticker pack banners. An invalid `size` or a
       #|format the asset cannot have raises `CdnUrlError` before any IO.
+      #|
+      #|`display_avatar_url` resolves the avatar a client would show: the member's
+      #|guild avatar when there is one, then the user's avatar, then the default
+      #|avatar.
+      #|
+      #|```mbt check
+      #|///|
+      #|test "resolve the avatar shown in a guild" {
+      #|  let user : @model.User = @json.from_json({
+      #|    "id": "80351110224678912",
+      #|    "username": "nelly",
+      #|    "discriminator": "0",
+      #|    "avatar": "global",
+      #|  })
+      #|  let profile : @model.GuildMember = @json.from_json({
+      #|    "avatar": "local",
+      #|    "roles": [],
+      #|    "joined_at": null,
+      #|  })
+      #|  let guild_id : @model.GuildId = @model.Id::parse("197038439483310086")
+      #|  inspect(
+      #|    @util.display_avatar_url(user, guild_member=(guild_id, profile)),
+      #|    content="https://cdn.discordapp.com/guilds/197038439483310086/users/80351110224678912/avatars/local.png",
+      #|  )
+      #|  inspect(
+      #|    @util.display_avatar_url(user),
+      #|    content="https://cdn.discordapp.com/avatars/80351110224678912/global.png",
+      #|  )
+      #|}
+      #|```
     ),
   },
   {
