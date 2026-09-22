@@ -9440,7 +9440,7 @@ let entries_5 : Array[ApiEntry] = [
     pkg: "gaato/discord/http",
     name: "VERSION",
     kind: "const",
-    signature: "pub const VERSION : String = \"0.4.1\"",
+    signature: "pub const VERSION : String = \"0.4.2\"",
     doc: "Library version, sent in the User-Agent header.",
     file: "src/http/client.mbt",
     line: 30,
