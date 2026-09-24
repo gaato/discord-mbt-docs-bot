@@ -349,9 +349,9 @@ let entries_0 : Array[ApiEntry] = [
     name: "serve_interactions",
     kind: "fn",
     signature: "pub async fn[X] serve_interactions(@async.TaskGroup[X], @app.App, addr~ : String, public_key~ : String, client? : @http.Client, token? : String, application_id? : @model.Id[@model.ApplicationMarker], path? : String, deadline_ms? : Int) -> @endpoint_http.InteractionsServer",
-    doc: "Start a native Discord HTTP-interactions server in `group`.\n\nUse port zero in `addr` to let the OS choose a free port, then read the\nresolved address from `InteractionsServer::addr`.",
+    doc: "Start a Discord HTTP-interactions server in `group` on native or moonrun Wasm.\n\nUse port zero in `addr` to let the OS choose a free port, then read the\nresolved address from `InteractionsServer::addr`.",
     file: "src/endpoint_http/endpoint_http.mbt",
-    line: 222,
+    line: 149,
   },
   {
     pkg: "gaato/discord",
@@ -1687,12 +1687,48 @@ let entries_0 : Array[ApiEntry] = [
   },
   {
     pkg: "gaato/discord/app",
+    name: "InteractionEndpoint::handle_signed_http",
+    kind: "fn",
+    signature: "pub async fn InteractionEndpoint::handle_signed_http(Self, InteractionHttpRequest, @verify.InteractionVerifier, deadline_ms? : Int) -> InteractionHttpResponse",
+    doc: "Verify the raw HTTP body, decode one interaction, and dispatch it.\n\nThe caller owns the task group supplied to `App::serve`. Keep that group\nalive after this method returns so deferred handlers can finish.",
+    file: "src/app/interaction_http.mbt",
+    line: 44,
+  },
+  {
+    pkg: "gaato/discord/app",
     name: "InteractionHandler[A]",
     kind: "enum",
     signature: "pub(all) enum InteractionHandler[A] {\n  Immediate(async (ImmediateCtx, A) -> CommandReply)\n  Deferred(ephemeral~ : Bool, async (DeferredCtx, A) -> Unit)\n  Raw(async (@framework.CommandCtx) -> Unit)\n}",
     doc: "Execution strategy for a typed application command.",
     file: "src/app/command.mbt",
     line: 3,
+  },
+  {
+    pkg: "gaato/discord/app",
+    name: "InteractionHttpBody",
+    kind: "enum",
+    signature: "pub(all) enum InteractionHttpBody {\n  Empty\n  Bytes(Bytes)\n  Chunks(Array[@http.MultipartChunk])\n}",
+    doc: "A callback body. Multipart chunks retain file bytes without a second copy.",
+    file: "src/app/interaction_http.mbt",
+    line: 13,
+  },
+  {
+    pkg: "gaato/discord/app",
+    name: "InteractionHttpRequest",
+    kind: "struct",
+    signature: "pub(all) struct InteractionHttpRequest {\n  http_method : String\n  signature : String?\n  timestamp : String?\n  body : Bytes\n}",
+    doc: "The exact bytes received from an HTTP host. Never parse or reserialize\n`body` before verifying the Discord signature.",
+    file: "src/app/interaction_http.mbt",
+    line: 4,
+  },
+  {
+    pkg: "gaato/discord/app",
+    name: "InteractionHttpResponse",
+    kind: "struct",
+    signature: "pub(all) struct InteractionHttpResponse {\n  status : Int\n  content_type : String?\n  body : InteractionHttpBody\n}",
+    doc: "A host-independent HTTP response for a Discord interaction.",
+    file: "src/app/interaction_http.mbt",
+    line: 21,
   },
   {
     pkg: "gaato/discord/app",
@@ -1766,6 +1802,10 @@ let entries_0 : Array[ApiEntry] = [
     file: "src/app/modal.mbt",
     line: 740,
   },
+]
+
+///|
+let entries_1 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/app",
     name: "ModalDeferredCtx::guild_id",
@@ -1802,10 +1842,6 @@ let entries_0 : Array[ApiEntry] = [
     file: "src/app/modal.mbt",
     line: 681,
   },
-]
-
-///|
-let entries_1 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/app",
     name: "ModalDeferredCtx::raw",
@@ -2279,18 +2315,18 @@ let entries_1 : Array[ApiEntry] = [
     name: "Bot",
     kind: "struct",
     signature: "pub struct Bot {\n  // private fields\n}",
-    doc: "Native gateway executor for a gateway-free application core.",
+    doc: "Gateway executor for a gateway-free application core on native, JavaScript,\nand Wasm. Voice connections are native-only.",
     file: "src/bot/bot.mbt",
-    line: 59,
+    line: 62,
   },
   {
     pkg: "gaato/discord/bot",
     name: "Bot::Bot",
     kind: "fn",
-    signature: "pub fn Bot::Bot(@app.App, token~ : String, intents? : @model.Intents, capabilities? : @model.GatewayCapabilities, client? : @http.Client, gateway_url? : String, shards? : ShardConfig, compress? : Bool, identify_queue? : &@queue.IdentifyQueue, sync? : @app.CommandScope, sync_unowned? : @framework.UnownedCommands) -> Self",
-    doc: "Create a gateway runner for `app`. When `intents` is omitted, the bot\ninfers the union of intents required by its typed event subscriptions at\n`run` time (privileged intents are only inferred, never invented — they\nmust still be enabled in the developer portal). `client` supplies a\npreconfigured REST client; by default one is built from `token`.\n`shards`, `compress`, and `identify_queue` configure sharding, transport\ncompression, and cross-process identify coordination. `capabilities` is\nsent in Identify (see `@model.GatewayCapabilities`).\n\nWhen `sync` is omitted, the bot performs no command synchronization. When\nset, synchronization runs once per process after the first READY. It uses\nDiscord's bulk overwrite and deletes commands in that scope that this App\ndoes not declare, except for entry points, which are always preserved.\n`sync_unowned=Keep` also preserves commands registered by other owners.\nDeletions are reported through the app's warning hook. In multi-process\nsharding, enable synchronization in exactly one process.",
+    signature: "pub fn Bot::Bot(@app.App, token~ : String, intents? : @model.Intents, capabilities? : @model.GatewayCapabilities, client? : @http.Client, gateway_url? : String, shards? : ShardConfig, compress? : Bool, identify_queue? : &@queue.IdentifyQueue, sync? : @app.CommandScope, sync_unowned? : @framework.UnownedCommands, resume? : Map[Int, BotSession]) -> Self",
+    doc: "Create a gateway runner for `app`. When `intents` is omitted, the bot\ninfers the union of intents required by its typed event subscriptions at\n`run` time (privileged intents are only inferred, never invented — they\nmust still be enabled in the developer portal). `client` supplies a\npreconfigured REST client; by default one is built from `token`.\n`shards`, `compress`, and `identify_queue` configure sharding, transport\ncompression, and cross-process identify coordination. Every IDENTIFY, at\nstartup or after a lost session, first reads `session_start_limit` from\n`GET /gateway/bot`; an exhausted limit ends `run` with\n`SessionStartLimitExceeded` instead of risking a token reset. `capabilities`\nis sent in Identify (see `@model.GatewayCapabilities`).\n\nWhen `sync` is omitted, the bot performs no command synchronization. When\nset, synchronization runs once per process after the first READY. It uses\nDiscord's bulk overwrite and deletes commands in that scope that this App\ndoes not declare, except for entry points, which are always preserved.\n`sync_unowned=Keep` also preserves commands registered by other owners.\nDeletions are reported through the app's warning hook. In multi-process\nsharding, enable synchronization in exactly one process.\n`resume` seeds saved Bot sessions per shard id so those shards RESUME instead\nof identifying (see `Bot::sessions`). It restores gateway identity, not\noptional cache contents or application-owned state. `run` rejects a saved\nsession whose gateway id disagrees with its READY session id.",
     file: "src/bot/bot.mbt",
-    line: 105,
+    line: 118,
   },
   {
     pkg: "gaato/discord/bot",
@@ -2299,7 +2335,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn Bot::attach_cache(Self, @cache.InMemoryCache) -> Unit",
     doc: "Feeds every decoded gateway event into an opt-in cache before dispatching\ntyped and raw event handlers.",
     file: "src/bot/bot.mbt",
-    line: 166,
+    line: 214,
   },
   {
     pkg: "gaato/discord/bot",
@@ -2317,7 +2353,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn[T] Bot::on(Self, EventType[T], async (GatewayCtx, T) -> Unit) -> Unit",
     doc: "Subscribe a typed handler to one gateway event (see `Events` for the\ndescriptors). The event's required intents join the inferred intent set\nwhen `Bot(...)` omits explicit `intents`. Handlers run through the event\nmiddleware chain; a raised error is reported via the app's failure policy\nwithout stopping the bot.",
     file: "src/bot/bot.mbt",
-    line: 176,
+    line: 224,
   },
   {
     pkg: "gaato/discord/bot",
@@ -2326,7 +2362,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn Bot::on_decode_error(Self, (String, Json) -> Unit) -> Unit",
     doc: "Observe gateway events whose known payload failed typed decoding.\n\n`marker` is the full synthetic event type\n`DECODE_ERROR:<event-name>:<decode-error>`, and `payload` is Discord's raw\nevent data. Handlers run synchronously in the dispatch loop and should\nreturn promptly. Registering a handler does not add gateway intents or\nwiden the event filter.",
     file: "src/bot/bot.mbt",
-    line: 211,
+    line: 259,
   },
   {
     pkg: "gaato/discord/bot",
@@ -2335,7 +2371,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn Bot::on_event(Self, async (GatewayCtx, @model.Event) -> Unit) -> Unit",
     doc: "Subscribe to the raw event stream: every decoded gateway dispatch,\nincluding `Resumed` and `Unknown`, without payload projection. Unlike\n`Bot::on`, this adds nothing to the inferred intent set.",
     file: "src/bot/bot.mbt",
-    line: 196,
+    line: 244,
   },
   {
     pkg: "gaato/discord/bot",
@@ -2344,7 +2380,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn Bot::on_telemetry(Self, (@telemetry.TelemetryEvent) -> Unit raise) -> Unit",
     doc: "Observe structured gateway, dispatch, and REST telemetry aggregated by\nthis bot. Hooks run synchronously and should return promptly.",
     file: "src/bot/bot.mbt",
-    line: 147,
+    line: 195,
   },
   {
     pkg: "gaato/discord/bot",
@@ -2353,7 +2389,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub async fn Bot::run(Self) -> Unit",
     doc: "Connect and process gateway events until graceful shutdown or a fatal close.",
     file: "src/bot/bot.mbt",
-    line: 476,
+    line: 524,
   },
   {
     pkg: "gaato/discord/bot",
@@ -2362,7 +2398,16 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn Bot::service(Self, name~ : String, async (GatewayCtx) -> Unit) -> Unit",
     doc: "Register a long-running background task started alongside the shards when\nthe bot runs (e.g. a periodic status updater). `name` labels the service\nin failure reports. A raised error is reported via the app's failure\npolicy and stops only that service, not the bot.",
     file: "src/bot/bot.mbt",
-    line: 223,
+    line: 271,
+  },
+  {
+    pkg: "gaato/discord/bot",
+    name: "Bot::sessions",
+    kind: "fn",
+    signature: "pub fn Bot::sessions(Self) -> Map[Int, BotSession]",
+    doc: "Current resumable gateway state paired with READY metadata, keyed by shard\nid. A supplied snapshot is available from the start of `run` until its\nshard replaces, drops, or invalidates it, including while `run` still\nresolves the shard layout over REST; an unsaved shard appears after READY.\nEmpty while the bot is not running. Returned values do not alias mutable\nruntime state.",
+    file: "src/bot/bot.mbt",
+    line: 174,
   },
   {
     pkg: "gaato/discord/bot",
@@ -2378,6 +2423,24 @@ let entries_1 : Array[ApiEntry] = [
     name: "BotError::to_string",
     kind: "fn",
     signature: "pub fn BotError::to_string(Self) -> String",
+    doc: "",
+    file: "src/bot/bot.mbt",
+    line: 1,
+  },
+  {
+    pkg: "gaato/discord/bot",
+    name: "BotSession",
+    kind: "struct",
+    signature: "pub(all) struct BotSession {\n  gateway : @gateway.Session\n  ready : @model.Ready\n} derive(ToJson, @debug.Debug, @json.FromJson)",
+    doc: "Persist a Bot gateway session together with the READY identity needed to\nrestore event and interaction handling before Discord sends RESUMED.\nOptional cache contents and application-owned state are not restored.\nPersisting a receive sequence periodically does not guarantee exactly-once\nevent handling after a restart.",
+    file: "src/bot/session.mbt",
+    line: 7,
+  },
+  {
+    pkg: "gaato/discord/bot",
+    name: "BotSession::to_json",
+    kind: "fn",
+    signature: "pub fn BotSession::to_json(Self) -> Json",
     doc: "",
     file: "src/bot/bot.mbt",
     line: 1,
@@ -3145,7 +3208,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub struct GatewayCtx {\n  // private fields\n}",
     doc: "Gateway-only services passed to event and service handlers after READY.",
     file: "src/bot/ctx.mbt",
-    line: 3,
+    line: 4,
   },
   {
     pkg: "gaato/discord/bot",
@@ -3154,7 +3217,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn GatewayCtx::app(Self) -> @app.AppCtx",
     doc: "The transport-neutral application context for REST access.",
     file: "src/bot/ctx.mbt",
-    line: 23,
+    line: 20,
   },
   {
     pkg: "gaato/discord/bot",
@@ -3163,7 +3226,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn GatewayCtx::cache(Self) -> @cache.InMemoryCache?",
     doc: "The cache attached with `Bot::attach_cache`, or `None` when no cache is\nattached.",
     file: "src/bot/ctx.mbt",
-    line: 44,
+    line: 41,
   },
   {
     pkg: "gaato/discord/bot",
@@ -3172,7 +3235,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn GatewayCtx::channel_ref(Self, @model.Id[@model.ChannelMarker]) -> @http.ChannelRef",
     doc: "Bind a channel id to the gateway REST client.",
     file: "src/bot/ctx.mbt",
-    line: 62,
+    line: 59,
   },
   {
     pkg: "gaato/discord/bot",
@@ -3181,7 +3244,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn GatewayCtx::framework_raw(Self) -> @framework.Framework",
     doc: "Access the underlying interaction framework.",
     file: "src/bot/ctx.mbt",
-    line: 56,
+    line: 53,
   },
   {
     pkg: "gaato/discord/bot",
@@ -3190,7 +3253,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn GatewayCtx::guild_ref(Self, @model.Id[@model.GuildMarker]) -> @http.GuildRef",
     doc: "Bind a guild id to the gateway REST client.",
     file: "src/bot/ctx.mbt",
-    line: 101,
+    line: 98,
   },
   {
     pkg: "gaato/discord/bot",
@@ -3199,7 +3262,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub async fn GatewayCtx::join_voice(Self, @model.Id[@model.GuildMarker], @model.Id[@model.ChannelMarker], self_mute? : Bool, self_deaf? : Bool, timeout_ms? : Int, telemetry? : (@voice.VoiceTelemetry) -> Unit) -> @voice.VoiceConnection",
     doc: "Join a guild voice channel and wait until its voice transport is ready.\n\nA second call for the same guild returns the registered connection; moving\nan existing connection to another channel is outside this API. Discord may\nsend no response events when the channel is full and the bot lacks\n`MOVE_MEMBERS`; that case raises `VoiceError::JoinTimeout`.\n\nThe bot must connect the main Gateway with the `GUILD_VOICE_STATES` intent.\nThis method raises `VoiceError::MissingIntent` before sending Opcode 4 when\nthat intent is absent.\n\nPass `telemetry` to observe non-fatal voice gateway and media diagnostics.",
     file: "src/bot/voice.mbt",
-    line: 129,
+    line: 142,
   },
   {
     pkg: "gaato/discord/bot",
@@ -3208,7 +3271,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn GatewayCtx::latency_ms(Self) -> Int64?",
     doc: "The latest heartbeat round-trip time for this context's shard. Unlike\n`AppCtx::latency_ms()`, this is the exact shard value rather than the mean\nacross shards with measured latency.",
     file: "src/bot/ctx.mbt",
-    line: 37,
+    line: 34,
   },
   {
     pkg: "gaato/discord/bot",
@@ -3217,7 +3280,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn GatewayCtx::member_ref(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker]) -> @http.MemberRef",
     doc: "Bind a guild/user id pair to the gateway REST client.",
     file: "src/bot/ctx.mbt",
-    line: 110,
+    line: 107,
   },
   {
     pkg: "gaato/discord/bot",
@@ -3226,7 +3289,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn GatewayCtx::message_ref(Self, @model.MessageCreateEvent) -> @http.MessageRef",
     doc: "Bind a message-create event's message to the gateway REST client.",
     file: "src/bot/ctx.mbt",
-    line: 129,
+    line: 126,
   },
   {
     pkg: "gaato/discord/bot",
@@ -3235,7 +3298,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn GatewayCtx::ready(Self) -> @model.Ready",
     doc: "The latest READY payload for this gateway session.",
     file: "src/bot/ctx.mbt",
-    line: 29,
+    line: 26,
   },
   {
     pkg: "gaato/discord/bot",
@@ -3244,7 +3307,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn GatewayCtx::ref_of_message(Self, @model.Message) -> @http.MessageRef",
     doc: "Bind a message model to the gateway REST client.",
     file: "src/bot/ctx.mbt",
-    line: 138,
+    line: 135,
   },
   {
     pkg: "gaato/discord/bot",
@@ -3253,7 +3316,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub async fn GatewayCtx::resolve_channel(Self, @model.Id[@model.ChannelMarker]) -> @model.Channel raise @http.DiscordHttpError",
     doc: "Resolve a channel with a cache-first lookup, including cached threads.\nCache misses (including a disabled channels resource) fall back to REST.\nThis favors speed; use `channel_ref(id).fetch()` when the latest channel\nstate is required. A REST result is deliberately not written back because\ngateway events are the cache's only mutation entry point.\n\n`MessageCreateEvent.channel_type` is commonly absent, so resolving the\nchannel makes thread detection straightforward:\n\n```mbt\nlet channel = ctx.resolve_channel(event.message.channel_id)\n\nlet is_thread = match channel.typ {\n  AnnouncementThread | PublicThread | PrivateThread => true\n  _ => false\n}\n```",
     file: "src/bot/ctx.mbt",
-    line: 87,
+    line: 84,
   },
   {
     pkg: "gaato/discord/bot",
@@ -3262,7 +3325,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn GatewayCtx::shard_raw(Self) -> @gateway.Shard",
     doc: "Access the underlying gateway shard.",
     file: "src/bot/ctx.mbt",
-    line: 50,
+    line: 47,
   },
   {
     pkg: "gaato/discord/bot",
@@ -3271,7 +3334,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub async fn GatewayCtx::shutdown(Self) -> Unit",
     doc: "Request a graceful stop. Closing every managed shard wakes the run loop;\nthe task group then waits for already-started handlers before returning.",
     file: "src/bot/ctx.mbt",
-    line: 174,
+    line: 171,
   },
   {
     pkg: "gaato/discord/bot",
@@ -3280,7 +3343,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn GatewayCtx::user_ref(Self, @model.Id[@model.UserMarker]) -> @http.UserRef",
     doc: "Bind a user id to the gateway REST client.",
     file: "src/bot/ctx.mbt",
-    line: 120,
+    line: 117,
   },
   {
     pkg: "gaato/discord/bot",
@@ -3289,7 +3352,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub async fn[T] GatewayCtx::wait_for(Self, EventType[T], (T) -> Bool, timeout_ms? : Int) -> T?",
     doc: "Wait for the next gateway event of `event_type` that satisfies `predicate`.\nThe event remains visible to other collectors and registered handlers.\nReturns `None` on timeout. The caller must enable an intent capable of\ndelivering the requested event when it is not already subscribed.",
     file: "src/bot/ctx.mbt",
-    line: 162,
+    line: 159,
   },
   {
     pkg: "gaato/discord/bot",
@@ -3298,7 +3361,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub async fn GatewayCtx::wait_for_component(Self, custom_id~ : String, user? : @model.Id[@model.UserMarker], timeout_ms? : Int) -> @framework.ComponentCtx?",
     doc: "Wait for the next component interaction with an exact custom id, optionally\nrestricted to one invoking user.",
     file: "src/bot/ctx.mbt",
-    line: 148,
+    line: 145,
   },
   {
     pkg: "gaato/discord/bot",
@@ -3543,6 +3606,10 @@ let entries_1 : Array[ApiEntry] = [
     file: "src/cache/cache.mbt",
     line: 805,
   },
+]
+
+///|
+let entries_2 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/cache",
     name: "InMemoryCache::roles",
@@ -3606,10 +3673,6 @@ let entries_1 : Array[ApiEntry] = [
     file: "src/cache/cache.mbt",
     line: 869,
   },
-]
-
-///|
-let entries_2 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/cooldown",
     name: "CooldownDecision",
@@ -3858,9 +3921,9 @@ let entries_2 : Array[ApiEntry] = [
     name: "InteractionsServer",
     kind: "struct",
     signature: "pub struct InteractionsServer {\n  // private fields\n}",
-    doc: "A native HTTP server dispatching Discord interactions through an `App`.",
+    doc: "An HTTP server dispatching Discord interactions on native or moonrun Wasm.",
     file: "src/endpoint_http/endpoint_http.mbt",
-    line: 196,
+    line: 123,
   },
   {
     pkg: "gaato/discord/endpoint_http",
@@ -3869,7 +3932,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn InteractionsServer::addr(Self) -> String",
     doc: "Return the actual listening address, including an OS-assigned port.",
     file: "src/endpoint_http/endpoint_http.mbt",
-    line: 203,
+    line: 130,
   },
   {
     pkg: "gaato/discord/endpoint_http",
@@ -3878,16 +3941,16 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub async fn InteractionsServer::close(Self) -> Unit noraise",
     doc: "Stop accepting requests and cancel active connection handlers.",
     file: "src/endpoint_http/endpoint_http.mbt",
-    line: 209,
+    line: 136,
   },
   {
     pkg: "gaato/discord/endpoint_http",
     name: "serve_interactions",
     kind: "fn",
     signature: "pub async fn[X] serve_interactions(@async.TaskGroup[X], @app.App, addr~ : String, public_key~ : String, client? : @http.Client, token? : String, application_id? : @model.Id[@model.ApplicationMarker], path? : String, deadline_ms? : Int) -> InteractionsServer",
-    doc: "Start a native Discord HTTP-interactions server in `group`.\n\nUse port zero in `addr` to let the OS choose a free port, then read the\nresolved address from `InteractionsServer::addr`.",
+    doc: "Start a Discord HTTP-interactions server in `group` on native or moonrun Wasm.\n\nUse port zero in `addr` to let the OS choose a free port, then read the\nresolved address from `InteractionsServer::addr`.",
     file: "src/endpoint_http/endpoint_http.mbt",
-    line: 222,
+    line: 149,
   },
   {
     pkg: "gaato/discord/framework",
@@ -4775,9 +4838,9 @@ let entries_2 : Array[ApiEntry] = [
     pkg: "gaato/discord/gateway",
     name: "InflateError",
     kind: "suberror",
-    signature: "pub(all) suberror InflateError {\n  InflateError(status~ : Int)\n  InvalidUtf8\n} derive(@debug.Debug)",
+    signature: "pub(all) suberror InflateError {\n  InflateError(status~ : Int)\n  InvalidUtf8\n  Unsupported\n} derive(@debug.Debug)",
     doc: "Raised when a compressed Gateway stream cannot be initialized or decoded.",
-    file: "src/gateway/compression.mbt",
+    file: "src/gateway/inflater.mbt",
     line: 3,
   },
   {
@@ -4786,8 +4849,8 @@ let entries_2 : Array[ApiEntry] = [
     kind: "trait",
     signature: "pub(open) trait Inflater {\n  fn push(Self, Bytes) -> String? raise\n}",
     doc: "Stateful decoder seam for Gateway compression. Implementations retain one\ninflate context across messages. `None` means the Z_SYNC_FLUSH suffix has\nnot arrived yet.",
-    file: "src/gateway/compression.mbt",
-    line: 12,
+    file: "src/gateway/inflater.mbt",
+    line: 14,
   },
   {
     pkg: "gaato/discord/gateway",
@@ -4802,10 +4865,19 @@ let entries_2 : Array[ApiEntry] = [
     pkg: "gaato/discord/gateway",
     name: "Session",
     kind: "struct",
-    signature: "pub(all) struct Session {\n  id : String\n  resume_url : String\n  mut sequence : Int64\n} derive(@debug.Debug)",
-    doc: "Gateway session state retained across reconnects for RESUME.",
+    signature: "pub(all) struct Session {\n  id : String\n  resume_url : String\n  mut sequence : Int64\n} derive(ToJson, @debug.Debug, @json.FromJson)",
+    doc: "Gateway session state retained across reconnects for RESUME. Persist it\n(for example with `to_json`) and pass it to `Shard::start(resume~)` after a\nprocess restart. `sequence` serializes as a JSON string (core's `Int64`\nencoding); `from_json` accepts that form.",
     file: "src/gateway/state.mbt",
-    line: 23,
+    line: 26,
+  },
+  {
+    pkg: "gaato/discord/gateway",
+    name: "Session::to_json",
+    kind: "fn",
+    signature: "pub fn Session::to_json(Self) -> Json",
+    doc: "",
+    file: "src/gateway/command_limit.mbt",
+    line: 1,
   },
   {
     pkg: "gaato/discord/gateway",
@@ -4823,7 +4895,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub async fn Shard::close(Self) -> Unit noraise",
     doc: "Request a graceful shutdown: closes the connection with code 1000 (which\ninvalidates the session — Discord will not allow a resume after it).",
     file: "src/gateway/shard.mbt",
-    line: 61,
+    line: 73,
   },
   {
     pkg: "gaato/discord/gateway",
@@ -4832,7 +4904,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn Shard::latency_ms(Self) -> Int64?",
     doc: "Latest heartbeat round-trip time in milliseconds.",
     file: "src/gateway/shard.mbt",
-    line: 36,
+    line: 48,
   },
   {
     pkg: "gaato/discord/gateway",
@@ -4841,7 +4913,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub async fn Shard::next(Self) -> ShardEvent",
     doc: "Pull the next event. Blocks until one is available.",
     file: "src/gateway/shard.mbt",
-    line: 42,
+    line: 54,
   },
   {
     pkg: "gaato/discord/gateway",
@@ -4850,16 +4922,25 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub async fn Shard::send(Self, Json) -> Unit",
     doc: "Send a gateway command (presence update, request guild members, ...).\nRate limited (120/60s minus heartbeat reserve) and serialized with the\nshard's other writes.",
     file: "src/gateway/shard.mbt",
-    line: 50,
+    line: 62,
+  },
+  {
+    pkg: "gaato/discord/gateway",
+    name: "Shard::session",
+    kind: "fn",
+    signature: "pub fn Shard::session(Self) -> Session?",
+    doc: "A copy of the current gateway session, or `None` before the first READY\nand after the session was invalidated. Persist it to RESUME after a\nrestart.",
+    file: "src/gateway/shard.mbt",
+    line: 38,
   },
   {
     pkg: "gaato/discord/gateway",
     name: "Shard::start",
     kind: "fn",
-    signature: "pub fn[X] Shard::start(@async.TaskGroup[X], token~ : String, intents~ : @model.Intents, capabilities? : @model.GatewayCapabilities, gateway_url? : String, shard_id? : Int, shard_count? : Int, identify_queue? : &@queue.IdentifyQueue, event_filter? : (@model.EventKind) -> Bool, connector? : async (String) -> &GatewayTransport, compress? : Bool, inflater_factory? : () -> &Inflater raise, queue_capacity? : Int, telemetry? : (@telemetry.TelemetryEvent) -> Unit, sleeper? : async (Int) -> Unit, rand? : @random.Rand) -> Self",
-    doc: "Spawn a shard into `group` and return its handle.",
+    signature: "pub fn[X] Shard::start(@async.TaskGroup[X], token~ : String, intents~ : @model.Intents, capabilities? : @model.GatewayCapabilities, gateway_url? : String, shard_id? : Int, shard_count? : Int, identify_queue? : &@queue.IdentifyQueue, event_filter? : (@model.EventKind) -> Bool, connector? : async (String) -> &GatewayTransport, compress? : Bool, inflater_factory? : () -> &Inflater raise, queue_capacity? : Int, telemetry? : (@telemetry.TelemetryEvent) -> Unit, sleeper? : async (Int) -> Unit, rand? : @random.Rand, resume? : Session) -> Self",
+    doc: "Spawn a shard into `group` and return its handle. `resume` seeds the\nsession so the first connection attempts RESUME at its `resume_url`.",
     file: "src/gateway/shard.mbt",
-    line: 125,
+    line: 138,
   },
   {
     pkg: "gaato/discord/gateway",
@@ -4913,7 +4994,16 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn on_close(Int?, Bool) -> ReconnectPolicy",
     doc: "Classify a close code into the action to take, per the Discord docs.\n\n- fatal: authentication failure or invalid shard/intent configuration —\n  reconnecting cannot succeed;\n- re-identify: the session is gone (invalid seq, session timeout);\n- resume: everything else (transient errors, unclean closes), provided a\n  session exists.",
     file: "src/gateway/state.mbt",
-    line: 37,
+    line: 40,
+  },
+  {
+    pkg: "gaato/discord/gateway",
+    name: "zlib_stream_supported",
+    kind: "fn",
+    signature: "pub fn zlib_stream_supported() -> Bool",
+    doc: "Whether this backend can inflate Discord's `zlib-stream` transport\ncompression. False here: leave `compress` off.",
+    file: "src/gateway/compression_unsupported.mbt",
+    line: 4,
   },
   {
     pkg: "gaato/discord/http",
@@ -5320,6 +5410,10 @@ let entries_2 : Array[ApiEntry] = [
     file: "src/http/handles_channel.mbt",
     line: 192,
   },
+]
+
+///|
+let entries_3 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/http",
     name: "ChannelRef::delete_permission",
@@ -5410,10 +5504,6 @@ let entries_2 : Array[ApiEntry] = [
     file: "src/http/handles_channel.mbt",
     line: 219,
   },
-]
-
-///|
-let entries_3 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/http",
     name: "ChannelRef::join_thread",
@@ -7124,6 +7214,10 @@ let entries_3 : Array[ApiEntry] = [
     file: "src/http/api_channel.mbt",
     line: 569,
   },
+]
+
+///|
+let entries_4 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/http",
     name: "Client::leave_guild",
@@ -7214,10 +7308,6 @@ let entries_3 : Array[ApiEntry] = [
     file: "src/http/api_scheduled_event.mbt",
     line: 212,
   },
-]
-
-///|
-let entries_4 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/http",
     name: "Client::list_guild_scheduled_events",
@@ -8928,6 +9018,10 @@ let entries_4 : Array[ApiEntry] = [
     file: "src/http/handles_message.mbt",
     line: 160,
   },
+]
+
+///|
+let entries_5 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/http",
     name: "MessageRef::edit",
@@ -9018,10 +9112,6 @@ let entries_4 : Array[ApiEntry] = [
     file: "src/http/handles_message.mbt",
     line: 207,
   },
-]
-
-///|
-let entries_5 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/http",
     name: "MessageRef::unpin",
@@ -9440,7 +9530,7 @@ let entries_5 : Array[ApiEntry] = [
     pkg: "gaato/discord/http",
     name: "VERSION",
     kind: "const",
-    signature: "pub const VERSION : String = \"0.4.2\"",
+    signature: "pub const VERSION : String = \"0.5.0\"",
     doc: "Library version, sent in the User-Agent header.",
     file: "src/http/client.mbt",
     line: 30,
@@ -10732,6 +10822,10 @@ let entries_5 : Array[ApiEntry] = [
     file: "src/model/activity_instance.mbt",
     line: 1,
   },
+]
+
+///|
+let entries_6 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "ActivityInstance",
@@ -10822,10 +10916,6 @@ let entries_5 : Array[ApiEntry] = [
     file: "src/model/activity_instance.mbt",
     line: 1,
   },
-]
-
-///|
-let entries_6 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "ActivitySecrets",
@@ -12536,6 +12626,10 @@ let entries_6 : Array[ApiEntry] = [
     file: "src/model/activity_instance.mbt",
     line: 1,
   },
+]
+
+///|
+let entries_7 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "ChannelInfoEvent",
@@ -12626,10 +12720,6 @@ let entries_6 : Array[ApiEntry] = [
     file: "src/model/channel_type.mbt",
     line: 9,
   },
-]
-
-///|
-let entries_7 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "ChannelType::from_int",
@@ -14340,6 +14430,10 @@ let entries_7 : Array[ApiEntry] = [
     file: "src/model/activity_instance.mbt",
     line: 1,
   },
+]
+
+///|
+let entries_8 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "GuildMessageSearchResults",
@@ -14430,10 +14524,6 @@ let entries_7 : Array[ApiEntry] = [
     file: "src/model/activity_instance.mbt",
     line: 1,
   },
-]
-
-///|
-let entries_8 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "GuildRoleEvent",
@@ -16144,6 +16234,10 @@ let entries_8 : Array[ApiEntry] = [
     file: "src/model/message.mbt",
     line: 317,
   },
+]
+
+///|
+let entries_9 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "MessageCall::to_json",
@@ -16234,10 +16328,6 @@ let entries_8 : Array[ApiEntry] = [
     file: "src/model/message.mbt",
     line: 627,
   },
-]
-
-///|
-let entries_9 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "MessageFlags::ephemeral",
@@ -17948,6 +18038,10 @@ let entries_9 : Array[ApiEntry] = [
     file: "src/model/activity_instance.mbt",
     line: 1,
   },
+]
+
+///|
+let entries_10 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "RadioOption",
@@ -18038,10 +18132,6 @@ let entries_9 : Array[ApiEntry] = [
     file: "src/model/activity_instance.mbt",
     line: 1,
   },
-]
-
-///|
-let entries_10 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "Ready",
@@ -19752,6 +19842,10 @@ let entries_10 : Array[ApiEntry] = [
     file: "src/model/user.mbt",
     line: 122,
   },
+]
+
+///|
+let entries_11 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "UserFlags::mfa_sms",
@@ -19842,10 +19936,6 @@ let entries_10 : Array[ApiEntry] = [
     file: "src/model/user.mbt",
     line: 162,
   },
-]
-
-///|
-let entries_11 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "UserFlags::to_json",
@@ -21556,6 +21646,10 @@ let entries_11 : Array[ApiEntry] = [
     file: "src/voice/gateway.mbt",
     line: 145,
   },
+]
+
+///|
+let entries_12 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/voice",
     name: "VoiceGateway::state",
@@ -21646,10 +21740,6 @@ let entries_11 : Array[ApiEntry] = [
     file: "src/voice/transport.mbt",
     line: 11,
   },
-]
-
-///|
-let entries_12 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/voice",
     name: "VoiceTransportClosed",

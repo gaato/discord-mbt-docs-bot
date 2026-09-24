@@ -119,7 +119,7 @@ pub let sections : Array[Section] = [
       #|}
       #|```
       #|
-      #|`App` owns the commands and interaction handlers. `Bot` adds the native
+      #|`App` owns the commands and interaction handlers. `Bot` adds the
       #|Gateway connection and dispatch loop. Passing `sync=Global` opts into command
       #|synchronization once after the first READY; omitting it performs no command
       #|request. Use `CommandScope::Guild(guild_id)` while developing if the command
@@ -900,7 +900,7 @@ pub let sections : Array[Section] = [
     title: "Events and intents",
     anchor: "",
     body: (
-      #|The native `Bot` executor exposes typed Gateway event descriptors through
+      #|The `Bot` executor exposes typed Gateway event descriptors through
       #|`Events`. Each descriptor fixes both the payload type and the delivery intents
       #|associated with that event.
     ),
@@ -1178,7 +1178,14 @@ pub let sections : Array[Section] = [
       #|Every shard feeds the same handlers, cache, and collectors. Identify calls are
       #|serialized according to the `max_concurrency` rules Discord returns from
       #|`GET /gateway/bot`, and startup fails early if the remaining session-start
-      #|allowance cannot cover the selected shards. For multiple processes, use the
+      #|allowance cannot cover the selected shards that have no saved session. A
+      #|saved session sends RESUME, which does not consume that allowance. Every
+      #|IDENTIFY, including the fallback after a rejected RESUME, first reads the live
+      #|allowance again; a shard that would exceed it is held and `run` ends with
+      #|`SessionStartLimitExceeded`, because exceeding Discord's daily limit resets the
+      #|bot token. A saved session whose READY was
+      #|recorded under another shard layout is dropped with a warning because its
+      #|RESUME would keep the old guild assignment. For multiple processes, use the
       #|bundled coordinator described in
       #|[Scaling across processes](08-scaling-processes.mbt.md).
     ),
@@ -1199,12 +1206,16 @@ pub let sections : Array[Section] = [
       #|}
       #|```
       #|
-      #|Each Gateway connection then requests `compress=zlib-stream` and retains one
-      #|inflate context for that connection, including across consecutive Gateway
+      #|On native, each compressed Gateway connection requests `compress=zlib-stream`
+      #|and retains one inflate context, including across consecutive Gateway
       #|messages. Only server-to-client binary messages are decompressed; identify,
       #|heartbeat, and other client-to-server payloads remain uncompressed text.
       #|
-      #|The zlib shared library is loaded at runtime (like the async runtime loads
+      #|Compression is available only on native; `zlib_stream_supported()` reports
+      #|whether the current backend can use it. On JavaScript and Wasm,
+      #|`Bot::run` rejects `compress=true` before connecting.
+      #|
+      #|The zlib shared library is loaded at runtime on native (like the async runtime loads
       #|OpenSSL), so neither this library nor applications using it need extra link
       #|flags; building only requires the zlib header. If the shared library is
       #|missing at runtime, enabling compression raises before any connection is
@@ -1845,6 +1856,32 @@ pub let sections : Array[Section] = [
       #|}
       #|```
       #|
+      #|For an HTTP host, pass the exact request bytes and the two signature headers
+      #|to `handle_signed_http`. The method verifies the signature before decoding
+      #|JSON, then returns a status, optional content type, and bytes or multipart
+      #|chunks. The host adapter translates only its request and response conventions:
+      #|
+      #|```mbt check
+      #|///|
+      #|async fn dispatch_signed_http(
+      #|  endpoint : @discord.InteractionEndpoint,
+      #|  verifier : @discord.InteractionVerifier,
+      #|  raw_body : Bytes,
+      #|  signature : String?,
+      #|  timestamp : String?,
+      #|) -> @discord.InteractionHttpResponse {
+      #|  endpoint.handle_signed_http(
+      #|    { http_method: "POST", signature, timestamp, body: raw_body, },
+      #|    verifier,
+      #|  )
+      #|}
+      #|```
+      #|
+      #|The public request requires no absolute URL, environment binding, or host
+      #|execution context. Keep the `App::serve` task group alive after the initial
+      #|response to finish deferred handlers. Hosts with `waitUntil` can attach that
+      #|group's completion promise; other hosts choose their own lifetime policy.
+      #|
       #|Command registration is a separate deploy-time step. Run a one-shot program
       #|that builds the same App and calls `app.sync_commands(client, application_id,
       #|scope~)` before starting or updating the HTTP deployment. The call returns an
@@ -1939,16 +1976,16 @@ pub let sections : Array[Section] = [
       #|  match outcome {
       #|    Reply(response~, files~) => send_callback(response, files)
       #|    NoRoute => send_status(404)
-      #|    NoResponse => send_status(500)
-      #|    TimedOut => send_status(202)
+      #|    NoResponse => send_status(202)
+      #|    TimedOut => send_status(504)
       #|  }
       #|}
       #|```
       #|
       #|`TimedOut` means the initial response was not available before the deadline;
-      #|the handler remains attached to the task group. Returning HTTP 202 by itself
-      #|does not acknowledge an interaction, so slow handlers should use a deferred
-      #|handler mode.
+      #|the handler remains attached to the task group. `NoResponse` is for a handler
+      #|that already sent the callback through Discord REST. Slow handlers should
+      #|instead use a deferred handler mode so the endpoint returns an initial ACK.
     ),
   },
   {
@@ -2015,6 +2052,7 @@ pub let sections : Array[Section] = [
       #|test "http interaction declarations compile" {
       #|  ignore(dispatch_interaction)
       #|  ignore(serve_with_existing_client)
+      #|  ignore(dispatch_signed_http)
       #|  ignore(configure_interactions_endpoint)
       #|  ignore(restore_gateway_interactions)
       #|  ignore(route_outcome)
@@ -2024,10 +2062,57 @@ pub let sections : Array[Section] = [
       #|```
       #|
       #|The server validates and expands the public key before binding its socket, then
-      #|reuses that verifier for every request. It verifies signatures against the raw
-      #|body, handles Discord PINGs, dispatches through `App::serve`, returns 404 for
-      #|`NoRoute`, and returns 202 for `NoResponse` or `TimedOut`. Use a reverse proxy
-      #|for public HTTPS termination.
+      #|reuses that verifier for every request. It answers 401 before reading the body
+      #|when either signature header is missing, verifies signatures against the raw
+      #|body, handles Discord PINGs, dispatches through `App::serve`, and maps the
+      #|outcome like `handle_signed_http`: 404 for `NoRoute`, 202 for `NoResponse`,
+      #|504 for `TimedOut`. Use a reverse proxy for public HTTPS termination.
+    ),
+  },
+  {
+    chapter: "HTTP interactions",
+    file: "06-http-interactions.mbt.md",
+    title: "JavaScript hosts",
+    anchor: "javascript-hosts",
+    body: (
+      #|`App::start_signed_http` exists on the JavaScript backend only and returns a
+      #|JavaScript object `{ response, background }`: `InteractionHttpDispatch`. Both
+      #|promises exist synchronously when the function returns, so hosts such as
+      #|Fastly that must register `waitUntil` before awaiting anything can do so
+      #|immediately. Pass `background` to the host's `waitUntil`-style lifetime API
+      #|and await `response` for the initial callback. `abort_signal` cancels only the
+      #|`response` waiter; `background` keeps running so deferred handlers still
+      #|finish after a client disconnect.
+      #|
+      #|The library caches the expanded verifier for the most recent `public_key`
+      #|(one entry, process-wide) and answers 401 for an unusable key without caching
+      #|it. Each dispatch owns one REST `Client` built from `token` and the optional
+      #|`api_base_url`, and closes it when its work ends, so connections are not
+      #|reused across interactions. `application_id` is required so no startup
+      #|request is made. A handler that produces no initial response yields status
+      #|202 with a `null` body and `null` content type; multipart replies arrive as a
+      #|`ReadableStream` of chunks. See `src/examples/interactions_js/handler.js` for
+      #|a reference host adapter.
+      #|
+      #|```mbt nocheck
+      #|///|
+      #|fn dispatch_on_js_host(
+      #|  app : @discord.App,
+      #|  request : @discord.InteractionHttpRequest,
+      #|  token : String,
+      #|  application_id : @model.ApplicationId,
+      #|  public_key : String,
+      #|  abort_signal : @js_async.AbortSignal,
+      #|) -> @discord.InteractionHttpDispatch {
+      #|  app.start_signed_http(
+      #|    request,
+      #|    token~,
+      #|    application_id~,
+      #|    public_key~,
+      #|    abort_signal~,
+      #|  )
+      #|}
+      #|```
     ),
   },
   {
@@ -2069,8 +2154,9 @@ pub let sections : Array[Section] = [
       #|env WRANGLER_SEND_METRICS=false npm test
       #|```
       #|
-      #|Gateway and Voice transports remain native-only. The JavaScript backend is for
-      #|the REST client, signature verification, and gateway-free HTTP interactions.
+      #|Voice remains native-only. Gateway bots also run on JavaScript (including
+      #|Durable Objects) and moonrun Wasm; the JavaScript backend also serves REST,
+      #|signature verification, and gateway-free HTTP interactions.
       #|With `moonbitlang/async@0.22.1`, the JS Fetch transport also completes
       #|null-body 204 responses. The `workers_echo` suite covers this with a deferred
       #|interaction-response deletion that runs to completion under `waitUntil`.
@@ -2928,7 +3014,7 @@ pub let sections : Array[Section] = [
     title: "Gateway event middleware",
     anchor: "gateway-event-middleware",
     body: (
-      #|`Bot::middleware` is native-only. It receives the `GatewayCtx`, a decoded
+      #|`Bot::middleware` receives the `GatewayCtx`, a decoded
       #|`Event`, and `next(event)`. Not calling `next` drops the event from typed and
       #|raw handlers while leaving wire-level processing intact.
       #|
