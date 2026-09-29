@@ -34,4 +34,3 @@ pub fn ApiEntry::url(Self) -> String
 // Type aliases
 
 // Traits
-

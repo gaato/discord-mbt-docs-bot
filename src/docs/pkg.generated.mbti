@@ -34,4 +34,3 @@ pub fn Section::url(Self) -> String
 // Type aliases
 
 // Traits
-

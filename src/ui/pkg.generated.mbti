@@ -9,19 +9,17 @@ import {
 }
 
 // Values
-pub let api_component_prefix : String
+pub let api_route : @app.ComponentRoute[(Int, String)]
 
-pub fn api_view(@api.ApiEntry, page~ : Int) -> Array[@model.Component]
+pub fn api_view(@api.ApiEntry, page~ : Int) -> Array[@model.Component] raise @app.CustomIdError
 
-pub let component_prefix : String
+pub fn custom_id(@docs.Section, page~ : Int) -> String raise @app.CustomIdError
 
-pub fn custom_id(@docs.Section, page~ : Int) -> String
-
-pub fn parse_suffix(String) -> (Int, String)?
+pub let docs_route : @app.ComponentRoute[(Int, String)]
 
 pub fn register(@app.App, Array[@docs.Section], Array[@api.ApiEntry]) -> Unit
 
-pub fn view(Array[@docs.Section], @docs.Section, page~ : Int) -> Array[@model.Component]
+pub fn view(Array[@docs.Section], @docs.Section, page~ : Int) -> Array[@model.Component] raise @app.CustomIdError
 
 // Errors
 
@@ -30,4 +28,3 @@ pub fn view(Array[@docs.Section], @docs.Section, page~ : Int) -> Array[@model.Co
 // Type aliases
 
 // Traits
-

@@ -2,7 +2,7 @@
 package "gaato/discord-mbt-docs-bot/app"
 
 // Values
-pub fn build(sync? : @gaato/discord/app.CommandSync) -> @gaato/discord/app.App
+pub fn build() -> @gaato/discord/app.App
 
 // Errors
 
@@ -11,4 +11,3 @@ pub fn build(sync? : @gaato/discord/app.CommandSync) -> @gaato/discord/app.App
 // Type aliases
 
 // Traits
-
