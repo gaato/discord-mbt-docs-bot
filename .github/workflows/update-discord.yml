@@ -1,0 +1,82 @@
+name: Follow discord.mbt releases
+
+# A new gaato/discord on mooncakes bumps the dependency, regenerates both
+# indexes from that release's tag, and deploys once the tests pass. A release
+# whose API breaks the bot fails here and leaves main untouched.
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: update-discord
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  bump:
+    runs-on: ubuntu-26.04
+    container: ghcr.io/gaato/moonbit:0.10.14
+    permissions:
+      contents: write
+    outputs:
+      sha: ${{ steps.push.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v5
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Install zlib headers for the native gateway
+        run: apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends zlib1g-dev
+      - run: moon update
+      - name: Compare with the latest release
+        id: versions
+        run: |
+          index="${MOON_HOME:-$HOME/.moon}/registry/index/user/gaato/discord.index"
+          latest=$(tail -n 1 "$index" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p')
+          current=$(sed -n 's/.*"gaato\/discord@\([^"]*\)".*/\1/p' moon.mod)
+          test -n "$latest" && test -n "$current"
+          echo "current=$current latest=$latest"
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"
+          if [ "$latest" != "$current" ]; then echo "changed=true" >> "$GITHUB_OUTPUT"; fi
+      - name: Bump and regenerate
+        if: steps.versions.outputs.changed
+        env:
+          VERSION: ${{ steps.versions.outputs.latest }}
+        run: |
+          sed -i "s|\"gaato/discord@[^\"]*\"|\"gaato/discord@$VERSION\"|" moon.mod
+          git clone --quiet --depth 1 --branch "v$VERSION" \
+            https://github.com/gaato/discord.mbt.git "$RUNNER_TEMP/discord.mbt"
+          moon update
+          moon run --target native --release src/gen "$RUNNER_TEMP/discord.mbt"
+          moon fmt
+          moon info
+      - name: Test
+        if: steps.versions.outputs.changed
+        run: |
+          moon check --target native --deny-warn
+          moon check --target js --deny-warn
+          moon test --target native
+          moon test --target js
+      - name: Push
+        id: push
+        if: steps.versions.outputs.changed
+        env:
+          VERSION: ${{ steps.versions.outputs.latest }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Depend on gaato/discord $VERSION and regenerate the indexes"
+          git push origin HEAD:main
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  # A push made with GITHUB_TOKEN starts no workflows, so deploy is called here.
+  deploy:
+    needs: bump
+    if: needs.bump.outputs.sha
+    uses: ./.github/workflows/deploy.yml
+    with:
+      ref: ${{ needs.bump.outputs.sha }}
+    secrets: inherit
