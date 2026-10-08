@@ -69,7 +69,7 @@ async fn run_interaction(
     group.add_defer(() => client.close())
     let endpoint = @app.build().serve(
       group,
-      client~,
+      access=Client(client),
       application_id=interaction.application_id,
     )
     responses.put(encode_outcome(endpoint.handle_interaction(interaction)))

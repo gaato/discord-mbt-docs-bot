@@ -14,13 +14,13 @@ async fn main {
       println("DISCORD_TOKEN is not set")
       return
     }
-    let bot = @discord.Bot(@app.build(), token~, sync=command_scope())
+    let bot = @discord.BotBuilder(@app.build(), token~, sync=command_scope())
     bot.on(@discord.Events::ready(), (_, ready) => {
       println(
         "ready as \{ready.user.username} (\{@docs.sections.length()} sections indexed)",
       )
     })
-    bot.run()
+    bot.build().run()
   } catch {
     _ if @async.is_being_cancelled() => ()
     error => raise error

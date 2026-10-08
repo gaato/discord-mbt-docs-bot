@@ -101,13 +101,13 @@ pub let sections : Array[Section] = [
       #|  @signal.set_global_cancellation_signals([SIGINT, SIGTERM])
       #|  @async.handle_cancellation(() => {
       #|    let token = @env.get_env_var("DISCORD_TOKEN").unwrap_or("")
-      #|    let app = @discord.App()
+      #|    let app = @discord.AppBuilder()
       #|    app.command(echo_command())
-      #|    let bot = @discord.Bot(app, token~, sync=Global)
+      #|    let bot = @discord.BotBuilder(app.build(), token~, sync=Global)
       #|    bot.on(@discord.Events::ready(), (_, ready) => {
       #|      println("ready as \{ready.user.username}")
       #|    })
-      #|    bot.run()
+      #|    bot.build().run()
       #|  })
       #|  |> ignore
       #|  println("[bot] shutting down")
@@ -119,8 +119,10 @@ pub let sections : Array[Section] = [
       #|}
       #|```
       #|
-      #|`App` owns the commands and interaction handlers. `Bot` adds the
-      #|Gateway connection and dispatch loop. Passing `sync=Global` opts into command
+      #|`AppBuilder` collects the commands and interaction handlers, and `build()`
+      #|validates them and freezes them into an `App`; a bad
+      #|declaration fails there, before any connection. `Bot` adds the Gateway
+      #|connection and dispatch loop. Passing `sync=Global` opts into command
       #|synchronization once after the first READY; omitting it performs no command
       #|request. Use `CommandScope::Guild(guild_id)` while developing if the command
       #|should appear immediately in one guild.
@@ -166,8 +168,8 @@ pub let sections : Array[Section] = [
       #|DISCORD_TOKEN=... moon run --target native src/main
       #|```
       #|
-      #|The token passed to `Bot(...)` and `Client(...)` is the raw bot token without a
-      #|`Bot ` prefix.
+      #|The token passed to `BotBuilder(...)` and `Client(...)` is the raw bot token
+      #|without a `Bot ` prefix.
     ),
   },
   {
@@ -220,8 +222,8 @@ pub let sections : Array[Section] = [
       #|///|
       #|let paint_args : @discord.Args[PaintArgs] = @discord.Args::map2(
       #|  @discord.arg_string(name="color", description="Paint color", choices=[
-      #|    @discord.string_choice("Red", "red"),
-      #|    @discord.string_choice("Blue", "blue"),
+      #|    @discord.string_choice(name="Red", value="red"),
+      #|    @discord.string_choice(name="Blue", value="blue"),
       #|  ]),
       #|  @discord.arg_int32(name="coats", description="Number of coats", min=1, max=5).with_default(
       #|    1,
@@ -264,7 +266,7 @@ pub let sections : Array[Section] = [
       #|      name_localizations={ "ja": "スタイル" },
       #|      description_localizations={ "ja": "あいさつの種類" },
       #|      choices=[
-      #|        @discord.string_choice("Friendly", "friendly", name_localizations={
+      #|        @discord.string_choice(name="Friendly", value="friendly", name_localizations={
       #|          "ja": "フレンドリー",
       #|        }),
       #|      ],
@@ -305,7 +307,7 @@ pub let sections : Array[Section] = [
       #|    let query = input.to_lower()
       #|    ["Ada", "Grace", "Linus"]
       #|    .filter(name => query.is_empty() || name.to_lower().has_prefix(query))
-      #|    .map(name => @discord.string_choice(name, name))
+      #|    .map(name => @discord.string_choice(name~, value=name))
       #|  })
       #|}
       #|```
@@ -361,7 +363,7 @@ pub let sections : Array[Section] = [
       #|
       #|```mbt check
       #|///|
-      #|let wave : @discord.Command[@framework.TargetUser] = @discord.user_command(
+      #|let wave : @discord.Command[@discord.TargetUser] = @discord.user_command(
       #|  name="Wave",
       #|  handler=Immediate((_, target) => {
       #|    @discord.CommandReply::message(
@@ -431,16 +433,23 @@ pub let sections : Array[Section] = [
       #|  Error policies follow the gate's real state, so a Raw handler that responds
       #|  and then raises receives an error followup through `respond_error`.
       #|
-      #|`edit_original` and `followup` return the resulting message; append
-      #|`|> ignore` when the handler does not need it.
+      #|Every deferred context — command, component, and modal — has the same
+      #|message surface: `original()`, `edit_original`, and `delete_original()` for
+      #|the deferred response, and `followup`, `get_followup`, `edit_followup`, and
+      #|`delete_followup` for the messages sent after it. `edit_original` and
+      #|`followup` return the resulting message; append `|> ignore` when the handler
+      #|does not need it. A followup's return value is the only way to learn the id a
+      #|later `edit_followup` or `delete_followup` needs. When `edit_original` adds
+      #|`files`, the new uploads replace the existing attachments unless
+      #|`keep_attachments` lists the ones to retain.
       #|
       #|Register every command with `app.command(command)`. To synchronize the
-      #|declarations, pass a `CommandScope` to `Bot(sync=...)` or call
+      #|declarations, pass a `CommandScope` to `BotBuilder(sync=...)` or call
       #|`app.sync_commands(client, application_id, scope~)` from a one-shot program.
       #|The call returns a sync report. Both paths default to deleting undeclared
       #|commands in the selected scope, while always preserving the Entry Point
-      #|command. Use `unowned=Keep` on `sync_commands` or `sync_unowned=Keep` on `Bot`
-      #|for a scope shared with other command owners.
+      #|command. Use `unowned=Keep` on `sync_commands` or `sync_unowned=Keep` on
+      #|`BotBuilder` for a scope shared with other command owners.
       #|
       #|```mbt check
       #|///|
@@ -465,19 +474,22 @@ pub let sections : Array[Section] = [
     anchor: "checks-and-app-middleware",
     body: (
       #|A command check is a per-command gate. Cooldown keys include command type,
-      #|command name, and the selected User, Guild, or Global bucket. `App()` keeps
-      #|windows in a fresh in-memory store; pass `App(cooldown_store=...)` to share them
+      #|command name, and the selected User, Guild, or Global bucket. `AppBuilder()` keeps
+      #|windows in a fresh in-memory store; pass `AppBuilder(cooldown_store=...)` to share them
       #|between Apps or processes. See [Shared cooldowns](08-scaling-processes.mbt.md#shared-cooldowns).
       #|App middleware is application-global and wraps checks, cooldowns, and handler
       #|dispatch for commands, components, and modals. It does not run for
       #|autocomplete. Use checks for command-specific permissions and preconditions.
       #|Checks may call async services such as Discord REST through
       #|`ctx.app().http()`. The command path is middleware, checks in registration
-      #|order, cooldown, argument decoding, then the handler. Checks run before the
-      #|handler can defer, so they spend Discord's three-second initial-response budget;
-      #|keep them fast or cache their results. A cooldown store is called only after
-      #|all checks pass, and commands without a cooldown never call it. Remote cooldown
-      #|acquisitions also spend that initial-response budget.
+      #|order, cooldown, argument decoding, then the handler. All of it runs inside
+      #|Discord's three-second initial-response window. A `Deferred` handler is
+      #|acknowledged automatically if that work is still running when 1000 ms of the
+      #|budget remain, so a slow check cannot expire it. A later failure then replaces
+      #|the loading message, whose visibility the handler declared. Immediate and raw
+      #|handlers have no such fallback, so keep checks fast or cache their results. A
+      #|cooldown store is called only after all checks pass, and commands without a
+      #|cooldown never call it.
       #|Use middleware for policy that spans interaction kinds, or inspect its routed
       #|target to keep the policy scoped. See [Middleware](09-middleware.mbt.md) for
       #|ordering, short-circuiting, and error-policy behavior.
@@ -504,7 +516,7 @@ pub let sections : Array[Section] = [
       #|authorize the user again in the handler.
       #|
       #|`route.decode(custom_id)` is the inverse: it reads the state back from an id
-      #|the route produced, and raises `HandlerError::InvalidArgument` for an id that
+      #|the route produced, and raises `HandlerError::Malformed` for an id that
       #|belongs to another route or whose state does not decode. Typed handlers
       #|receive the state already decoded, so reach for it where an id arrives
       #|undecoded — the `ComponentCtx` returned by `wait_for_component`, or a test
@@ -572,7 +584,7 @@ pub let sections : Array[Section] = [
       #|
       #|```mbt check
       #|///|
-      #|fn register_ticket_handlers(app : @discord.App) -> Unit {
+      #|fn register_ticket_handlers(app : @discord.AppBuilder) -> Unit {
       #|  app.on_component(
       #|    close_ticket,
       #|    Immediate((_, ticket) => {
@@ -603,7 +615,11 @@ pub let sections : Array[Section] = [
       #|with `:` and splits at the first separator; only the final segment may contain
       #|`:`. `imap` and `custom` support application types. Encoding ambiguous segments
       #|raises `CustomIdError::SeparatorInSegment`; oversized ids raise `TooLong`.
-      #|Decode failures reach the error policy as `HandlerError::InvalidArgument`.
+      #|A `custom` or `imap` decoder may raise any error. A `HandlerError` it raises
+      #|keeps its meaning; any other decode failure reaches the error policy as
+      #|`HandlerError::Malformed`. The app produced the state, so state that does not
+      #|decode is stale or tampered with, not input the user can correct. The default
+      #|policy logs the reason and tells the user the interaction is out of date.
       #|
       #|Typed routes match the exact id or that id followed by `:` and state, so
       #|`ticket-closeish` does not match `ticket-close`. Route ids must be nonempty
@@ -611,7 +627,7 @@ pub let sections : Array[Section] = [
       #|typed routes can keep ids already attached to posted messages, such as
       #|`bot:rolemenu` — but two typed ids may not nest at a `:` boundary: `ticket`
       #|beside `ticket:close` is rejected, because state encoded for `ticket` could
-      #|reach the `ticket:close` handler. `App::validate` also rejects
+      #|reach the `ticket:close` handler. `AppBuilder::build` also rejects
       #|duplicate effective prefixes: typed `ticket-close` collides with raw
       #|`ticket-close:`. `on_component_raw(prefix~, handler)` and `on_modal_raw`
       #|retain literal-prefix routing for advanced handlers. Strict prefix overlaps
@@ -680,8 +696,8 @@ pub let sections : Array[Section] = [
     title: "Typed modals",
     anchor: "typed-modals",
     body: (
-      #|Define modal fields once, then use the same `Modal[A]` for display and typed
-      #|submission decoding:
+      #|Define a modal once — its state codec and fields — then use the same
+      #|`Modal[S, A]` for display and for typed decoding of the submission:
       #|
       #|```mbt check
       #|///|
@@ -691,9 +707,10 @@ pub let sections : Array[Section] = [
       #|} derive(Debug)
       #|
       #|///|
-      #|let feedback : @discord.Modal[Feedback] = @discord.modal(
+      #|let feedback : @discord.Modal[Int, Feedback] = @discord.modal(
       #|  custom_id="feedback",
       #|  title="Feedback",
+      #|  state=@discord.CustomIdCodec::int(),
       #|  fields=@discord.ModalFields::map2(
       #|    @discord.text_field(
       #|      custom_id="topic",
@@ -706,12 +723,9 @@ pub let sections : Array[Section] = [
       #|)
       #|
       #|///|
-      #|let feedback_state : @discord.CustomIdCodec[Int] = @discord.CustomIdCodec::int()
-      #|
-      #|///|
       #|let open_feedback : @discord.ComponentRoute[Int] = @discord.component_route(
       #|  id="open-feedback",
-      #|  state=feedback_state,
+      #|  state=@discord.CustomIdCodec::int(),
       #|)
       #|
       #|///|
@@ -720,24 +734,21 @@ pub let sections : Array[Section] = [
       #|}
       #|
       #|///|
-      #|fn register_feedback(app : @discord.App) -> Unit {
+      #|fn register_feedback(app : @discord.AppBuilder) -> Unit {
       #|  app.on_component(
       #|    open_feedback,
       #|    Immediate((_, ticket) => {
-      #|      ShowModal(
-      #|        feedback.show(state=feedback_state.encode(ticket), values={
-      #|          "topic": "Follow-up",
-      #|        }),
-      #|      )
+      #|      ShowModal(feedback.show(ticket, values={ "topic": "Follow-up" }))
       #|    }),
       #|  )
       #|  app.on_modal(
       #|    feedback,
-      #|    Immediate((ctx, form) => {
-      #|      let ticket = feedback_state.decode(ctx.state().unwrap_or(""))
-      #|      @discord.InitialResponse::message(
+      #|    Immediate((_, ticket, form) => {
+      #|      // The button that opened this modal sits on a message, so the submit
+      #|      // can replace that message instead of posting a new one.
+      #|      @discord.ModalReply::update_message(
       #|        content="ticket=\{ticket}; topic=\{form.topic}",
-      #|        ephemeral=true,
+      #|        components=[],
       #|      )
       #|    }),
       #|  )
@@ -748,7 +759,7 @@ pub let sections : Array[Section] = [
       #|`Modal::show(values=...)` overrides selected text inputs for one response and
       #|does not mutate the modal definition, so later calls return to the static
       #|default. Override keys are text-input `custom_id` values. An unknown key or a
-      #|key naming a non-text field raises `ModalPrefillError` instead of being
+      #|key naming a non-text field raises `ModalShowError` instead of being
       #|silently ignored, and so does a value over Discord's 4000-unit text-input
       #|limit: check the length before calling `show` when the prefill comes from
       #|longer content such as an embed description (4096).
@@ -759,20 +770,28 @@ pub let sections : Array[Section] = [
       #|request with 400 Invalid Form Body when one is exceeded. The library checks
       #|them locally: typed send helpers raise `DiscordHttpError::Validation` naming the
       #|offending path (such as `components[0].components[2].label`), and
-      #|`App::validate` applies the modal limits to registered modals at startup, so a
-      #|bad declaration fails before the first interaction. The same checks are
+      #|`AppBuilder::build` applies the modal limits to registered modals, so a bad
+      #|declaration fails before any executor starts. The same checks are
       #|available as `@model.message_component_limit_violations`,
       #|`@model.modal_limit_violations`, and `@model.embed_limit_violations`.
       #|
       #|Raw `Client::request` and raw interaction callback JSON remain escape hatches;
       #|they do not promise complete outgoing model validation.
       #|
-      #|`ModalImmediateCtx::origin()` distinguishes a modal opened from a component
-      #|from one opened from a command. `state()` is the value passed to `show`.
-      #|Modal fields stay typed by `Modal[A]`; encode typed modal state with a codec
-      #|when calling `show`, then decode `ctx.state()` in the submission handler as
-      #|above. `show` checks the complete custom id, including state, against the same
-      #|100-unit limit and raises `CustomIdError::TooLong` if it is exceeded.
+      #|A `Modal[S, A]` is a route like `component_route`: `state` is the codec for
+      #|the value `show` carries in the custom id, and handlers receive the decoded
+      #|state next to the decoded form — `(ctx, state, form)`. Use
+      #|`CustomIdCodec::unit()` for a modal without state. State that does not decode
+      #|is `HandlerError::Malformed`, exactly as for components. `show` checks the
+      #|complete custom id against the 100-unit limit and raises
+      #|`ModalShowError::InvalidCustomId` if the state does not fit.
+      #|
+      #|A submission can answer with a new message (`ModalReply::message`,
+      #|`DeferredMessage`) or, when a component opened the modal, by editing that
+      #|component's message (`ModalReply::update_message`, `DeferredUpdate`).
+      #|`ctx.origin()` tells the two apart. A modal opened by a command has no message
+      #|to edit, so an update reply fails with `HandlerError::UnsupportedResponse`
+      #|before anything is sent, and the error policy answers instead.
       #|
       #|### File uploads
       #|
@@ -784,9 +803,10 @@ pub let sections : Array[Section] = [
       #|
       #|```mbt check
       #|///|
-      #|let upload_report : @discord.Modal[Array[@model.Attachment]] = @discord.modal(
+      #|let upload_report : @discord.Modal[Unit, Array[@model.Attachment]] = @discord.modal(
       #|  custom_id="upload-report",
       #|  title="Report",
+      #|  state=@discord.CustomIdCodec::unit(),
       #|  fields=@discord.ModalFields::of(
       #|    @discord.file_field(
       #|      custom_id="proof",
@@ -799,7 +819,7 @@ pub let sections : Array[Section] = [
       #|```
       #|
       #|Filters match file extensions only, so validate the attachment contents
-      #|before trusting them. `App::validate` rejects a filter with more than 10
+      #|before trusting them. `AppBuilder::build` rejects a filter with more than 10
       #|entries or an extension without its leading dot.
     ),
   },
@@ -809,9 +829,11 @@ pub let sections : Array[Section] = [
     title: "Waiting for one component",
     anchor: "waiting-for-one-component",
     body: (
-      #|A deferred handler can wait for an exact custom ID. By default, only the user
-      #|who invoked the command or component may satisfy the wait. Waiters take
-      #|precedence over registered component handlers.
+      #|A deferred handler — command, component, or modal — can wait for one click.
+      #|Name the button with a route and a state value, then wait for the same route
+      #|and value: the two cannot drift apart, and the state keeps concurrent waits
+      #|from colliding. By default, only the user who invoked the handler may satisfy
+      #|the wait. Waiters take precedence over registered component handlers.
       #|
       #|```mbt check
       #|///|
@@ -820,14 +842,22 @@ pub let sections : Array[Section] = [
       #|  description="Ask for confirmation",
       #|  args=@discord.Args::unit(),
       #|  handler=Deferred(ephemeral=false, (ctx, _) => {
-      #|    let custom_id = "confirm:\{ctx.interaction().id}"
+      #|    let confirm = @discord.component_route(
+      #|      id="confirm",
+      #|      state=@discord.CustomIdCodec::id(),
+      #|    )
+      #|    let waited = ctx.interaction().id
       #|    ctx.edit_original(content="Continue?", components=[
       #|      @discord.action_row([
-      #|        @discord.button(custom_id~, label="Confirm", style=Success),
+      #|        @discord.button(
+      #|          custom_id=confirm.custom_id(waited),
+      #|          label="Confirm",
+      #|          style=Success,
+      #|        ),
       #|      ]),
       #|    ])
       #|    |> ignore
-      #|    match ctx.wait_for_component(custom_id~, timeout_ms=30_000) {
+      #|    match ctx.wait_for_component(confirm, waited, timeout_ms=30_000) {
       #|      Some(click) => click.update_message(content="Confirmed", components=[])
       #|      None => ctx.edit_original(content="Timed out", components=[]) |> ignore
       #|    }
@@ -836,10 +866,10 @@ pub let sections : Array[Section] = [
       #|
       #|///|
       #|test "component and modal declarations compile" {
-      #|  let app = @discord.App()
+      #|  let app = @discord.AppBuilder()
       #|  register_ticket_handlers(app)
       #|  register_feedback(app)
-      #|  app.validate()
+      #|  app.build() |> ignore
       #|  assert_eq(ticket_controls(42).length(), 1)
       #|  guard feedback_button(42) is Button(button) else { fail("expected button") }
       #|  assert_eq(button.custom_id, Some("open-feedback:42"))
@@ -849,10 +879,17 @@ pub let sections : Array[Section] = [
       #|```
       #|
       #|For a public poll, opt out of the user filter explicitly with
-      #|`ctx.wait_for_component(custom_id~, from=Anyone, timeout_ms=30_000)`. Keep an
-      #|interaction-specific value in the exact ID when concurrent waits are possible;
+      #|`ctx.wait_for_component(route, state, from=Anyone, timeout_ms=30_000)`. Keep
+      #|an interaction-specific value in the state when concurrent waits are possible;
       #|the unique value prevents two waits from colliding, while the default
       #|`Invoker` filter provides user safety.
+      #|
+      #|The waited click comes back as the lower-level `ComponentCtx`, unanswered.
+      #|It does not pass through the App's admission or automatic defer, so answer it
+      #|yourself — `update_message`, `defer_update`, or `respond` — within Discord's
+      #|three seconds. A gateway event handler can wait too, through
+      #|`GatewayCtx::wait_for_component(route, state, user?)`; an event has no
+      #|invoking user, so that wait accepts anyone unless `user` is given.
       #|
       #|```mbt check
       #|///|
@@ -913,7 +950,7 @@ pub let sections : Array[Section] = [
     body: (
       #|```mbt check
       #|///|
-      #|fn register_handlers(bot : @discord.Bot) -> Unit {
+      #|fn register_handlers(bot : @discord.BotBuilder) -> Unit {
       #|  bot.on(@discord.Events::ready(), (_, ready) => {
       #|    println("ready as \{ready.user.username}")
       #|  })
@@ -966,7 +1003,7 @@ pub let sections : Array[Section] = [
       #|)
       #|
       #|///|
-      #|fn observe_shard_latency(bot : @discord.Bot) -> Unit {
+      #|fn observe_shard_latency(bot : @discord.BotBuilder) -> Unit {
       #|  bot.on(@discord.Events::ready(), (ctx, _) => {
       #|    println("this shard: \{latency_text(ctx.latency_ms())}")
       #|  })
@@ -989,7 +1026,7 @@ pub let sections : Array[Section] = [
       #|
       #|```mbt check
       #|///|
-      #|fn register_message_edits(bot : @discord.Bot) -> Unit {
+      #|fn register_message_edits(bot : @discord.BotBuilder) -> Unit {
       #|  bot.on(@discord.Events::message_update(), (_, event) => {
       #|    if event.is_edit() {
       #|      match event.before {
@@ -1016,7 +1053,7 @@ pub let sections : Array[Section] = [
     title: "Automatic intent derivation",
     anchor: "automatic-intent-derivation",
     body: (
-      #|When `Bot(...)` omits `intents`, `Bot` unions the delivery intents required by
+      #|When `BotBuilder(...)` omits `intents`, `build()` unions the delivery intents required by
       #|all typed subscriptions, then removes privileged intents. For example,
       #|`message_create()` contributes `GUILD_MESSAGES | DIRECT_MESSAGES`.
       #|
@@ -1040,8 +1077,8 @@ pub let sections : Array[Section] = [
       #|fn bot_with_explicit_intents(
       #|  app : @discord.App,
       #|  token : String,
-      #|) -> @discord.Bot {
-      #|  Bot(app, token~, intents=explicit_intents)
+      #|) -> @discord.BotBuilder {
+      #|  @discord.BotBuilder(app, token~, intents=explicit_intents)
       #|}
       #|
       #|///|
@@ -1057,7 +1094,7 @@ pub let sections : Array[Section] = [
       #|
       #|Raw handlers registered with `bot.on_event` also cannot imply an intent set.
       #|If any raw handlers are used, pass the complete intended bitfield to
-      #|`Bot(...)`.
+      #|`BotBuilder(...)`.
     ),
   },
   {
@@ -1068,14 +1105,17 @@ pub let sections : Array[Section] = [
     body: (
       #|Known events that fail typed decoding are still delivered to raw handlers as
       #|an `Event::Unknown` value whose marker starts with `DECODE_ERROR:`. The `App`
-      #|warning hook receives a summary without the payload.
+      #|warning hook receives an `AppWarning` summary without the payload.
       #|
       #|Register a decode observer only when the raw payload is needed for diagnostics:
       #|
       #|```mbt check
       #|///|
-      #|fn observe_decode_errors(app : @discord.App, bot : @discord.Bot) -> Unit {
-      #|  app.on_warn(message => println("[warn] \{message}"))
+      #|fn observe_decode_errors(
+      #|  app : @discord.AppBuilder,
+      #|  bot : @discord.BotBuilder,
+      #|) -> Unit {
+      #|  app.on_warn(warning => println("[warn] \{warning.to_string()}"))
       #|  bot.on_decode_error((marker, payload) => {
       #|    println("\{marker}: \{payload.stringify()}")
       #|  })
@@ -1102,8 +1142,11 @@ pub let sections : Array[Section] = [
       #|
       #|```mbt check
       #|///|
-      #|fn obfuscation_test_bot(app : @discord.App, token : String) -> @discord.Bot {
-      #|  @discord.Bot(
+      #|fn obfuscation_test_bot(
+      #|  app : @discord.App,
+      #|  token : String,
+      #|) -> @discord.BotBuilder {
+      #|  @discord.BotBuilder(
       #|    app,
       #|    token~,
       #|    capabilities=@discord.GatewayCapabilities::channel_obfuscation(),
@@ -1118,12 +1161,12 @@ pub let sections : Array[Section] = [
     title: "Gateway event middleware",
     anchor: "gateway-event-middleware",
     body: (
-      #|`Bot::middleware` can filter an event by omitting `next`, or transform the
+      #|`BotBuilder::middleware` can filter an event by omitting `next`, or transform the
       #|event passed to typed and raw handlers:
       #|
       #|```mbt check
       #|///|
-      #|fn filter_and_tag(bot : @discord.Bot) -> Unit {
+      #|fn filter_and_tag(bot : @discord.BotBuilder) -> Unit {
       #|  bot.middleware((_, event, next) => {
       #|    match event {
       #|      MessageCreate(created) if created.message.author.bot is Some(true) => ()
@@ -1157,10 +1200,17 @@ pub let sections : Array[Section] = [
       #|
       #|```mbt check
       #|///|
-      #|fn sharded_bots(app : @discord.App, token : String) -> Array[@discord.Bot] {
-      #|  let auto = @discord.Bot(app, token~, shards=Auto) // recommended count
-      #|  let fixed = @discord.Bot(app, token~, shards=Fixed(count=4)) // explicit local count
-      #|  let ranged = @discord.Bot(app, token~, shards=Range(ids=[0, 1], count=8))
+      #|fn sharded_bots(
+      #|  app : @discord.App,
+      #|  token : String,
+      #|) -> Array[@discord.BotBuilder] {
+      #|  let auto = @discord.BotBuilder(app, token~, shards=Auto) // recommended count
+      #|  let fixed = @discord.BotBuilder(app, token~, shards=Fixed(count=4)) // explicit local count
+      #|  let ranged = @discord.BotBuilder(
+      #|    app,
+      #|    token~,
+      #|    shards=Range(ids=[0, 1], count=8),
+      #|  )
       #|  [auto, fixed, ranged]
       #|}
       #|
@@ -1197,12 +1247,12 @@ pub let sections : Array[Section] = [
     anchor: "gateway-compression",
     body: (
       #|Gateway `zlib-stream` transport compression is opt-in. Pass `compress=true`
-      #|to `Bot(...)` (or `Shard::start` at the lower level):
+      #|to `BotBuilder(...)` (or `Shard::start` at the lower level):
       #|
       #|```mbt check
       #|///|
-      #|fn compressed_bot(app : @discord.App, token : String) -> @discord.Bot {
-      #|  Bot(app, token~, compress=true)
+      #|fn compressed_bot(app : @discord.App, token : String) -> @discord.BotBuilder {
+      #|  @discord.BotBuilder(app, token~, compress=true)
       #|}
       #|```
       #|
@@ -1213,7 +1263,8 @@ pub let sections : Array[Section] = [
       #|
       #|Compression is available only on native; `zlib_stream_supported()` reports
       #|whether the current backend can use it. On JavaScript and Wasm,
-      #|`Bot::run` rejects `compress=true` before connecting.
+      #|`BotBuilder::build` rejects `compress=true` with
+      #|`BotConfigError::CompressionUnavailable`.
       #|
       #|The zlib shared library is loaded at runtime on native (like the async runtime loads
       #|OpenSSL), so neither this library nor applications using it need extra link
@@ -1230,11 +1281,12 @@ pub let sections : Array[Section] = [
     anchor: "opt-in-cache",
     body: (
       #|`gaato/discord/cache` is a portable, gateway-driven in-memory cache. Attach
-      #|it to a `Bot` to apply every decoded event before event handlers run:
+      #|it with `BotBuilder::attach_cache` to apply every decoded event before event
+      #|handlers run:
       #|
       #|```mbt check
       #|///|
-      #|fn install_cache(bot : @discord.Bot) -> @cache.InMemoryCache {
+      #|fn install_cache(bot : @discord.BotBuilder) -> @cache.InMemoryCache {
       #|  let cache = @cache.InMemoryCache(
       #|    resources=CacheResources(presences=true, messages=true),
       #|    limits=CacheLimits(
@@ -1296,7 +1348,7 @@ pub let sections : Array[Section] = [
       #|
       #|```mbt check
       #|///|
-      #|fn register_channel_resolution(bot : @discord.Bot) -> Unit {
+      #|fn register_channel_resolution(bot : @discord.BotBuilder) -> Unit {
       #|  bot.on(@discord.Events::message_create(), (ctx, event) => {
       #|    if ctx.cache() is Some(cache) {
       #|      ignore(cache.channel(event.message.channel_id))
@@ -1499,7 +1551,7 @@ pub let sections : Array[Section] = [
       #|| `ScheduledEventRef` | `Client::scheduled_event_ref`, `GuildRef::scheduled_event_ref` | `fetch`, `edit`, `delete`, `users` |
       #|| `AutoModerationRuleRef` | `Client::auto_moderation_rule_ref`, `GuildRef::auto_moderation_rule_ref` | `fetch`, `edit`, `delete` |
       #|| `TemplateRef` | `Client::guild_template_ref`, `GuildRef::template_ref` | `fetch`, `sync`, `edit`, `create_guild` |
-      #|| `InviteRef` | `Client::invite_ref` | `fetch`, `delete`, `update_target_users` |
+      #|| `InviteRef` | `Client::invite_ref` | `fetch`, `delete`, `update_target_users`, `add_target_user`, `remove_target_user`, `bulk_add_target_users`, `bulk_delete_target_users` |
       #|| `WebhookRef` | `Client::webhook_ref` | `fetch`, `edit`, `delete`, `with_token` |
       #|| `WebhookTokenRef` | `Client::webhook_token_ref`, `WebhookRef::with_token` | `fetch`, `edit`, `send`, `message_ref` |
       #|| `WebhookMessageRef` | `WebhookTokenRef::message_ref` | `fetch`, `edit`, `delete` |
@@ -1629,8 +1681,10 @@ pub let sections : Array[Section] = [
       #|
       #|`next_page()` returns `Array[T]?`, where `None` is the terminal state.
       #|`next_page`, `collect`, and `each` consume the same paginator state and must be
-      #|called sequentially. See the `Client::paginate_messages` documentation for
-      #|cursor direction details.
+      #|called sequentially. A `collect` that stops partway through a page keeps the
+      #|rest for the next call. `Paginator[T]` is the `gaato/sdk-runtime` paginator
+      #|with `DiscordHttpError` as its error, so the callback of `each` may be async.
+      #|See the `Client::paginate_messages` documentation for cursor direction details.
     ),
   },
   {
@@ -1685,7 +1739,10 @@ pub let sections : Array[Section] = [
       #|global window inside one process. The client updates bucket state from response
       #|headers and retries 429 responses after the declared delay. Typed and custom
       #|routes use the same request path, so no separate limiter integration is
-      #|required. A custom limiter can be passed through `Client(limiter=...)`.
+      #|required. A custom limiter implements the `gaato/sdk-runtime` `RateLimiter`
+      #|trait and is passed through `Client(limiter=...)`. The client calls its
+      #|`release` exactly once for every `acquire` that returned, with the response's
+      #|status and headers, or with status 0 when no response arrived.
       #|
       #|`Client(request_timeout_ms=30000)` bounds each single network attempt,
       #|including reading its response body. Rate-limit waits, 429 back-off, and user
@@ -1836,7 +1893,7 @@ pub let sections : Array[Section] = [
       #|  token : String,
       #|  body : Json,
       #|) -> Json? {
-      #|  let endpoint = app.serve(group, token~)
+      #|  let endpoint = app.serve(group, access=Token(token))
       #|  endpoint.handle(body)
       #|}
       #|```
@@ -1852,7 +1909,7 @@ pub let sections : Array[Section] = [
       #|  client : @dhttp.Client,
       #|  application_id : @model.ApplicationId,
       #|) -> @discord.InteractionEndpoint {
-      #|  app.serve(group, client~, application_id~)
+      #|  app.serve(group, access=Client(client), application_id~)
       #|}
       #|```
       #|
@@ -1883,7 +1940,7 @@ pub let sections : Array[Section] = [
       #|group's completion promise; other hosts choose their own lifetime policy.
       #|
       #|Command registration is a separate deploy-time step. Run a one-shot program
-      #|that builds the same App and calls `app.sync_commands(client, application_id,
+      #|that builds the same App and calls `app.build().sync_commands(client, application_id,
       #|scope~)` before starting or updating the HTTP deployment. The call returns an
       #|`@app.SyncReport`; print it to see each scope's changes and `overwritten` flag:
       #|
@@ -2032,17 +2089,17 @@ pub let sections : Array[Section] = [
       #|```mbt check
       #|///|
       #|async fn run_server(
-      #|  app : @discord.App,
+      #|  app : @discord.AppBuilder,
       #|  public_key : String,
       #|  token : String,
       #|) -> Unit {
       #|  @async.with_task_group(group => {
       #|    let server = @discord.serve_interactions(
       #|      group,
-      #|      app,
+      #|      app.build(),
+      #|      access=Token(token),
       #|      addr="127.0.0.1:8080",
       #|      public_key~,
-      #|      token~,
       #|    )
       #|    println("listening on \{server.addr()}")
       #|  })
@@ -2097,14 +2154,16 @@ pub let sections : Array[Section] = [
       #|```mbt nocheck
       #|///|
       #|fn dispatch_on_js_host(
-      #|  app : @discord.App,
+      #|  app : @discord.AppBuilder,
       #|  request : @discord.InteractionHttpRequest,
       #|  token : String,
       #|  application_id : @model.ApplicationId,
       #|  public_key : String,
       #|  abort_signal : @js_async.AbortSignal,
       #|) -> @discord.InteractionHttpDispatch {
-      #|  app.start_signed_http(
+      #|  app
+      #|  .build()
+      #|  .start_signed_http(
       #|    request,
       #|    token~,
       #|    application_id~,
@@ -2121,10 +2180,10 @@ pub let sections : Array[Section] = [
     title: "Cloudflare Workers",
     anchor: "cloudflare-workers",
     body: (
-      #|On per-request runtimes such as Workers, constructing `App()` for every request
+      #|On per-request runtimes such as Workers, constructing `AppBuilder()` for every request
       #|also rebuilds its in-memory cooldown store. Those cooldowns are therefore inert
       #|across requests. Implement `gaato/discord/cooldown.CooldownStore` over KV or a
-      #|Durable Object and inject it with `App(cooldown_store=...)` to enforce real
+      #|Durable Object and inject it with `AppBuilder(cooldown_store=...)` to enforce real
       #|cooldowns. The implementation must own its clock and atomically acquire each
       #|key's window; account for the storage service's consistency and atomicity
       #|guarantees. The TCP `RemoteCooldownStore` is native-only.
@@ -2142,8 +2201,8 @@ pub let sections : Array[Section] = [
       #|`NoResponse` to 202, internal dispatch failures to 500, and `TimedOut` to 504.
       #|
       #|Replies containing `FileUpload` values become a multipart callback body. The
-      #|adapter exposes a Web `ReadableStream` that emits the existing multipart text
-      #|and `Bytes` chunks in order, without concatenating them. Cancelling that stream
+      #|adapter exposes a Web `ReadableStream` that emits the multipart `Bytes` chunks
+      #|in order, without concatenating them. Cancelling that stream
       #|drops unsent chunks and does not leave a MoonBit producer task behind.
       #|
       #|Run its signed endpoint tests in Cloudflare's local runtime with:
@@ -2172,7 +2231,10 @@ pub let sections : Array[Section] = [
       #|
       #|```mbt check
       #|///|
-      #|pub fn install_feedback(app : @discord.App, config~ : FeedbackConfig) -> Unit {
+      #|pub fn install_feedback(
+      #|  app : @discord.AppBuilder,
+      #|  config~ : FeedbackConfig,
+      #|) -> Unit {
       #|  app.middleware(feedback_access_policy(config))
       #|  FeedbackFeature(config).install(app)
       #|}
@@ -2181,17 +2243,29 @@ pub let sections : Array[Section] = [
       #|The installer registers middleware, commands, components, and modals that
       #|belong to the feature. App middleware is global, so a feature-specific policy
       #|should inspect its routed target and call `next()` for unrelated interactions.
-      #|See [Middleware](09-middleware.mbt.md) for a complete installer example. A
-      #|feature that consumes Gateway events also accepts `Bot`:
+      #|See [Middleware](09-middleware.mbt.md) for a complete installer example.
+      #|
+      #|A `BotBuilder` takes a built `App`, so declarations must be complete before
+      #|the bot is configured. A feature that also consumes Gateway events therefore
+      #|exports two functions: an installer that takes the `AppBuilder` for its
+      #|declarations, and an attach function that takes the `BotBuilder` for its event
+      #|handlers. Both builders freeze on `build()`, so every installer and attach
+      #|call happens before the bot runs:
       #|
       #|```mbt check
       #|///|
       #|pub fn install_starboard(
-      #|  app : @discord.App,
-      #|  bot : @discord.Bot,
+      #|  app : @discord.AppBuilder,
       #|  config~ : StarboardConfig,
       #|) -> Unit {
       #|  install_starboard_commands(app, config)
+      #|}
+      #|
+      #|///|
+      #|pub fn attach_starboard(
+      #|  bot : @discord.BotBuilder,
+      #|  config~ : StarboardConfig,
+      #|) -> Unit {
       #|  bot.on(@discord.Events::message_reaction_add(), (ctx, event) => {
       #|    handle_star(event, ctx.app().http(), config)
       #|  })
@@ -2207,17 +2281,18 @@ pub let sections : Array[Section] = [
       #|  command_scope : @discord.CommandScope,
       #|  feedback_config : FeedbackConfig,
       #|  starboard_config : StarboardConfig,
-      #|) -> Unit {
-      #|  let app = @discord.App()
-      #|  let bot = @discord.Bot(app, token~, sync=command_scope)
+      #|) -> Unit raise @discord.AppConfigError {
+      #|  let app = @discord.AppBuilder()
       #|  install_feedback(app, config=feedback_config)
-      #|  install_starboard(app, bot, config=starboard_config)
+      #|  install_starboard(app, config=starboard_config)
+      #|  let bot = @discord.BotBuilder(app.build(), token~, sync=command_scope)
+      #|  attach_starboard(bot, config=starboard_config)
       #|}
       #|```
       #|
       #|`sync=command_scope` uses the combined declarations from all installers.
       #|If another process owns commands in that scope, add `sync_unowned=Keep` to
-      #|the Bot constructor to preserve them. The Entry Point command is preserved
+      #|the `BotBuilder` to preserve them. The Entry Point command is preserved
       #|under either policy.
       #|
       #|```mbt check
@@ -2257,10 +2332,11 @@ pub let sections : Array[Section] = [
       #|}
       #|
       #|///|
-      #|fn feedback_modal() -> @discord.Modal[String] {
+      #|fn feedback_modal() -> @discord.Modal[Unit, String] {
       #|  @discord.modal(
       #|    custom_id="feedback",
       #|    title="Feedback",
+      #|    state=@discord.CustomIdCodec::unit(),
       #|    fields=@discord.ModalFields::map1(
       #|      @discord.text_field(custom_id="text", label="Feedback"),
       #|      text => text,
@@ -2270,7 +2346,7 @@ pub let sections : Array[Section] = [
       #|
       #|///|
       #|fn feedback_command(
-      #|  modal : @discord.Modal[String],
+      #|  modal : @discord.Modal[Unit, String],
       #|  cooldown_seconds : Int,
       #|) -> @discord.Command[Unit] {
       #|  ignore(cooldown_seconds)
@@ -2278,7 +2354,7 @@ pub let sections : Array[Section] = [
       #|    name="feedback",
       #|    description="Send feedback",
       #|    args=@discord.Args::unit(),
-      #|    handler=Immediate((_, _) => ShowModal(modal.show())),
+      #|    handler=Immediate((_, _) => ShowModal(modal.show(()))),
       #|  )
       #|}
       #|
@@ -2309,7 +2385,7 @@ pub let sections : Array[Section] = [
       #|
       #|///|
       #|fn install_starboard_commands(
-      #|  app : @discord.App,
+      #|  app : @discord.AppBuilder,
       #|  config : StarboardConfig,
       #|) -> Unit {
       #|  ignore(app)
@@ -2370,13 +2446,13 @@ pub let sections : Array[Section] = [
       #|///|
       #|pub fn FeedbackFeature::install(
       #|  self : FeedbackFeature,
-      #|  app : @discord.App,
+      #|  app : @discord.AppBuilder,
       #|) -> Unit {
       #|  let modal = feedback_modal()
       #|  app.command(feedback_command(modal, self.config_.cooldown_seconds))
       #|  app.on_modal(
       #|    modal,
-      #|    Deferred(ephemeral=true, (ctx, form) => {
+      #|    DeferredMessage(ephemeral=true, (ctx, _, form) => {
       #|      store_feedback(ctx.app().http(), self.config_, ctx.user(), form)
       #|      self.stored_ += 1
       #|      ctx.edit_original(content="Thanks. Your feedback was saved.") |> ignore
@@ -2394,7 +2470,10 @@ pub let sections : Array[Section] = [
       #|}
       #|
       #|///|
-      #|fn keep_feature_value(app : @discord.App, config : FeedbackConfig) -> Unit {
+      #|fn keep_feature_value(
+      #|  app : @discord.AppBuilder,
+      #|  config : FeedbackConfig,
+      #|) -> Unit {
       #|  let feedback = FeedbackFeature(config)
       #|  feedback.install(app)
       #|  println("stored so far: \{feedback.stored()}")
@@ -2423,7 +2502,7 @@ pub let sections : Array[Section] = [
       #|
       #|///|
       #|fn wire_feedback(
-      #|  app : @discord.App,
+      #|  app : @discord.AppBuilder,
       #|  feedback_channel_id : @model.ChannelId,
       #|) -> Unit {
       #|  let feedback_config = FeedbackConfig::{
@@ -2501,7 +2580,7 @@ pub let sections : Array[Section] = [
       #|```mbt check
       #|///|
       #|fn register_guarded_feedback(
-      #|  app : @discord.App,
+      #|  app : @discord.AppBuilder,
       #|  config : FeedbackConfig,
       #|) -> Unit {
       #|  let modal = feedback_modal()
@@ -2509,7 +2588,7 @@ pub let sections : Array[Section] = [
       #|      name="feedback",
       #|      description="Send feedback",
       #|      args=@discord.Args::unit(),
-      #|      handler=Immediate((_, _) => ShowModal(modal.show())),
+      #|      handler=Immediate((_, _) => ShowModal(modal.show(()))),
       #|    )
       #|    .check(@discord.guild_only())
       #|    .cooldown(seconds=config.cooldown_seconds, bucket=User)
@@ -2528,13 +2607,14 @@ pub let sections : Array[Section] = [
       #|Call `.check` more than once when a command needs several guards. The App runs
       #|them in registration order. The complete command path is middleware, checks,
       #|cooldown, argument decoding, then the handler. A check may use `ctx.app()` for
-      #|async I/O, but checks run before the handler can defer and therefore spend
-      #|Discord's three-second initial-response budget; keep them fast or cache their
-      #|results. Cooldown failures use the same error policy as handler failures.
+      #|async I/O. Checks run before the handler, inside Discord's three-second
+      #|initial-response window. `Deferred` handlers are acknowledged automatically
+      #|when 1000 ms of that budget remain; immediate handlers are not, so keep checks
+      #|fast or cache their results. Cooldown failures use the same error policy as handler failures.
       #|
       #|Cooldown storage belongs to the App, with a fresh `InMemoryCooldownStore` by
       #|default. Command type, name, and bucket are included in each storage key, so
-      #|features sharing a store do not collide. Supply `App(cooldown_store=...)` when
+      #|features sharing a store do not collide. Supply `AppBuilder(cooldown_store=...)` when
       #|windows must be shared across Apps or processes; the portable `CooldownStore`
       #|trait and native `RemoteCooldownStore` are described under
       #|[Shared cooldowns](08-scaling-processes.mbt.md#shared-cooldowns).
@@ -2618,16 +2698,16 @@ pub let sections : Array[Section] = [
       #|  let limiter = @coordinator.RemoteRateLimiter::connect("127.0.0.1:7600")
       #|  defer identify.close()
       #|  defer limiter.close()
-      #|  let client = @dhttp.Client(token, limiter=(limiter : &@ratelimit.RateLimiter))
+      #|  let client = @dhttp.Client(token, limiter=(limiter : &@runtime.RateLimiter))
       #|  defer client.close()
-      #|  let bot = @discord.Bot(
+      #|  let bot = @discord.BotBuilder(
       #|    app,
       #|    token~,
       #|    client~,
       #|    shards=Range(ids=[0, 1], count=8),
       #|    identify_queue=(identify : &@queue.IdentifyQueue),
       #|  )
-      #|  bot.run()
+      #|  bot.build().run()
       #|}
       #|
       #|///|
@@ -2654,7 +2734,7 @@ pub let sections : Array[Section] = [
     title: "Shared cooldowns",
     anchor: "shared-cooldowns",
     body: (
-      #|`App()` creates a fresh `InMemoryCooldownStore`. To enforce the same command
+      #|`AppBuilder()` creates a fresh `InMemoryCooldownStore`. To enforce the same command
       #|cooldown across processes, inject a shared store into **every process that
       #|serves interactions**, including HTTP interaction workers:
       #|
@@ -2670,7 +2750,9 @@ pub let sections : Array[Section] = [
       #|      on_error=error => println("cooldown coordinator: \{error}"),
       #|    )
       #|    defer cooldown.close()
-      #|    let app = @app.App(cooldown_store=(cooldown : &@cooldown.CooldownStore))
+      #|    let app = @app.AppBuilder(
+      #|      cooldown_store=(cooldown : &@cooldown.CooldownStore),
+      #|    )
       #|    app.command(
       #|      @app.slash(
       #|        name="limited",
@@ -2679,7 +2761,7 @@ pub let sections : Array[Section] = [
       #|        handler=Raw(_ => ()),
       #|      ).cooldown(seconds=10, bucket=User),
       #|    )
-      #|    app.validate()
+      #|    app.build() |> ignore
       #|    cooldown.ping()
       #|  })
       #|}
@@ -2707,8 +2789,9 @@ pub let sections : Array[Section] = [
       #|Each cooldown store has its own connection, independent of blocking
       #|`http_acquire` requests. Acquisition makes one attempt with no retries;
       #|`timeout_ms` (default 1000) bounds the entire operation, including connection
-      #|queueing and reconnect time. This work runs before the handler can defer and
-      #|spends Discord's three-second initial-response budget. Identify and REST retain
+      #|queueing and reconnect time. This work runs before the handler and spends
+      #|Discord's three-second initial-response budget; `Deferred` handlers are
+      #|acknowledged automatically when 1000 ms of it remain. Identify and REST retain
       #|their existing retry policy; `RemoteRateLimiter` remains fail-closed because
       #|avoiding Discord's 429 bans is a correctness concern.
     ),
@@ -2751,15 +2834,16 @@ pub let sections : Array[Section] = [
       #|Code before `next` can inspect, change, or stop work; code after `next` observes
       #|the completed inner operation.
       #|
-      #|Register middleware with the `middleware` method on `Client`, `App`, or `Bot`.
+      #|Register middleware with the `middleware` method on `Client`, `AppBuilder`, or
+      #|`BotBuilder`.
       #|Registration returns `Unit`, so cascade syntax keeps related setup together:
       #|
       #|```mbt check
       #|///|
       #|fn register_in_order(
       #|  client : @dhttp.Client,
-      #|  app : @discord.App,
-      #|  bot : @discord.Bot,
+      #|  app : @discord.AppBuilder,
+      #|  bot : @discord.BotBuilder,
       #|  http_a : @dhttp.HttpMiddleware,
       #|  http_b : @dhttp.HttpMiddleware,
       #|  interaction_a : @app.InteractionMiddleware,
@@ -2787,7 +2871,7 @@ pub let sections : Array[Section] = [
       #||---|---|---|
       #|| `Client::middleware` | One logical REST call, including rate-limit acquisition, the wire exchange, and bounded 429 retries | Status-code mapping, typed response decoding, and the caller's code |
       #|| `App::middleware` | Checks, command cooldowns, and command, component, or modal handler dispatch, inside the `ErrorPolicy` boundary | Autocomplete, Gateway events, and services |
-      #|| `Bot::middleware` | Typed and raw Gateway handler fan-out for one decoded event | Cache updates, decode-error observation, collectors, and interaction routing |
+      #|| `BotBuilder::middleware` | Typed and raw Gateway handler fan-out for one decoded event | Cache updates, decode-error observation, collectors, and interaction routing |
     ),
   },
   {
@@ -2888,7 +2972,7 @@ pub let sections : Array[Section] = [
       #|
       #|///|
       #|fn install_ban_list(
-      #|  app : @discord.App,
+      #|  app : @discord.AppBuilder,
       #|  banned_users : Set[@model.UserId],
       #|) -> Unit {
       #|  app.middleware(deny_banned_users(banned_users))
@@ -2920,18 +3004,21 @@ pub let sections : Array[Section] = [
       #|
       #|///|
       #|fn install_maintenance(
-      #|  app : @discord.App,
+      #|  app : @discord.AppBuilder,
       #|  maintenance_enabled : Ref[Bool],
       #|) -> Unit {
       #|  app.middleware(maintenance_mode(maintenance_enabled))
       #|}
       #|```
       #|
-      #|Interaction middleware uses Discord's three-second initial-response window.
-      #|If the initial response is not sent within three seconds, Discord invalidates
-      #|the interaction token. Do not perform heavy work before `next()`. Respond from
-      #|middleware when it owns the result, or call `next()` promptly into a
-      #|`Deferred` handler so the handler can acknowledge before doing slow work.
+      #|Interaction middleware runs inside Discord's three-second initial-response
+      #|window. If no initial response is sent within three seconds, Discord
+      #|invalidates the interaction token. Deferring routes (`Deferred`,
+      #|`DeferredUpdate`, `DeferredMessage`) are acknowledged automatically when
+      #|1000 ms of the budget remain, so slow middleware in front of them cannot expire
+      #|the interaction. After that acknowledgement, `InteractionCtx::respond` replaces
+      #|the loading message instead of sending an initial response. Immediate and raw
+      #|routes have no fallback: keep heavy work out of middleware in front of them.
       #|`InteractionCtx` itself has no defer method.
     ),
   },
@@ -2943,14 +3030,18 @@ pub let sections : Array[Section] = [
     body: (
       #|The error policy receives the invoking user and, for interaction failures, an
       #|optional raw context. Prefer `respond_error` for replies because it selects an
-      #|initial response or followup from the gate's real state. `response_state()`
+      #|initial response, a placeholder edit, or a followup from the gate's real state. `response_state()`
       #|reads that state on demand, including responses sent through `raw()`:
       #|
       #|- `Some(Pending)` sends an initial callback. A definitively rejected callback
       #|  returns the gate to this state so the policy can send a different payload.
-      #|- `Some(Sent(type))` or `Some(Unconfirmed(type))` attempts a followup. The latter
-      #|  means the sink raised and delivery may have succeeded; followup failures go
-      #|  to the existing warning hook.
+      #|- `Some(Sent(DeferredChannelMessageWithSource))` edits the loading message
+      #|  while it is still showing; the reply keeps the visibility chosen when
+      #|  deferring. Once the handler has edited or deleted the original response, a
+      #|  followup is sent instead.
+      #|- Any other `Some(Sent(type))` or `Some(Unconfirmed(type))` sends a followup.
+      #|  `Unconfirmed` means the sink raised and delivery may have succeeded. An
+      #|  unconfirmed deferral is edited first, with a followup as the fallback.
       #|- `Some(Expired)` warns with a payload summary because the executor closed the
       #|  callback window.
       #|- `None` also warns: event, service, and autocomplete failures have no raw
@@ -2958,7 +3049,7 @@ pub let sections : Array[Section] = [
       #|
       #|```mbt check
       #|///|
-      #|fn install_rich_error_policy(app : @discord.App) -> Unit {
+      #|fn install_rich_error_policy(app : @discord.AppBuilder) -> Unit {
       #|  app.error_policy((failure, error) => {
       #|    let username = match failure.user() {
       #|      Some(user) => user.username
@@ -2999,7 +3090,7 @@ pub let sections : Array[Section] = [
       #|```
       #|
       #|`FailureCtx::user()` and `raw()` return `None` for Gateway event, service, and autocomplete
-      #|failures. In that case `respond_error` sends a summary to the warning hook
+      #|failures. In that case `respond_error` sends an `AppWarning` summary to the warning hook
       #|because there is no interaction response target. The raw command, component,
       #|and modal contexts are escape hatches; responding through them directly can
       #|attempt a second initial callback, so ordinary policies should continue to use
@@ -3014,7 +3105,7 @@ pub let sections : Array[Section] = [
     title: "Gateway event middleware",
     anchor: "gateway-event-middleware",
     body: (
-      #|`Bot::middleware` receives the `GatewayCtx`, a decoded
+      #|`BotBuilder::middleware` receives the `GatewayCtx`, a decoded
       #|`Event`, and `next(event)`. Not calling `next` drops the event from typed and
       #|raw handlers while leaving wire-level processing intact.
       #|
@@ -3053,7 +3144,7 @@ pub let sections : Array[Section] = [
       #|}
       #|
       #|///|
-      #|fn install_event_filters(bot : @discord.Bot) -> Unit {
+      #|fn install_event_filters(bot : @discord.BotBuilder) -> Unit {
       #|  bot..middleware(ignore_bot_messages()).middleware(tag_message_content())
       #|}
       #|```
@@ -3063,9 +3154,10 @@ pub let sections : Array[Section] = [
       #|decoded wire event. In particular, dropping every event here does not disable
       #|slash-command routing through `App`.
       #|
-      #|The event chain runs serially in each shard's dispatch loop, and `next`
-      #|returns once handlers have been spawned rather than when they finish. Return
-      #|promptly, just as a telemetry hook must. A dropped event emits no
+      #|The event chain runs serially, in event order, in a dispatch task separate
+      #|from the shard loop, and `next` returns once handlers have been spawned rather
+      #|than when they finish. Slow middleware delays later events, never interaction
+      #|routing; still return promptly, just as a telemetry hook must. A dropped event emits no
       #|`EventDispatched` telemetry. Middleware cannot widen configured intents or
       #|the Gateway event filter. If event middleware raises, the bot reports it to
       #|the warning sink and continues the dispatch loop.
@@ -3100,10 +3192,10 @@ pub let sections : Array[Section] = [
       #|      ),
       #|    }
       #|  })
-      #|  let app = @discord.App()
+      #|  let app = @discord.AppBuilder()
       #|  let warnings : Array[String] = []
-      #|  let states : Array[@framework.ResponseState?] = []
-      #|  app.on_warn(message => warnings.push(message))
+      #|  let states : Array[@discord.ResponseState?] = []
+      #|  app.on_warn(warning => warnings.push(warning.to_string()))
       #|  app.middleware((_, next) => {
       #|    next()
       #|    raise @app.HandlerError::UserMessage(message="after next", ephemeral=true)
@@ -3122,7 +3214,7 @@ pub let sections : Array[Section] = [
       #|  })
       #|  let application_id = @model.Id::parse("400000000000000001")
       #|  let framework = @framework.Framework(client, application_id)
-      #|  app.attach(framework, client~, application_id~) |> ignore
+      #|  app.build().attach(framework, client~, application_id~) |> ignore
       #|  let interaction : @model.Interaction = @json.from_json(
       #|    @json.parse(
       #|      (
@@ -3192,7 +3284,7 @@ pub let sections : Array[Section] = [
       #|
       #|///|
       #|pub fn install_moderation(
-      #|  app : @discord.App,
+      #|  app : @discord.AppBuilder,
       #|  banned~ : Set[@model.UserId],
       #|) -> Unit {
       #|  app.middleware(deny_banned_users(banned))
@@ -3227,14 +3319,14 @@ pub let sections : Array[Section] = [
     title: "Telemetry",
     anchor: "telemetry",
     body: (
-      #|Middleware wraps work; telemetry observes it. `Client` and `Bot` expose
-      #|dependency-free structured telemetry callbacks through `on_telemetry`. `Bot`
-      #|aggregates its shard, dispatch, decode-error, and REST client events, and
-      #|shard-scoped events carry the shard id:
+      #|Middleware wraps work; telemetry observes it. `Client` and `BotBuilder`
+      #|expose dependency-free structured telemetry callbacks through `on_telemetry`.
+      #|A built `Bot` aggregates its shard, dispatch, decode-error, and REST client
+      #|events while it runs, and shard-scoped events carry the shard id:
       #|
       #|```mbt check
       #|///|
-      #|fn install_telemetry(bot : @discord.Bot) -> Unit {
+      #|fn install_telemetry(bot : @discord.BotBuilder) -> Unit {
       #|  bot.on_telemetry(event => {
       #|    match event {
       #|      HttpRequest(route_bucket~, status~, duration_ms~, retries~, ..) =>
@@ -3258,8 +3350,8 @@ pub let sections : Array[Section] = [
       #|event middleware has. Unlike HTTP middleware, which returns once per logical
       #|call, HTTP telemetry reports per-attempt values such as `HttpRateLimited`.
       #|
-      #|Telemetry is an additional channel: `App::on_warn` and `Bot::on_decode_error`
-      #|retain their behavior, and a telemetry callback failure is reported through
+      #|Telemetry is an additional channel: `AppBuilder::on_warn` and
+      #|`BotBuilder::on_decode_error` retain their behavior, and a telemetry callback failure is reported through
       #|the warning hook instead of being silently discarded. Standalone clients
       #|install the same observer with `client.on_telemetry` and configure the
       #|warning sink with `client.on_warn`.
@@ -3360,9 +3452,9 @@ pub let sections : Array[Section] = [
       #|
       #|```mbt check
       #|///|
-      #|fn voice_bot(app : @discord.App, token : String) -> @discord.Bot {
+      #|fn voice_bot(app : @discord.App, token : String) -> @discord.BotBuilder {
       #|  let intents = @model.Intents::guilds() | @model.Intents::guild_voice_states()
-      #|  Bot(app, token~, intents~)
+      #|  @discord.BotBuilder(app, token~, intents~)
       #|}
       #|```
       #|
@@ -3599,7 +3691,7 @@ pub let sections : Array[Section] = [
       #|  or exact ids with optional `:state` via `component_id` / `modal_id`.
       #|  The longest effective prefix wins (`id + ":"` for id routes), with ties
       #|  retaining registration order. Component waiters (below) take precedence.
-      #|  Framework accepts duplicate and empty routes; `App::validate` rejects them.
+      #|  Framework accepts duplicate and empty routes; `AppBuilder::build` rejects them.
       #|
       #|```mbt check
       #|///|
@@ -3755,7 +3847,7 @@ pub let sections : Array[Section] = [
       #||---|---|---|
       #|| `CommandCtx` | slash and context-menu commands | `options`, `model()`, `show_modal` |
       #|| `ComponentCtx` | buttons and select menus | `message()`, `update_message`, `defer_update`, `show_modal` |
-      #|| `ModalCtx` | modal submits | `text_value(custom_id)`, `origin()` |
+      #|| `ModalCtx` | modal submits | `text_value(custom_id)`, `origin()`, `update_message`, `defer_update` (component-opened modals only) |
       #|| `AutocompleteCtx` | focused autocomplete options | `suggest(choices)` |
       #|
       #|`CommandCtx`, `ComponentCtx`, and `ModalCtx` share the response lifecycle:
@@ -3812,7 +3904,7 @@ pub let sections : Array[Section] = [
       #|  ctx.suggest(
       #|    ["Ada", "Grace", "Linus"]
       #|    .filter(name => query.is_empty() || name.to_lower().has_prefix(query))
-      #|    .map(name => @interaction.string_choice(name, name)),
+      #|    .map(name => @interaction.string_choice(name~, value=name)),
       #|  )
       #|}
       #|```
@@ -3909,8 +4001,16 @@ pub let sections : Array[Section] = [
       #|  `ResponseCapture`; the callback value is handed to the receiver instead of
       #|  leaving the process. `App::serve` uses this shape so HTTP adapters can
       #|  return the callback in the HTTP response.
-      #|- `ResponseGate::ResponseGate(kind, sink, rejected=...)` wraps any async sink
-      #|  for custom transports. The optional classifier defaults to `_ => false`.
+      #|- `ResponseGate::ResponseGate(kind, sink, classify=..., deadline_ms=...)`
+      #|  wraps any async sink for custom transports. The optional classifier
+      #|  defaults to `_ => Uncertain`, and the gate has no deadline unless one is
+      #|  given.
+      #|
+      #|`rest` and `capture` take `deadline_ms` (default
+      #|`DEFAULT_INTERACTION_DEADLINE_MS`, 2500) measured from construction, so build
+      #|the gate as soon as the interaction arrives. `gate.remaining_ms()` reports the
+      #|budget left, and the contexts expose the same value through
+      #|`ctx.remaining_ms()`.
       #|
       #|`process_with(interaction, gate~)` routes with a caller-provided gate;
       #|`gate.state()` returns a `ResponseState`:
@@ -3921,21 +4021,29 @@ pub let sections : Array[Section] = [
       #|  type before calling the sink, preventing concurrent initial callbacks.
       #|- `Unconfirmed(type)`: the sink raised, and Discord may or may not have
       #|  accepted the callback. The gate stays closed to further initial callbacks.
-      #|- `Expired`: the executor gave up the callback window before a callback was
-      #|  sent. A later send raises `ResponseGateError::Expired`.
+      #|- `Expired`: the callback window closed before a callback was sent, either
+      #|  because the deadline passed or because the executor gave it up. A later send
+      #|  raises `ResponseGateError::Expired`.
       #|
-      #|If the sink raises and `rejected(error)` is true, the gate returns to `Pending`
-      #|and re-raises the error. A different initial callback may then be sent.
-      #|The REST gate classifies client-side `DiscordHttpError::Validation` and HTTP
-      #|4xx API errors as definitive refusals, except status 429 and JSON error code
-      #|40060 (already acknowledged). Server errors, transport errors, and timeouts
-      #|remain unconfirmed. Cancellation always becomes `Unconfirmed` and never calls
-      #|the rejection classifier.
+      #|If the sink raises, `classify(error)` returns a `DeliveryFailure`. `Rejected`
+      #|returns the gate to `Pending`, so a different initial callback may be sent;
+      #|`Expired` closes the window; `Uncertain` leaves it `Unconfirmed`. The REST
+      #|classifier (`classify_rest_callback_failure`) treats JSON error code 10062
+      #|(Unknown Interaction) as `Expired`. Client-side `DiscordHttpError::Validation`
+      #|and other HTTP 4xx API errors are `Rejected`, except status 429 and error code
+      #|40060 (already acknowledged). Server errors, transport errors, and timeouts are
+      #|`Uncertain`. Cancellation always becomes `Unconfirmed` and never calls the
+      #|classifier. A `send` made while another callback is in flight waits for that
+      #|delivery to finish, then sees its result.
       #|
       #|`gate.expire()` changes only `Pending` to `Expired`; other states remain
       #|unchanged. The HTTP interaction endpoint expires the gate on a callback
       #|deadline, while preserving a callback that already won the capture race.
-      #|`gate.responded()` is true for every state except `Pending`, including expiry.
+      #|`gate.is_pending()` is true only while an initial callback can still be sent.
+      #|After a `DeferredChannelMessageWithSource` callback, `gate.placeholder_open()`
+      #|stays true until the original response is edited or deleted, or a followup is
+      #|sent. The contexts' `reply` methods use it to choose between editing the
+      #|loading message and sending a followup.
       #|Command, component, and modal contexts expose the current state through
       #|`ctx.response_state()` without exposing their gate. App error policies read
       #|the same state through `FailureCtx::response_state()`.

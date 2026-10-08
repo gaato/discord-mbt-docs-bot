@@ -17,7 +17,7 @@ pub fn custom_id(@docs.Section, page~ : Int) -> String raise @app.CustomIdError
 
 pub let docs_route : @app.ComponentRoute[(Int, String)]
 
-pub fn register(@app.App, Array[@docs.Section], Array[@api.ApiEntry]) -> Unit
+pub fn register(@app.AppBuilder, Array[@docs.Section], Array[@api.ApiEntry]) -> Unit
 
 pub fn view(Array[@docs.Section], @docs.Section, page~ : Int) -> Array[@model.Component] raise @app.CustomIdError
 

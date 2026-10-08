@@ -1,7 +1,7 @@
 ///|
 /// Register the `/docs` and `/api` commands and their component handlers.
 pub fn register(
-  app : @discord.App,
+  app : @discord.AppBuilder,
   sections : Array[@docs.Section],
   entries : Array[@api.ApiEntry],
 ) -> Unit {
@@ -46,7 +46,7 @@ fn docs_command(sections : Array[@docs.Section]) -> @discord.Command[String] {
         description="Guide section to look up",
         suggest=(_, input) => {
           @docs.search(sections, input).map(section => {
-            @discord.string_choice(section.label(), section.key())
+            @discord.string_choice(name=section.label(), value=section.key())
           })
         },
       ),
@@ -78,7 +78,7 @@ fn api_command(entries : Array[@api.ApiEntry]) -> @discord.Command[String] {
         input,
       ) => {
         @api.search(entries, input).map(entry => {
-          @discord.string_choice(entry.label(), entry.key())
+          @discord.string_choice(name=entry.label(), value=entry.key())
         })
       }),
     ),

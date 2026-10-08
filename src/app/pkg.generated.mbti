@@ -2,7 +2,7 @@
 package "gaato/discord-mbt-docs-bot/app"
 
 // Values
-pub fn build() -> @gaato/discord/app.App
+pub fn build() -> @gaato/discord/app.App raise @gaato/discord/app.AppConfigError
 
 // Errors
 
