@@ -3,13 +3,15 @@
 /// `<page>:<section key>`, so a click carries everything needed to
 /// rebuild the message: no per-conversation state, any process (or a
 /// restarted one) can serve it.
-pub let docs_route : @discord.ComponentRoute[(Int, String)] = page_route("docs")
+pub let docs_route : @discord.ComponentRoute[(Int32, String)] = page_route(
+  "docs",
+)
 
 ///|
 /// A pagination route: `<id>:<page>:<key>`. The same value produces the
 /// button ids and registers the handler, so the two cannot drift; the decoded
 /// state is still untrusted input.
-fn page_route(id : String) -> @discord.ComponentRoute[(Int, String)] {
+fn page_route(id : String) -> @discord.ComponentRoute[(Int32, String)] {
   @discord.component_route(
     id~,
     state=@discord.CustomIdCodec::int().zip(@discord.CustomIdCodec::string()),
@@ -19,7 +21,7 @@ fn page_route(id : String) -> @discord.ComponentRoute[(Int, String)] {
 ///|
 pub fn custom_id(
   section : @docs.Section,
-  page~ : Int,
+  page~ : Int32,
 ) -> String raise @discord.CustomIdError {
   docs_route.custom_id((page, section.key()))
 }
@@ -29,7 +31,7 @@ pub fn custom_id(
 pub fn view(
   sections : Array[@docs.Section],
   section : @docs.Section,
-  page~ : Int,
+  page~ : Int32,
 ) -> Array[@model.Component] raise @discord.CustomIdError {
   let pages = section.pages()
   let last = pages.length() - 1
@@ -97,7 +99,7 @@ pub fn view(
 }
 
 ///|
-fn index_of(sections : Array[@docs.Section], section : @docs.Section) -> Int? {
+fn index_of(sections : Array[@docs.Section], section : @docs.Section) -> Int32? {
   for i, candidate in sections {
     if candidate.key() == section.key() {
       return Some(i)

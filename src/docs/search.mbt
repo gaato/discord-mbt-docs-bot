@@ -4,13 +4,13 @@
 pub fn search(
   sections : Array[Section],
   query : String,
-  limit? : Int = 25,
+  limit~ : Int32 = 25,
 ) -> Array[Section] {
   let q = query.trim().to_owned().to_lower()
   if q.is_empty() {
     return [..sections[:@cmp.minimum(limit, sections.length())]]
   }
-  let scored : Array[(Int, Int, Section)] = []
+  let scored : Array[(Int32, Int32, Section)] = []
   for i, section in sections {
     let s = section.score(q)
     if s > 0 {
@@ -42,7 +42,7 @@ pub fn resolve(sections : Array[Section], query : String) -> Section? {
 }
 
 ///|
-fn Section::score(self : Section, query : String) -> Int {
+fn Section::score(self : Section, query : String) -> Int32 {
   let title = self.title.to_lower()
   let chapter = self.chapter.to_lower()
   if title == query {

@@ -7,7 +7,7 @@ pub(all) struct ApiEntry {
   signature : String
   doc : String
   file : String
-  line : Int
+  line : Int32
 } derive(Debug, Eq)
 
 ///|
@@ -53,7 +53,7 @@ pub fn ApiEntry::pages(self : ApiEntry) -> Array[String] {
 }
 
 ///|
-fn clip(s : String, limit : Int) -> String {
+fn clip(s : String, limit : Int32) -> String {
   if s.length() <= limit {
     s
   } else {

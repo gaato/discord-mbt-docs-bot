@@ -3,7 +3,7 @@
 /// Pages break at line boundaries. A page that would cut a fenced code
 /// block closes the fence, and the next page reopens it with the same
 /// info string, so every page renders as valid markdown on its own.
-pub fn paginate(body : String, page_chars? : Int = 1400) -> Array[String] {
+pub fn paginate(body : String, page_chars~ : Int32 = 1400) -> Array[String] {
   if body.length() <= page_chars {
     return [body]
   }
@@ -48,7 +48,7 @@ pub fn paginate(body : String, page_chars? : Int = 1400) -> Array[String] {
 ///|
 pub fn Section::pages(
   self : Section,
-  page_chars? : Int = 1400,
+  page_chars~ : Int32 = 1400,
 ) -> Array[String] {
   paginate(self.body, page_chars~)
 }

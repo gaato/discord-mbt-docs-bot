@@ -58,8 +58,8 @@ async fn main {
 fn is_chapter_file(name : String) -> Bool {
   name.has_suffix(".mbt.md") &&
   name.length() > 2 &&
-  name[0] is ('0'..='9') &&
-  name[1] is ('0'..='9')
+  name[0] is ('0'..<='9') &&
+  name[1] is ('0'..<='9')
 }
 
 ///|
@@ -107,7 +107,7 @@ fn github_anchor(title : String) -> String {
   let out = StringBuilder()
   for c in title.to_lower() {
     match c {
-      'a'..='z' | '0'..='9' | '-' | '_' => out <+ "\{c}"
+      'a'..<='z' | '0'..<='9' | '-' | '_' => out <+ "\{c}"
       ' ' => out <+ "-"
       _ => ()
     }
@@ -182,7 +182,7 @@ struct RawApiEntry {
   signature : String
   doc : String
   file : String
-  line : Int
+  line : Int32
 }
 
 ///|
@@ -197,15 +197,15 @@ struct RawSymbol {
 struct SourceDoc {
   doc : String
   file : String
-  line : Int
+  line : Int32
 }
 
 ///|
 struct ApiIndex {
   entries : Array[RawApiEntry]
-  package_count : Int
-  inherited : Int
-  mismatches : Int
+  package_count : Int32
+  inherited : Int32
+  mismatches : Int32
 }
 
 ///|
@@ -311,7 +311,7 @@ async fn load_api_index(lib_root : String) -> ApiIndex {
 /// Fill undocumented facade re-exports from their documented declaration.
 /// Only entries that had docs before this pass may donate, preventing an
 /// inherited entry from making a later match spuriously ambiguous.
-fn inherit_docs(entries : Array[RawApiEntry]) -> Int {
+fn inherit_docs(entries : Array[RawApiEntry]) -> Int32 {
   let donors = entries.filter(entry => !entry.doc.is_empty())
   let mut inherited = 0
   for i, entry in entries {
@@ -488,7 +488,7 @@ fn declaration_name(line : String, kind : String) -> String {
 }
 
 ///|
-fn brace_delta(line : String) -> Int {
+fn brace_delta(line : String) -> Int32 {
   let mut depth = 0
   for c in line {
     if c == '{' {
@@ -565,7 +565,7 @@ fn normalize_doc_line(line : String) -> String {
 /// Entries per generated top-level definition. One literal holding every
 /// symbol exceeds the compiler's per-segment line limit, so the index is
 /// emitted as chunks that `entries` concatenates.
-const API_CHUNK_SIZE : Int = 200
+const API_CHUNK_SIZE : Int32 = 200
 
 ///|
 fn render_api(entries : Array[RawApiEntry]) -> String {

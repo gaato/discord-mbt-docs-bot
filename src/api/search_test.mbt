@@ -1,5 +1,5 @@
 ///|
-fn api_entry(pkg : String, name : String, doc? : String = "") -> @api.ApiEntry {
+fn api_entry(pkg : String, name : String, doc~ : String = "") -> @api.ApiEntry {
   {
     pkg,
     name,

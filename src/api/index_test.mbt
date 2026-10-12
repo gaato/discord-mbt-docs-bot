@@ -20,9 +20,9 @@ test "generated API keys are unique and fit component state limits" {
     let key = entry.key()
     assert_false(seen.contains(key), msg="duplicate key: \{key}")
     seen[key] = ()
-    assert_true(key.length() is (1..=90), msg="key out of range: \{key}")
+    assert_true(key.length() is (1..<=90), msg="key out of range: \{key}")
     assert_true(
-      entry.label().length() is (1..=100),
+      entry.label().length() is (1..<=100),
       msg="label out of range: \{entry.label()}",
     )
     assert_false(entry.signature.is_empty(), msg="empty signature: \{key}")

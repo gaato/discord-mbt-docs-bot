@@ -43,7 +43,7 @@ pub fn Section::url(self : Section) -> String {
 }
 
 ///|
-fn clip(s : String, limit : Int) -> String {
+fn clip(s : String, limit : Int32) -> String {
   if s.length() <= limit {
     s
   } else {

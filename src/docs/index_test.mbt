@@ -11,9 +11,9 @@ test "generated keys are unique and fit Discord choice limits" {
     let key = section.key()
     assert_false(seen.contains(key), msg="duplicate key: \{key}")
     seen[key] = ()
-    assert_true(key.length() is (1..=100), msg="key out of range: \{key}")
+    assert_true(key.length() is (1..<=100), msg="key out of range: \{key}")
     assert_true(
-      section.label().length() is (1..=100),
+      section.label().length() is (1..<=100),
       msg="label out of range: \{section.label()}",
     )
   }

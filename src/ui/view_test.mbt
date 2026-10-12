@@ -37,7 +37,7 @@ test "custom id roundtrip and malformed input" {
     ),
   )
   for malformed in ["docs:indicator", "docs::missing-page", "docs", "api:0:x"] {
-    let decoded : (Int, String)? = Some(@ui.docs_route.decode(malformed)) catch {
+    let decoded : (Int32, String)? = Some(@ui.docs_route.decode(malformed)) catch {
       _ => None
     }
     assert_true(decoded is None, msg="decoded \{malformed}")

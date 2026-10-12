@@ -1,11 +1,11 @@
 ///|
 /// Route for symbol API pagination buttons.
-pub let api_route : @discord.ComponentRoute[(Int, String)] = page_route("api")
+pub let api_route : @discord.ComponentRoute[(Int32, String)] = page_route("api")
 
 ///|
 fn api_custom_id(
   entry : @api.ApiEntry,
-  page~ : Int,
+  page~ : Int32,
 ) -> String raise @discord.CustomIdError {
   api_route.custom_id((page, entry.key()))
 }
@@ -14,7 +14,7 @@ fn api_custom_id(
 /// The Components V2 layout for one API symbol page.
 pub fn api_view(
   entry : @api.ApiEntry,
-  page~ : Int,
+  page~ : Int32,
 ) -> Array[@model.Component] raise @discord.CustomIdError {
   let pages = entry.pages()
   let last = pages.length() - 1

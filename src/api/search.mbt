@@ -4,13 +4,13 @@
 pub fn search(
   entries : Array[ApiEntry],
   query : String,
-  limit? : Int = 25,
+  limit~ : Int32 = 25,
 ) -> Array[ApiEntry] {
   let q = query.trim().to_owned().to_lower()
   if q.is_empty() {
     return [..entries[:@cmp.minimum(limit, entries.length())]]
   }
-  let scored : Array[(Int, Int, Int, ApiEntry)] = []
+  let scored : Array[(Int32, Int32, Int32, ApiEntry)] = []
   for i, entry in entries {
     let score = entry.score(q)
     if score > 0 {
@@ -49,7 +49,7 @@ pub fn resolve(entries : Array[ApiEntry], query : String) -> ApiEntry? {
 }
 
 ///|
-fn ApiEntry::score(self : ApiEntry, query : String) -> Int {
+fn ApiEntry::score(self : ApiEntry, query : String) -> Int32 {
   let name = self.name.to_lower()
   if name == query {
     120
