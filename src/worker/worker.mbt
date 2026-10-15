@@ -48,6 +48,8 @@ fn encode_outcome(outcome : @discord.InteractionOutcome) -> WorkerResponse {
     NoRoute => WorkerResponse("NoRoute", "")
     NoResponse => WorkerResponse("NoResponse", "")
     TimedOut => WorkerResponse("TimedOut", "")
+    // entry.js answers an unrecognised kind with 500.
+    @discord.InteractionOutcome::.. => WorkerResponse("Unknown", "")
   }
 }
 
