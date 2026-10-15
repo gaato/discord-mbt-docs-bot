@@ -65,9 +65,9 @@ test "multi-page section renders the ordered V2 tree with both button rows" {
     ] else {
     fail("unexpected container children")
   }
-  inspect(
+  assert_eq(
     title.content,
-    content="### [Two › Long](https://github.com/gaato/discord.mbt/blob/main/src/guide/02-two.mbt.md#long)",
+    "### [Two › Long](https://github.com/gaato/discord.mbt/blob/discord-v\{@docs.DISCORD_VERSION}/guide/02-two.mbt.md#long)",
   )
   assert_eq(body.content, sections[1].pages()[0])
   inspect(footer.content, content="-# discord.mbt guide · 1/2")

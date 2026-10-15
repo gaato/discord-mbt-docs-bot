@@ -6,7 +6,7 @@ fn api_entry(pkg : String, name : String, doc~ : String = "") -> @api.ApiEntry {
     kind: "fn",
     signature: "pub fn \{name}() -> Unit",
     doc,
-    file: "src/model/example.mbt",
+    file: "discord/src/model/example.mbt",
     line: 10,
   }
 }

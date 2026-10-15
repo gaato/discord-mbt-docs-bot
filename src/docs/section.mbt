@@ -32,9 +32,18 @@ pub fn Section::label(self : Section) -> String {
 }
 
 ///|
-/// Link to the section in the rendered guide on GitHub.
+/// Link to a repository-relative path in discord.mbt at the release tag the
+/// indexes were generated from, so the page matches the indexed version.
+pub fn source_url(path : String) -> String {
+  "https://github.com/gaato/discord.mbt/blob/discord-v\{DISCORD_VERSION}/\{path}"
+}
+
+///|
+/// Link to the section in the rendered guide on GitHub. `file` stays the
+/// chapter name, which is part of the button state, and the guide lives in
+/// the repository's `guide/` directory.
 pub fn Section::url(self : Section) -> String {
-  let base = "https://github.com/gaato/discord.mbt/blob/main/src/guide/\{self.file}"
+  let base = source_url("guide/\{self.file}")
   if self.anchor.is_empty() {
     base
   } else {

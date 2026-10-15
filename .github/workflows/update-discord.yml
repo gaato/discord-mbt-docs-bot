@@ -46,7 +46,7 @@ jobs:
           VERSION: ${{ steps.versions.outputs.latest }}
         run: |
           sed -i "s|\"gaato/discord@[^\"]*\"|\"gaato/discord@$VERSION\"|" moon.mod
-          git clone --quiet --depth 1 --branch "v$VERSION" \
+          git clone --quiet --depth 1 --branch "discord-v$VERSION" \
             https://github.com/gaato/discord.mbt.git "$RUNNER_TEMP/discord.mbt"
           moon update
           moon run --target native --release src/gen "$RUNNER_TEMP/discord.mbt"

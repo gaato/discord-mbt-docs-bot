@@ -9,7 +9,7 @@ test "facade re-exports inherit docs and source links" {
     fail("missing facade container entry")
   }
   assert_false(entry.doc.is_empty())
-  inspect(entry.file, content="src/interaction/builders.mbt")
+  inspect(entry.file, content="discord/src/interaction/builders.mbt")
   assert_true(entry.line > 1)
 }
 

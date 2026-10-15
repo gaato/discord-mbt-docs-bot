@@ -56,8 +56,9 @@ test "resolve prefers exact keys and falls back to search" {
 test "labels and urls" {
   inspect(fixture[0].label(), content="Getting started")
   inspect(fixture[2].label(), content="Commands › Autocomplete")
-  inspect(
+  // Links pin the release tag, which moves with each regenerated index.
+  assert_eq(
     fixture[2].url(),
-    content="https://github.com/gaato/discord.mbt/blob/main/src/guide/02-commands.mbt.md#autocomplete",
+    "https://github.com/gaato/discord.mbt/blob/discord-v\{@docs.DISCORD_VERSION}/guide/02-commands.mbt.md#autocomplete",
   )
 }

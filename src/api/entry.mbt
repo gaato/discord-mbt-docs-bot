@@ -36,9 +36,10 @@ fn package_alias(pkg : String) -> String {
 }
 
 ///|
-/// Link to the declaration in the discord.mbt source tree.
+/// Link to the declaration in the discord.mbt source tree; `file` is
+/// repository-relative.
 pub fn ApiEntry::url(self : ApiEntry) -> String {
-  "https://github.com/gaato/discord.mbt/blob/main/\{self.file}#L\{self.line}"
+  "\{@docs.source_url(self.file)}#L\{self.line}"
 }
 
 ///|

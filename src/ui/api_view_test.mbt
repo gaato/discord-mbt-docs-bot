@@ -6,7 +6,7 @@ fn api_fixture(doc : String) -> @api.ApiEntry {
     kind: "fn",
     signature: "pub fn Widget::find(String) -> Widget?",
     doc,
-    file: "src/model/widget.mbt",
+    file: "discord/src/model/widget.mbt",
     line: 42,
   }
 }
@@ -30,9 +30,9 @@ test "single-page API symbol renders ordered V2 children without a pager" {
     ] else {
     fail("unexpected container children")
   }
-  inspect(
+  assert_eq(
     title.content,
-    content="### [@model.Widget::find](https://github.com/gaato/discord.mbt/blob/main/src/model/widget.mbt#L42)",
+    "### [@model.Widget::find](https://github.com/gaato/discord.mbt/blob/discord-v\{@docs.DISCORD_VERSION}/discord/src/model/widget.mbt#L42)",
   )
   assert_eq(body.content, entry.pages()[0])
   inspect(footer.content, content="-# discord.mbt API · @gaato/discord/model")

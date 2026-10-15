@@ -5,7 +5,7 @@ guide and public API, then posts the match in a Discord Components V2
 container — built with discord.mbt itself.
 
 `/docs <query>` autocompletes over every `##` section of the in-repo guide
-(`src/guide/*.mbt.md` in discord.mbt) and replies with the section body and a
+(`guide/*.mbt.md` in discord.mbt) and replies with the section body and a
 link to the rendered page on GitHub. Long sections paginate with `◀ ▶`
 buttons (code fences are closed and reopened across page breaks), and `« »`
 buttons step to the neighboring guide sections.
@@ -26,7 +26,8 @@ handlers will work behind HTTP interactions or on serverless.
   is generated; the rest is hand-written.
 - `src/api` — the generated public-symbol index, API search, and entry model.
 - `src/gen` — the index generator. It parses guide headings, package interface
-  files, and source docstrings, then emits both generated indexes.
+  files, and source docstrings, then emits both generated indexes and the
+  `DISCORD_VERSION` they describe.
 - `src/ui` — the `/docs` and `/api` commands, pagination buttons, and component
   handlers.
 - `src/app` — the shared `App` definition used by every executor below.
@@ -41,25 +42,30 @@ handlers will work behind HTTP interactions or on serverless.
 ## Development
 
 The bot depends on the published `gaato/discord` package. Only the index
-generator reads a discord.mbt source checkout — the guide chapters and the
-generated interfaces — and it expects a sibling checkout (the standard ghq
-layout):
+generator reads a discord.mbt source checkout — the guide chapters in
+`guide/` and the library module's generated interfaces under `discord/src/`
+— and by default it expects a sibling checkout (the standard ghq layout):
 
 ```
 github.com/gaato/
 ├── discord.mbt/
+│   ├── discord/   # the gaato/discord module
+│   └── guide/
 └── discord-mbt-docs-bot/
 ```
 
-Check out the tag that matches the `gaato/discord` version in `moon.mod`, so
-the indexed guide and API describe the library the bot is built against.
-
-Refresh discord.mbt's checked-in interfaces, then regenerate both indexes
-after guide or public API changes:
+Generate from the release tag that matches the `gaato/discord` version in
+`moon.mod` (`discord-v<version>`), so the indexed guide and API describe the
+library the bot is built against. The generator records the version from
+`discord/moon.mod` as `DISCORD_VERSION`, and every guide and source link
+points at that tag. To use a clean export of the tag instead of the working
+tree, pass its root:
 
 ```sh
+git -C ../discord.mbt archive discord-v<version> | tar -x -C /path/to/export
+moon run --target native --release src/gen /path/to/export
+moon fmt
 moon info
-moon run --target native --release src/gen
 ```
 
 Test and run:
