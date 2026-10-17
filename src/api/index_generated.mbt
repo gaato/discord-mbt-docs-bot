@@ -351,7 +351,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub async fn[X] serve_interactions(@async.TaskGroup[X], @app.App, addr~ : String, public_key~ : String, access~ : @app.RestAccess, application_id? : @model.Id[@model.ApplicationMarker], path? : String, deadline_ms? : Int, max_body_bytes? : Int, body_timeout_ms? : Int) -> @endpoint_http.InteractionsServer",
     doc: "Start a Discord HTTP-interactions server in `group` on native or moonrun Wasm.\n\nUse port zero in `addr` to let the OS choose a free port, then read the\nresolved address from `InteractionsServer::addr`.\n\nA request body larger than `max_body_bytes` gets 413, and one not received\nwithin `body_timeout_ms` gets 408; both close the connection. Discord's\ninteraction payloads are far below the 1 MiB default. Non-positive limits\nraise `ServerConfigError` before the server listens.",
     file: "discord/src/endpoint_http/endpoint_http.mbt",
-    line: 236,
+    line: 261,
   },
   {
     pkg: "gaato/discord",
@@ -477,7 +477,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub struct App {\n  // private fields\n}",
     doc: "Validated, immutable application declarations shared by gateway and HTTP\nexecutors. Build one with `AppBuilder::build`; every `App` has passed\nvalidation, so executors and `attach` never see an invalid declaration.",
     file: "discord/src/app/app.mbt",
-    line: 91,
+    line: 112,
   },
   {
     pkg: "gaato/discord/app",
@@ -486,7 +486,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn App::attach(Self, @framework.Framework, client~ : @http.Client, application_id~ : @model.Id[@model.ApplicationMarker], waiter? : async (String, @model.Id[@model.UserMarker]?, Int?) -> @framework.ComponentCtx?, latency_ms? : () -> Int64?) -> AppCtx",
     doc: "Wire every registered command, component, modal, and autocomplete\nroute into `framework` and return the `AppCtx` shared by handlers.\nCalled by the built-in executors (`Bot`, the HTTP endpoint); only\ncustom executors need it directly. Each call gets its own handler budget\nof `max_in_flight`.",
     file: "discord/src/app/app.mbt",
-    line: 585,
+    line: 652,
   },
   {
     pkg: "gaato/discord/app",
@@ -495,7 +495,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub async fn App::report_failure(Self, FailureOrigin, Error) -> Unit",
     doc: "Run the error policy for a failure raised outside interaction\ndispatch. Executors use this for event and service handlers; the\npolicy context has no response target in that case.",
     file: "discord/src/app/app.mbt",
-    line: 771,
+    line: 838,
   },
   {
     pkg: "gaato/discord/app",
@@ -513,7 +513,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn App::spawner(Self, @async.TaskGroup[Unit]) -> async (async () -> Unit) -> Unit",
     doc: "Create a bounded task spawner for an executor-owned task group. Executors\nuse it for non-interaction work such as event handlers; interaction\nhandlers get their own budget inside `attach`.",
     file: "discord/src/app/app.mbt",
-    line: 454,
+    line: 521,
   },
   {
     pkg: "gaato/discord/app",
@@ -522,7 +522,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub async fn App::sync_commands(Self, @http.Client, @model.Id[@model.ApplicationMarker], scope~ : CommandScope, unowned? : @framework.UnownedCommands) -> SyncReport",
     doc: "Synchronize the declared commands and report each scope's changes.\nEntry points are always preserved; `Keep` also preserves other owners.",
     file: "discord/src/app/app.mbt",
-    line: 727,
+    line: 794,
   },
   {
     pkg: "gaato/discord/app",
@@ -531,7 +531,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn App::warn(Self, AppWarning) -> Unit",
     doc: "Emit a structured warning through the app's warning hook.",
     file: "discord/src/app/app.mbt",
-    line: 785,
+    line: 852,
   },
   {
     pkg: "gaato/discord/app",
@@ -540,7 +540,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub struct AppBuilder {\n  // private fields\n}",
     doc: "Collects application declarations: commands, component and modal routes,\nautocomplete handlers, middleware, and failure hooks. `build` validates\nthem into an immutable `App`.",
     file: "discord/src/app/app.mbt",
-    line: 74,
+    line: 95,
   },
   {
     pkg: "gaato/discord/app",
@@ -549,7 +549,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn AppBuilder::AppBuilder(max_in_flight? : Int, max_pending? : Int, cooldown_store? : &@cooldown.CooldownStore) -> Self",
     doc: "Start collecting application declarations. `max_in_flight` caps\nconcurrently running interaction handlers; routing and component waiters\nare not counted, so a handler waiting for a component never blocks the\ninteraction that wakes it. A gateway executor gives its event handlers a\nseparate budget of the same size. `max_pending` caps the deferred\ninteractions waiting for a handler permit; one more is refused with\n`HandlerError::Busy` before it is acknowledged, and a deferred interaction\nstill waiting when its token expires (15 minutes after the executor\nreceived it) is dropped with a warning. Cooldowns use a fresh in-memory store unless a shared\n`cooldown_store` is supplied.",
     file: "discord/src/app/app.mbt",
-    line: 118,
+    line: 139,
   },
   {
     pkg: "gaato/discord/app",
@@ -558,7 +558,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn AppBuilder::autocomplete(Self, String, async (@framework.AutocompleteCtx) -> Unit) -> Unit",
     doc: "Register a raw autocomplete handler. A raw handler takes precedence over\nArg-level `suggest` handlers registered for the same command name.",
     file: "discord/src/app/app.mbt",
-    line: 267,
+    line: 320,
   },
   {
     pkg: "gaato/discord/app",
@@ -567,16 +567,16 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn AppBuilder::build(Self) -> App raise AppConfigError",
     doc: "Validate the declarations and freeze them into an `App`. Later changes to\nthis builder, or to the commands and specs registered on it, do not affect\nthe returned `App`.",
     file: "discord/src/app/app.mbt",
-    line: 143,
+    line: 164,
   },
   {
     pkg: "gaato/discord/app",
     name: "AppBuilder::command",
     kind: "fn",
-    signature: "pub fn[A] AppBuilder::command(Self, Command[A]) -> Unit",
-    doc: "Register a typed slash or context-menu command built with the\n`command` / `user_command` / `message_command` builders.",
+    signature: "pub fn[A] AppBuilder::command(Self, Command[A], loc~ : SourceLoc) -> Unit",
+    doc: "Register a typed slash or context-menu command built with the\n`command` / `user_command` / `message_command` builders. `loc` is filled\nwith the caller's location, which duplicate-registration errors report.",
     file: "discord/src/app/app.mbt",
-    line: 177,
+    line: 203,
   },
   {
     pkg: "gaato/discord/app",
@@ -585,7 +585,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn AppBuilder::error_policy(Self, async (FailureCtx, Error) -> Unit) -> Unit",
     doc: "Replace the error policy invoked when a handler raises. The default\npolicy maps `HandlerError` variants to ephemeral user-facing messages.\nFor `Malformed` and any other error it warns with the details and shows\nthe user only a generic message.",
     file: "discord/src/app/app.mbt",
-    line: 280,
+    line: 333,
   },
   {
     pkg: "gaato/discord/app",
@@ -594,43 +594,43 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn AppBuilder::middleware(Self, async (InteractionCtx, async () -> Unit) -> Unit) -> Unit",
     doc: "Install middleware around every command, component, and modal handler\n(not autocomplete). First installed is outermost. Runs inside the error\npolicy: raising HandlerError behaves exactly like a failing check.",
     file: "discord/src/app/app.mbt",
-    line: 167,
+    line: 191,
   },
   {
     pkg: "gaato/discord/app",
     name: "AppBuilder::on_component",
     kind: "fn",
-    signature: "pub fn[A] AppBuilder::on_component(Self, ComponentRoute[A], ComponentHandler[A]) -> Unit",
-    doc: "Route a component's exact id or `id:state`, decoding state before the handler.\nUse the same route's `custom_id` when building buttons and selects.",
+    signature: "pub fn[A] AppBuilder::on_component(Self, ComponentRoute[A], ComponentHandler[A], loc~ : SourceLoc) -> Unit",
+    doc: "Route a component's exact id or `id:state`, decoding state before the handler.\nUse the same route's `custom_id` when building buttons and selects. `loc`\nis filled with the caller's location.",
     file: "discord/src/app/app.mbt",
-    line: 195,
+    line: 229,
   },
   {
     pkg: "gaato/discord/app",
     name: "AppBuilder::on_component_raw",
     kind: "fn",
-    signature: "pub fn AppBuilder::on_component_raw(Self, prefix~ : String, async (@framework.ComponentCtx) -> Unit) -> Unit",
-    doc: "Register a fully raw literal-prefix component route. Longer prefixes win.\n`AppBuilder::build` rejects empty or duplicate effective prefixes.",
+    signature: "pub fn AppBuilder::on_component_raw(Self, prefix~ : String, async (@framework.ComponentCtx) -> Unit, loc~ : SourceLoc) -> Unit",
+    doc: "Register a fully raw literal-prefix component route. Longer prefixes win.\n`AppBuilder::build` rejects empty or duplicate effective prefixes. `loc`\nis filled with the caller's location.",
     file: "discord/src/app/app.mbt",
-    line: 206,
+    line: 243,
   },
   {
     pkg: "gaato/discord/app",
     name: "AppBuilder::on_modal",
     kind: "fn",
-    signature: "pub fn[S, A] AppBuilder::on_modal(Self, Modal[S, A], ModalSubmitHandler[S, A]) -> Unit",
-    doc: "Route submissions of the typed `modal` to `handler`; field values\nare decoded through the modal's `ModalFields` before the handler\nruns. Matches the exact modal id or that id followed by `:` and state.",
+    signature: "pub fn[S, A] AppBuilder::on_modal(Self, Modal[S, A], ModalSubmitHandler[S, A], loc~ : SourceLoc) -> Unit",
+    doc: "Route submissions of the typed `modal` to `handler`; field values\nare decoded through the modal's `ModalFields` before the handler\nruns. Matches the exact modal id or that id followed by `:` and state.\n`loc` is filled with the caller's location.",
     file: "discord/src/app/app.mbt",
-    line: 222,
+    line: 265,
   },
   {
     pkg: "gaato/discord/app",
     name: "AppBuilder::on_modal_raw",
     kind: "fn",
-    signature: "pub fn AppBuilder::on_modal_raw(Self, prefix~ : String, async (@framework.ModalCtx) -> Unit) -> Unit",
-    doc: "Register a fully raw literal-prefix modal route. Longer prefixes win.\n`AppBuilder::build` rejects empty or duplicate effective prefixes.",
+    signature: "pub fn AppBuilder::on_modal_raw(Self, prefix~ : String, async (@framework.ModalCtx) -> Unit, loc~ : SourceLoc) -> Unit",
+    doc: "Register a fully raw literal-prefix modal route. Longer prefixes win.\n`AppBuilder::build` rejects empty or duplicate effective prefixes. `loc`\nis filled with the caller's location.",
     file: "discord/src/app/app.mbt",
-    line: 247,
+    line: 296,
   },
   {
     pkg: "gaato/discord/app",
@@ -639,22 +639,22 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn AppBuilder::on_warn(Self, (AppWarning) -> Unit) -> Unit",
     doc: "Replace the warning hook used for non-fatal diagnostics. The hook receives\nan `AppWarning`; by default its one-line `to_string()` form is printed.",
     file: "discord/src/app/app.mbt",
-    line: 290,
+    line: 343,
   },
   {
     pkg: "gaato/discord/app",
     name: "AppBuilder::register",
     kind: "fn",
-    signature: "pub fn AppBuilder::register(Self, RegisteredCommand) -> Unit",
-    doc: "Register a type-erased command. `App::command` is the typed\nentry point; use this when composing pre-erased commands, e.g. from\na plugin.",
+    signature: "pub fn AppBuilder::register(Self, RegisteredCommand, loc~ : SourceLoc) -> Unit",
+    doc: "Register a type-erased command. `App::command` is the typed\nentry point; use this when composing pre-erased commands, e.g. from\na plugin. `loc` is filled with the caller's location.",
     file: "discord/src/app/app.mbt",
-    line: 185,
+    line: 216,
   },
   {
     pkg: "gaato/discord/app",
     name: "AppConfigError",
     kind: "suberror",
-    signature: "pub(all) suberror AppConfigError {\n  EmptyToken\n  DuplicateCommand(name~ : String)\n  DuplicateCommandPath(command~ : String, path~ : String)\n  NestedSubcommandGroup(command~ : String, path~ : String)\n  ChoicesWithAutocomplete(command~ : String, path~ : String)\n  RequiredOptionAfterOptional(command~ : String, path~ : String)\n  DuplicateComponentRoute(custom_id~ : String)\n  DuplicateModalRoute(custom_id~ : String)\n  EmptyComponentRoute\n  EmptyModalRoute\n  InvalidRouteId(custom_id~ : String, reason~ : String)\n  InvalidModalFieldCount(custom_id~ : String, count~ : Int)\n  DuplicateModalTextInput(custom_id~ : String, field~ : String)\n  ModalOutsideLimits(custom_id~ : String, violation~ : @model.LimitViolation)\n  InvalidFileTypes(owner~ : String, reason~ : String)\n  CommandOutsideLimits(command~ : String, violation~ : @model.LimitViolation)\n  InvalidCooldown(command~ : String, seconds~ : Int)\n  InvalidMaxInFlight(value~ : Int)\n  InvalidMaxPending(value~ : Int)\n} derive(@debug.Debug)",
+    signature: "pub(all) suberror AppConfigError {\n  EmptyToken\n  DuplicateCommand(name~ : String, first~ : SourceLoc, second~ : SourceLoc)\n  DuplicateCommandPath(command~ : String, path~ : String)\n  NestedSubcommandGroup(command~ : String, path~ : String)\n  ChoicesWithAutocomplete(command~ : String, path~ : String)\n  RequiredOptionAfterOptional(command~ : String, path~ : String)\n  DuplicateComponentRoute(custom_id~ : String, first~ : SourceLoc, second~ : SourceLoc)\n  DuplicateModalRoute(custom_id~ : String, first~ : SourceLoc, second~ : SourceLoc)\n  EmptyComponentRoute\n  EmptyModalRoute\n  InvalidRouteId(custom_id~ : String, reason~ : String)\n  InvalidModalFieldCount(custom_id~ : String, count~ : Int)\n  DuplicateModalTextInput(custom_id~ : String, field~ : String)\n  ModalOutsideLimits(custom_id~ : String, violation~ : @model.LimitViolation)\n  InvalidFileTypes(owner~ : String, reason~ : String)\n  CommandOutsideLimits(command~ : String, violation~ : @model.LimitViolation)\n  InvalidCooldown(command~ : String, seconds~ : Int)\n  InvalidMaxInFlight(value~ : Int)\n  InvalidMaxPending(value~ : Int)\n} derive(@debug.Debug)",
     doc: "Configuration errors detected before starting an application executor.",
     file: "discord/src/app/app.mbt",
     line: 11,
@@ -810,7 +810,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn[A] Command::erase(Self[A]) -> RegisteredCommand",
     doc: "Erase the decoded argument type while retaining registration and dispatch.",
     file: "discord/src/app/command.mbt",
-    line: 592,
+    line: 617,
   },
   {
     pkg: "gaato/discord/app",
@@ -882,7 +882,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn ComponentDeferredCtx::app(Self) -> AppCtx",
     doc: "The app-level services: the REST client and application id.",
     file: "discord/src/app/component.mbt",
-    line: 289,
+    line: 292,
   },
   {
     pkg: "gaato/discord/app",
@@ -891,7 +891,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn ComponentDeferredCtx::custom_id(Self) -> String",
     doc: "The full custom id of the component that fired.",
     file: "discord/src/app/component.mbt",
-    line: 336,
+    line: 339,
   },
   {
     pkg: "gaato/discord/app",
@@ -900,7 +900,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub async fn ComponentDeferredCtx::delete_followup(Self, @model.Id[@model.MessageMarker]) -> Unit",
     doc: "Delete a followup message sent for this interaction.",
     file: "discord/src/app/component.mbt",
-    line: 494,
+    line: 497,
   },
   {
     pkg: "gaato/discord/app",
@@ -909,7 +909,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub async fn ComponentDeferredCtx::delete_original(Self) -> Unit",
     doc: "Delete the original response.",
     file: "discord/src/app/component.mbt",
-    line: 428,
+    line: 431,
   },
   {
     pkg: "gaato/discord/app",
@@ -918,7 +918,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub async fn ComponentDeferredCtx::edit_followup(Self, @model.Id[@model.MessageMarker], content? : String, clear_content? : Bool, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions, files? : Array[@http.FileUpload], keep_attachments? : Array[@model.AttachmentRequest]) -> @model.Message",
     doc: "Edit a followup message sent for this interaction. New `files` replace\nits attachments unless `keep_attachments` lists the ones to retain.",
     file: "discord/src/app/component.mbt",
-    line: 469,
+    line: 472,
   },
   {
     pkg: "gaato/discord/app",
@@ -927,7 +927,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub async fn ComponentDeferredCtx::edit_original(Self, content? : String, clear_content? : Bool, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions, files? : Array[@http.FileUpload], keep_attachments? : Array[@model.AttachmentRequest], poll? : @model.PollCreateRequest) -> @model.Message",
     doc: "Edit the original response after deferring. For `DeferredUpdate`\nhandlers this edits the component's host message. New `files` replace\nthe existing attachments unless `keep_attachments` lists the ones to retain;\n`poll` can be added only here, while editing the deferred response.",
     file: "discord/src/app/component.mbt",
-    line: 403,
+    line: 406,
   },
   {
     pkg: "gaato/discord/app",
@@ -936,7 +936,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub async fn ComponentDeferredCtx::followup(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, poll? : @model.PollCreateRequest, ephemeral? : Bool) -> @model.Message",
     doc: "Send a followup message after the initial deferred response.",
     file: "discord/src/app/component.mbt",
-    line: 436,
+    line: 439,
   },
   {
     pkg: "gaato/discord/app",
@@ -945,7 +945,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub async fn ComponentDeferredCtx::get_followup(Self, @model.Id[@model.MessageMarker]) -> @model.Message",
     doc: "Fetch a followup message sent for this interaction.",
     file: "discord/src/app/component.mbt",
-    line: 459,
+    line: 462,
   },
   {
     pkg: "gaato/discord/app",
@@ -954,7 +954,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn ComponentDeferredCtx::guild_id(Self) -> @model.Id[@model.GuildMarker]?",
     doc: "The guild the interaction was invoked in, or `None` outside guilds. Use\n`guild_scope()` for flows that require a guild; this accessor is for\nmaybe-guild flows where DMs are valid.",
     file: "discord/src/app/component.mbt",
-    line: 328,
+    line: 331,
   },
   {
     pkg: "gaato/discord/app",
@@ -963,7 +963,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn ComponentDeferredCtx::guild_scope(Self) -> @framework.GuildInvocation raise HandlerError",
     doc: "The validated guild invocation. In a DM this raises\n`HandlerError::GuildOnly`, which the error policy renders normally.",
     file: "discord/src/app/component.mbt",
-    line: 310,
+    line: 313,
   },
   {
     pkg: "gaato/discord/app",
@@ -972,7 +972,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn ComponentDeferredCtx::interaction(Self) -> @model.Interaction",
     doc: "The full interaction payload.",
     file: "discord/src/app/component.mbt",
-    line: 318,
+    line: 321,
   },
   {
     pkg: "gaato/discord/app",
@@ -981,7 +981,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn ComponentDeferredCtx::message(Self) -> @model.Message",
     doc: "The message hosting the component.",
     file: "discord/src/app/component.mbt",
-    line: 374,
+    line: 377,
   },
   {
     pkg: "gaato/discord/app",
@@ -990,7 +990,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub async fn ComponentDeferredCtx::original(Self) -> @model.Message",
     doc: "Fetch the original response.",
     file: "discord/src/app/component.mbt",
-    line: 392,
+    line: 395,
   },
   {
     pkg: "gaato/discord/app",
@@ -999,7 +999,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn ComponentDeferredCtx::raw(Self) -> @framework.ComponentCtx",
     doc: "Escape hatch for advanced inspection. Calling response methods on the\nraw value opts out of this wrapper's response discipline.\nFailure handling still follows the gate's real response state.",
     file: "discord/src/app/component.mbt",
-    line: 384,
+    line: 387,
   },
   {
     pkg: "gaato/discord/app",
@@ -1008,7 +1008,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn ComponentDeferredCtx::scope(Self) -> @framework.InvocationScope",
     doc: "Guild or DM invocation scope, carrying the invoking member or user.",
     file: "discord/src/app/component.mbt",
-    line: 301,
+    line: 304,
   },
   {
     pkg: "gaato/discord/app",
@@ -1017,7 +1017,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn ComponentDeferredCtx::selected_channels(Self) -> Array[@model.Channel]",
     doc: "Resolved partial channel objects for a channel select.",
     file: "discord/src/app/component.mbt",
-    line: 366,
+    line: 369,
   },
   {
     pkg: "gaato/discord/app",
@@ -1026,7 +1026,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn ComponentDeferredCtx::selected_roles(Self) -> Array[@model.Role]",
     doc: "Resolved role objects for a role or mentionable select.",
     file: "discord/src/app/component.mbt",
-    line: 358,
+    line: 361,
   },
   {
     pkg: "gaato/discord/app",
@@ -1035,7 +1035,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn ComponentDeferredCtx::selected_users(Self) -> Array[@model.User]",
     doc: "Resolved user objects for a user or mentionable select.",
     file: "discord/src/app/component.mbt",
-    line: 350,
+    line: 353,
   },
   {
     pkg: "gaato/discord/app",
@@ -1044,7 +1044,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn ComponentDeferredCtx::user(Self) -> @model.User",
     doc: "The invoking user.",
     file: "discord/src/app/component.mbt",
-    line: 295,
+    line: 298,
   },
   {
     pkg: "gaato/discord/app",
@@ -1053,7 +1053,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn ComponentDeferredCtx::values(Self) -> Array[String]",
     doc: "The raw string values selected in a select menu (empty for buttons).",
     file: "discord/src/app/component.mbt",
-    line: 342,
+    line: 345,
   },
   {
     pkg: "gaato/discord/app",
@@ -1062,7 +1062,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub async fn[A] ComponentDeferredCtx::wait_for_component(Self, ComponentRoute[A], A, from? : WaitFrom, timeout_ms? : Int) -> @framework.ComponentCtx?",
     doc: "Wait for the next click on the component `route.custom_id(state)`\nidentifies — build the button with the same route and state. By default\nonly the invoking user may satisfy the wait; pass `from=Anyone` for a\npublic flow or `from=User(id)` for someone else. Returns `None` on\ntimeout, or at once without a gateway connection. Raises `CustomIdError`\nwhen the state does not encode.\n\nThe returned context has not been answered, and the waited interaction does\nnot pass through admission or the automatic defer: respond to it (for\nexample `update_message` or `defer_update`) within three seconds.",
     file: "discord/src/app/component.mbt",
-    line: 512,
+    line: 515,
   },
   {
     pkg: "gaato/discord/app",
@@ -1186,9 +1186,9 @@ let entries_0 : Array[ApiEntry] = [
     name: "ComponentImmediateCtx::unchecked_raw",
     kind: "fn",
     signature: "pub fn ComponentImmediateCtx::unchecked_raw(Self) -> @framework.ComponentCtx",
-    doc: "Escape hatch to the underlying context. Its response methods bypass this\nhandler's discipline of returning its initial response: a callback sent\nthrough it makes the returned reply fail with\n`ResponseGateError::AlreadyResponded`, which reaches the error policy.\nPrefer the read-only accessors on this context.",
+    doc: "Escape hatch to the underlying context. Its response methods bypass this\nhandler's discipline of returning its initial response: a callback sent\nthrough it makes the returned reply fail with\n`ResponseGateError::AlreadyResponded`, which reaches the error policy.\nPrefer the read-only accessors on this context. Each use raises an\n`alert_unchecked` warning; once the bypass is deliberate, silence it with\n`warnings = \"-alert_unchecked\"` in that package's `moon.pkg`.",
     file: "discord/src/app/component.mbt",
-    line: 281,
+    line: 284,
   },
   {
     pkg: "gaato/discord/app",
@@ -1386,7 +1386,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub struct DeferredCtx {\n  // private fields\n}",
     doc: "Command context made available after the initial deferred response.",
     file: "discord/src/app/ctx.mbt",
-    line: 148,
+    line: 151,
   },
   {
     pkg: "gaato/discord/app",
@@ -1395,7 +1395,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn DeferredCtx::app(Self) -> AppCtx",
     doc: "The app-level services: the REST client and application id.",
     file: "discord/src/app/ctx.mbt",
-    line: 157,
+    line: 160,
   },
   {
     pkg: "gaato/discord/app",
@@ -1404,7 +1404,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub async fn DeferredCtx::delete_followup(Self, @model.Id[@model.MessageMarker]) -> Unit",
     doc: "Delete a followup message sent for this interaction.",
     file: "discord/src/app/ctx.mbt",
-    line: 303,
+    line: 306,
   },
   {
     pkg: "gaato/discord/app",
@@ -1413,7 +1413,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub async fn DeferredCtx::delete_original(Self) -> Unit",
     doc: "Delete the original response.",
     file: "discord/src/app/ctx.mbt",
-    line: 239,
+    line: 242,
   },
   {
     pkg: "gaato/discord/app",
@@ -1422,7 +1422,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub async fn DeferredCtx::edit_followup(Self, @model.Id[@model.MessageMarker], content? : String, clear_content? : Bool, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions, files? : Array[@http.FileUpload], keep_attachments? : Array[@model.AttachmentRequest]) -> @model.Message",
     doc: "Edit a followup message sent for this interaction. New `files` replace\nits attachments unless `keep_attachments` lists the ones to retain.",
     file: "discord/src/app/ctx.mbt",
-    line: 278,
+    line: 281,
   },
   {
     pkg: "gaato/discord/app",
@@ -1431,7 +1431,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub async fn DeferredCtx::edit_original(Self, content? : String, clear_content? : Bool, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions, files? : Array[@http.FileUpload], keep_attachments? : Array[@model.AttachmentRequest], poll? : @model.PollCreateRequest) -> @model.Message",
     doc: "Edit the original response after deferring. New `files` replace\nthe existing attachments unless `keep_attachments` lists the ones to retain;\n`poll` can be added only here, while editing the deferred response.",
     file: "discord/src/app/ctx.mbt",
-    line: 214,
+    line: 217,
   },
   {
     pkg: "gaato/discord/app",
@@ -1440,7 +1440,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub async fn DeferredCtx::followup(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, poll? : @model.PollCreateRequest, ephemeral? : Bool) -> @model.Message",
     doc: "Send a followup message after the initial deferred response.",
     file: "discord/src/app/ctx.mbt",
-    line: 245,
+    line: 248,
   },
   {
     pkg: "gaato/discord/app",
@@ -1449,7 +1449,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub async fn DeferredCtx::get_followup(Self, @model.Id[@model.MessageMarker]) -> @model.Message",
     doc: "Fetch a followup message sent for this interaction.",
     file: "discord/src/app/ctx.mbt",
-    line: 268,
+    line: 271,
   },
   {
     pkg: "gaato/discord/app",
@@ -1458,7 +1458,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn DeferredCtx::guild_id(Self) -> @model.Id[@model.GuildMarker]?",
     doc: "The guild the interaction was invoked in, or `None` outside guilds. Use\n`guild_scope()` for flows that require a guild; this accessor is for\nmaybe-guild flows where DMs are valid.",
     file: "discord/src/app/ctx.mbt",
-    line: 192,
+    line: 195,
   },
   {
     pkg: "gaato/discord/app",
@@ -1467,7 +1467,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn DeferredCtx::guild_scope(Self) -> @framework.GuildInvocation raise HandlerError",
     doc: "The validated guild invocation. In a DM this raises\n`HandlerError::GuildOnly`, which the error policy renders normally.",
     file: "discord/src/app/ctx.mbt",
-    line: 170,
+    line: 173,
   },
   {
     pkg: "gaato/discord/app",
@@ -1476,7 +1476,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn DeferredCtx::interaction(Self) -> @model.Interaction",
     doc: "The full interaction payload.",
     file: "discord/src/app/ctx.mbt",
-    line: 184,
+    line: 187,
   },
   {
     pkg: "gaato/discord/app",
@@ -1485,7 +1485,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub async fn DeferredCtx::original(Self) -> @model.Message",
     doc: "Fetch the original response.",
     file: "discord/src/app/ctx.mbt",
-    line: 206,
+    line: 209,
   },
   {
     pkg: "gaato/discord/app",
@@ -1494,7 +1494,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn DeferredCtx::raw(Self) -> @framework.CommandCtx",
     doc: "Escape hatch for advanced inspection. Calling response methods on the\nraw value opts out of this wrapper's response discipline.\nFailure handling still follows the gate's real response state.",
     file: "discord/src/app/ctx.mbt",
-    line: 200,
+    line: 203,
   },
   {
     pkg: "gaato/discord/app",
@@ -1503,7 +1503,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn DeferredCtx::scope(Self) -> @framework.InvocationScope",
     doc: "Guild or DM invocation scope, carrying the invoking member or user.",
     file: "discord/src/app/ctx.mbt",
-    line: 163,
+    line: 166,
   },
   {
     pkg: "gaato/discord/app",
@@ -1512,7 +1512,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub fn DeferredCtx::user(Self) -> @model.User",
     doc: "The invoking user.",
     file: "discord/src/app/ctx.mbt",
-    line: 178,
+    line: 181,
   },
   {
     pkg: "gaato/discord/app",
@@ -1521,7 +1521,7 @@ let entries_0 : Array[ApiEntry] = [
     signature: "pub async fn[A] DeferredCtx::wait_for_component(Self, ComponentRoute[A], A, from? : WaitFrom, timeout_ms? : Int) -> @framework.ComponentCtx?",
     doc: "Wait for the next click on the component `route.custom_id(state)`\nidentifies — build the button with the same route and state. By default\nonly the invoking user may satisfy the wait; pass `from=Anyone` for a\npublic flow or `from=User(id)` for someone else. Returns `None` on\ntimeout, or at once without a gateway connection. Raises `CustomIdError`\nwhen the state does not encode.\n\nThe returned context has not been answered, and the waited interaction does\nnot pass through admission or the automatic defer: respond to it (for\nexample `update_message` or `defer_update`) within three seconds.",
     file: "discord/src/app/ctx.mbt",
-    line: 321,
+    line: 324,
   },
   {
     pkg: "gaato/discord/app",
@@ -1690,9 +1690,9 @@ let entries_0 : Array[ApiEntry] = [
     name: "ImmediateCtx::unchecked_raw",
     kind: "fn",
     signature: "pub fn ImmediateCtx::unchecked_raw(Self) -> @framework.CommandCtx",
-    doc: "Escape hatch to the underlying context. Its response methods bypass this\nhandler's discipline of returning its initial response: a callback sent\nthrough it makes the returned reply fail with\n`ResponseGateError::AlreadyResponded`, which reaches the error policy.\nPrefer the read-only accessors on this context.",
+    doc: "Escape hatch to the underlying context. Its response methods bypass this\nhandler's discipline of returning its initial response: a callback sent\nthrough it makes the returned reply fail with\n`ResponseGateError::AlreadyResponded`, which reaches the error policy.\nPrefer the read-only accessors on this context. Each use raises an\n`alert_unchecked` warning; once the bypass is deliberate, silence it with\n`warnings = \"-alert_unchecked\"` in that package's `moon.pkg`.",
     file: "discord/src/app/ctx.mbt",
-    line: 140,
+    line: 143,
   },
   {
     pkg: "gaato/discord/app",
@@ -1822,7 +1822,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub async fn InteractionEndpoint::handle_signed_http(Self, InteractionHttpRequest, @verify.InteractionVerifier, deadline_ms? : Int) -> InteractionHttpResponse",
     doc: "Verify the raw HTTP body, decode one interaction, and dispatch it.\n\nThe caller owns the task group supplied to `App::serve`. Keep that group\nalive after this method returns so deferred handlers can finish.",
     file: "discord/src/app/interaction_http.mbt",
-    line: 45,
+    line: 101,
   },
   {
     pkg: "gaato/discord/app",
@@ -1930,7 +1930,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn ModalDeferredCtx::app(Self) -> AppCtx",
     doc: "The app-level services: the REST client and application id.",
     file: "discord/src/app/modal.mbt",
-    line: 770,
+    line: 773,
   },
   {
     pkg: "gaato/discord/app",
@@ -1939,7 +1939,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub async fn ModalDeferredCtx::delete_followup(Self, @model.Id[@model.MessageMarker]) -> Unit",
     doc: "Delete a followup message sent for this interaction.",
     file: "discord/src/app/modal.mbt",
-    line: 931,
+    line: 934,
   },
   {
     pkg: "gaato/discord/app",
@@ -1948,7 +1948,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub async fn ModalDeferredCtx::delete_original(Self) -> Unit",
     doc: "Delete the original response.",
     file: "discord/src/app/modal.mbt",
-    line: 867,
+    line: 870,
   },
   {
     pkg: "gaato/discord/app",
@@ -1957,7 +1957,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub async fn ModalDeferredCtx::edit_followup(Self, @model.Id[@model.MessageMarker], content? : String, clear_content? : Bool, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions, files? : Array[@http.FileUpload], keep_attachments? : Array[@model.AttachmentRequest]) -> @model.Message",
     doc: "Edit a followup message sent for this interaction. New `files` replace\nits attachments unless `keep_attachments` lists the ones to retain.",
     file: "discord/src/app/modal.mbt",
-    line: 906,
+    line: 909,
   },
   {
     pkg: "gaato/discord/app",
@@ -1966,7 +1966,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub async fn ModalDeferredCtx::edit_original(Self, content? : String, clear_content? : Bool, embeds? : Array[@model.Embed], components? : Array[@model.Component], allowed_mentions? : @model.AllowedMentions, files? : Array[@http.FileUpload], keep_attachments? : Array[@model.AttachmentRequest], poll? : @model.PollCreateRequest) -> @model.Message",
     doc: "Edit the original response after deferring. New `files` replace\nthe existing attachments unless `keep_attachments` lists the ones to retain;\n`poll` can be added only here, while editing the deferred response.",
     file: "discord/src/app/modal.mbt",
-    line: 842,
+    line: 845,
   },
   {
     pkg: "gaato/discord/app",
@@ -1975,7 +1975,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub async fn ModalDeferredCtx::followup(Self, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], files? : Array[@http.FileUpload], allowed_mentions? : @model.AllowedMentions, poll? : @model.PollCreateRequest, ephemeral? : Bool) -> @model.Message",
     doc: "Send a followup message after the initial deferred response.",
     file: "discord/src/app/modal.mbt",
-    line: 873,
+    line: 876,
   },
   {
     pkg: "gaato/discord/app",
@@ -1984,7 +1984,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub async fn ModalDeferredCtx::get_followup(Self, @model.Id[@model.MessageMarker]) -> @model.Message",
     doc: "Fetch a followup message sent for this interaction.",
     file: "discord/src/app/modal.mbt",
-    line: 896,
+    line: 899,
   },
   {
     pkg: "gaato/discord/app",
@@ -1993,7 +1993,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn ModalDeferredCtx::guild_id(Self) -> @model.Id[@model.GuildMarker]?",
     doc: "The guild the interaction was invoked in, or `None` outside guilds. Use\n`guild_scope()` for flows that require a guild; this accessor is for\nmaybe-guild flows where DMs are valid.",
     file: "discord/src/app/modal.mbt",
-    line: 818,
+    line: 821,
   },
   {
     pkg: "gaato/discord/app",
@@ -2002,7 +2002,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn ModalDeferredCtx::guild_scope(Self) -> @framework.GuildInvocation raise HandlerError",
     doc: "The validated guild invocation. In a DM this raises\n`HandlerError::GuildOnly`, which the error policy renders normally.",
     file: "discord/src/app/modal.mbt",
-    line: 785,
+    line: 788,
   },
   {
     pkg: "gaato/discord/app",
@@ -2011,7 +2011,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn ModalDeferredCtx::interaction(Self) -> @model.Interaction",
     doc: "The full interaction payload.",
     file: "discord/src/app/modal.mbt",
-    line: 808,
+    line: 811,
   },
   {
     pkg: "gaato/discord/app",
@@ -2020,7 +2020,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn ModalDeferredCtx::origin(Self) -> @framework.ModalOrigin",
     doc: "What opened the modal: a component (with its host message) or a\ncommand.",
     file: "discord/src/app/modal.mbt",
-    line: 800,
+    line: 803,
   },
   {
     pkg: "gaato/discord/app",
@@ -2029,7 +2029,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub async fn ModalDeferredCtx::original(Self) -> @model.Message",
     doc: "Fetch the original response.",
     file: "discord/src/app/modal.mbt",
-    line: 832,
+    line: 835,
   },
   {
     pkg: "gaato/discord/app",
@@ -2038,7 +2038,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn ModalDeferredCtx::raw(Self) -> @framework.ModalCtx",
     doc: "Escape hatch for advanced inspection. Calling response methods on the\nraw value opts out of this wrapper's response discipline.\nFailure handling still follows the gate's real response state.",
     file: "discord/src/app/modal.mbt",
-    line: 826,
+    line: 829,
   },
   {
     pkg: "gaato/discord/app",
@@ -2047,7 +2047,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn ModalDeferredCtx::scope(Self) -> @framework.InvocationScope",
     doc: "Guild or DM invocation scope, carrying the invoking member or user.",
     file: "discord/src/app/modal.mbt",
-    line: 776,
+    line: 779,
   },
   {
     pkg: "gaato/discord/app",
@@ -2056,7 +2056,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn ModalDeferredCtx::user(Self) -> @model.User",
     doc: "The invoking user.",
     file: "discord/src/app/modal.mbt",
-    line: 793,
+    line: 796,
   },
   {
     pkg: "gaato/discord/app",
@@ -2065,7 +2065,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub async fn[A] ModalDeferredCtx::wait_for_component(Self, ComponentRoute[A], A, from? : WaitFrom, timeout_ms? : Int) -> @framework.ComponentCtx?",
     doc: "Wait for the next click on the component `route.custom_id(state)`\nidentifies — build the button with the same route and state. By default\nonly the invoking user may satisfy the wait; pass `from=Anyone` for a\npublic flow or `from=User(id)` for someone else. Returns `None` on\ntimeout, or at once without a gateway connection. Raises `CustomIdError`\nwhen the state does not encode.\n\nThe returned context has not been answered, and the waited interaction does\nnot pass through admission or the automatic defer: respond to it (for\nexample `update_message` or `defer_update`) within three seconds.",
     file: "discord/src/app/modal.mbt",
-    line: 965,
+    line: 968,
   },
   {
     pkg: "gaato/discord/app",
@@ -2279,9 +2279,9 @@ let entries_1 : Array[ApiEntry] = [
     name: "ModalImmediateCtx::unchecked_raw",
     kind: "fn",
     signature: "pub fn ModalImmediateCtx::unchecked_raw(Self) -> @framework.ModalCtx",
-    doc: "Escape hatch to the underlying context. Its response methods bypass this\nhandler's discipline of returning its initial response: a callback sent\nthrough it makes the returned reply fail with\n`ResponseGateError::AlreadyResponded`, which reaches the error policy.\nPrefer the read-only accessors on this context.",
+    doc: "Escape hatch to the underlying context. Its response methods bypass this\nhandler's discipline of returning its initial response: a callback sent\nthrough it makes the returned reply fail with\n`ResponseGateError::AlreadyResponded`, which reaches the error policy.\nPrefer the read-only accessors on this context. Each use raises an\n`alert_unchecked` warning; once the bypass is deliberate, silence it with\n`warnings = \"-alert_unchecked\"` in that package's `moon.pkg`.",
     file: "discord/src/app/modal.mbt",
-    line: 762,
+    line: 765,
   },
   {
     pkg: "gaato/discord/app",
@@ -2353,7 +2353,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub struct RegisteredCommand {\n  // private fields\n}",
     doc: "A type-erased command consumed by an App executor.",
     file: "discord/src/app/command.mbt",
-    line: 567,
+    line: 592,
   },
   {
     pkg: "gaato/discord/app",
@@ -2362,7 +2362,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn RegisteredCommand::name(Self) -> String",
     doc: "The top-level command name used for routing.",
     file: "discord/src/app/command.mbt",
-    line: 586,
+    line: 611,
   },
   {
     pkg: "gaato/discord/app",
@@ -2389,7 +2389,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub type Spawner = async (async () -> Unit) -> Unit",
     doc: "Executor-provided function that runs a handler task concurrently on\nthe surrounding async runtime.",
     file: "discord/src/app/app.mbt",
-    line: 68,
+    line: 89,
   },
   {
     pkg: "gaato/discord/app",
@@ -2398,7 +2398,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub(all) struct SyncReport {\n  scopes : Array[@framework.ScopeSyncReport]\n} derive(@debug.Debug)",
     doc: "Reports for each synchronized scope, in the requested order.",
     file: "discord/src/app/app.mbt",
-    line: 720,
+    line: 787,
   },
   {
     pkg: "gaato/discord/app",
@@ -2542,7 +2542,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub struct Bot {\n  // private fields\n}",
     doc: "A validated gateway bot, built by `BotBuilder::build`. Its configuration\nand registrations are fixed; `run` connects it.",
     file: "discord/src/bot/builder.mbt",
-    line: 243,
+    line: 230,
   },
   {
     pkg: "gaato/discord/bot",
@@ -2551,7 +2551,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub async fn Bot::run(Self) -> Unit",
     doc: "Connect and process gateway events until graceful shutdown or a fatal\nclose. Raises `BotError::AlreadyRunning` when this bot is already running;\nit may run again after `run` returns. Other failures are connection-time:\nREST errors from `GET /gateway/bot` or the command sync, `BotError` for a\nfatal gateway close, an exhausted session start limit, or unusable gateway\ninformation.",
     file: "discord/src/bot/builder.mbt",
-    line: 255,
+    line: 242,
   },
   {
     pkg: "gaato/discord/bot",
@@ -2560,7 +2560,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn Bot::sessions(Self) -> Map[Int, BotSession]",
     doc: "Current resumable gateway state paired with READY metadata, keyed by shard\nid. A supplied snapshot is available from the start of `run` until its\nshard replaces, drops, or invalidates it, including while `run` still\nresolves the shard layout over REST; an unsaved shard appears after READY.\nEmpty while the bot is not running. Returned values do not alias mutable\nruntime state.",
     file: "discord/src/bot/builder.mbt",
-    line: 273,
+    line: 260,
   },
   {
     pkg: "gaato/discord/bot",
@@ -2569,7 +2569,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub struct BotBuilder {\n  // private fields\n}",
     doc: "Collects a gateway bot's configuration and registrations: typed and raw\nevent handlers, event middleware, services, the cache, and observers.\n`build()` validates it into a `Bot` that can run. Like `AppBuilder`,\nregistering more on the builder afterwards does not change a built `Bot`.",
     file: "discord/src/bot/builder.mbt",
-    line: 24,
+    line: 21,
   },
   {
     pkg: "gaato/discord/bot",
@@ -2578,7 +2578,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn BotBuilder::BotBuilder(@app.App, token~ : String, intents? : @model.Intents, capabilities? : @model.GatewayCapabilities, client? : @http.Client, gateway_url? : String, shards? : ShardConfig, compress? : Bool, identify_queue? : &@queue.IdentifyQueue, sync? : @app.CommandScope, sync_unowned? : @framework.UnownedCommands, resume? : Map[Int, BotSession], event_backlog? : Int) -> Self",
     doc: "Configure a gateway bot for `app`. When `intents` is omitted, `build`\ninfers the union of intents required by the typed event subscriptions\n(privileged intents are only inferred, never invented — they must still be\nenabled in the developer portal). `client` supplies a preconfigured REST\nclient; by default one is built from `token`. `shards`, `compress`, and\n`identify_queue` configure sharding, transport compression, and\ncross-process identify coordination. Every IDENTIFY, at startup or after a\nlost session, first reads `session_start_limit` from `GET /gateway/bot`; an\nexhausted limit ends `run` with `SessionStartLimitExceeded` instead of\nrisking a token reset. `capabilities` is sent in Identify (see\n`@model.GatewayCapabilities`).\n\nWhen `sync` is omitted, the bot performs no command synchronization. When\nset, synchronization runs once per process after the first READY. It uses\nDiscord's bulk overwrite: every command in that scope that this App does not\ndeclare is **deleted**, except entry points, which are always preserved.\n`sync_unowned=Keep` also preserves commands registered by other owners.\nDeletions are reported through the app's warning hook. In multi-process\nsharding, enable synchronization in exactly one process.\n\n`resume` seeds saved Bot sessions per shard id so those shards RESUME\ninstead of identifying (see `Bot::sessions`). It restores gateway identity,\nnot optional cache contents or application-owned state.\n\n`event_backlog` caps the decoded events waiting for event middleware and\nhandlers (default `DEFAULT_EVENT_BACKLOG`). When handlers fall that far\nbehind, further events skip them — with an `EventDropped` telemetry event\neach and one warning per overload — until they catch up. The cache and\ninteraction routing never wait in this backlog.",
     file: "discord/src/bot/builder.mbt",
-    line: 58,
+    line: 55,
   },
   {
     pkg: "gaato/discord/bot",
@@ -2587,16 +2587,16 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn BotBuilder::attach_cache(Self, @cache.InMemoryCache) -> Unit",
     doc: "Feed every decoded gateway event into an opt-in cache before dispatching\ntyped and raw event handlers.",
     file: "discord/src/bot/builder.mbt",
-    line: 155,
+    line: 152,
   },
   {
     pkg: "gaato/discord/bot",
     name: "BotBuilder::build",
     kind: "fn",
     signature: "pub fn BotBuilder::build(Self) -> Bot raise BotConfigError",
-    doc: "Validate the configuration and freeze the registrations into a `Bot`.\nRaises `BotConfigError` for an empty token, `compress=true` without\nzlib-stream support, a shard selection Discord cannot represent, a saved\nsession whose ids disagree, or an `event_backlog` below 1. Intents are resolved here, so warnings about\nsubscriptions the intents cannot deliver appear once, at build time.",
+    doc: "Validate the configuration and freeze the registrations into a `Bot`.\nRaises `BotConfigError` for an empty token, a shard selection Discord\ncannot represent, a saved session whose ids disagree, or an `event_backlog` below 1. Intents are resolved here, so warnings about\nsubscriptions the intents cannot deliver appear once, at build time.",
     file: "discord/src/bot/builder.mbt",
-    line: 193,
+    line: 189,
   },
   {
     pkg: "gaato/discord/bot",
@@ -2605,7 +2605,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn BotBuilder::middleware(Self, async (GatewayCtx, @model.Event, async (@model.Event) -> Unit) -> Unit) -> Unit",
     doc: "Install gateway event middleware. The first installed middleware is\noutermost. The chain runs serially, in event order, in a dispatch task\nseparate from the shard loop: slow middleware delays later events, never\ninteraction routing. A dropped event emits no EventDispatched\ntelemetry. Middleware cannot widen intents or the gateway event filter.",
     file: "discord/src/bot/builder.mbt",
-    line: 132,
+    line: 129,
   },
   {
     pkg: "gaato/discord/bot",
@@ -2614,7 +2614,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn[T] BotBuilder::on(Self, EventType[T], async (GatewayCtx, T) -> Unit) -> Unit",
     doc: "Subscribe a typed handler to one gateway event (see `Events` for the\ndescriptors). The event's required intents join the inferred intent set\nwhen the builder omits explicit `intents`. Handlers run through the event\nmiddleware chain; a raised error is reported via the app's failure policy\nwithout stopping the bot.",
     file: "discord/src/bot/builder.mbt",
-    line: 98,
+    line: 95,
   },
   {
     pkg: "gaato/discord/bot",
@@ -2623,7 +2623,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn BotBuilder::on_decode_error(Self, (String, Json) -> Unit) -> Unit",
     doc: "Observe gateway events whose known payload failed typed decoding.\n\n`marker` is the full synthetic event type\n`DECODE_ERROR:<event-name>:<decode-error>`, and `payload` is Discord's raw\nevent data. Handlers run synchronously in the dispatch loop and should\nreturn promptly. Registering a handler does not add gateway intents or\nwiden the event filter.",
     file: "discord/src/bot/builder.mbt",
-    line: 180,
+    line: 177,
   },
   {
     pkg: "gaato/discord/bot",
@@ -2632,7 +2632,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn BotBuilder::on_event(Self, async (GatewayCtx, @model.Event) -> Unit) -> Unit",
     doc: "Subscribe to the raw event stream: every decoded gateway dispatch,\nincluding `Resumed` and `Unknown`, without payload projection. Unlike\n`on`, this adds nothing to the inferred intent set.",
     file: "discord/src/bot/builder.mbt",
-    line: 119,
+    line: 116,
   },
   {
     pkg: "gaato/discord/bot",
@@ -2641,7 +2641,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn BotBuilder::on_telemetry(Self, (@telemetry.TelemetryEvent) -> Unit raise) -> Unit",
     doc: "Observe structured gateway, dispatch, and REST telemetry aggregated by\nthis bot. Hooks run synchronously and should return promptly.",
     file: "discord/src/bot/builder.mbt",
-    line: 165,
+    line: 162,
   },
   {
     pkg: "gaato/discord/bot",
@@ -2650,7 +2650,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn BotBuilder::presence(Self, @model.UpdatePresence) -> Unit",
     doc: "Set the initial presence used by every shard managed by this process.",
     file: "discord/src/bot/builder.mbt",
-    line: 108,
+    line: 105,
   },
   {
     pkg: "gaato/discord/bot",
@@ -2659,13 +2659,13 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub fn BotBuilder::service(Self, name~ : String, async (GatewayCtx) -> Unit) -> Unit",
     doc: "Register a long-running background task started alongside the shards when\nthe bot runs (e.g. a periodic status updater). `name` labels the service\nin failure reports. A raised error is reported via the app's failure\npolicy and stops only that service, not the bot.",
     file: "discord/src/bot/builder.mbt",
-    line: 144,
+    line: 141,
   },
   {
     pkg: "gaato/discord/bot",
     name: "BotConfigError",
     kind: "suberror",
-    signature: "pub(all) suberror BotConfigError {\n  EmptyToken\n  CompressionUnavailable\n  InvalidShardConfig(message~ : String)\n  MismatchedSession(shard_id~ : Int)\n  InvalidEventBacklog(value~ : Int)\n} derive(@debug.Debug)",
+    signature: "pub(all) suberror BotConfigError {\n  EmptyToken\n  InvalidShardConfig(message~ : String)\n  MismatchedSession(shard_id~ : Int)\n  InvalidEventBacklog(value~ : Int)\n} derive(@debug.Debug)",
     doc: "A gateway configuration that cannot run, found by `BotBuilder::build`\nbefore any connection is attempted.",
     file: "discord/src/bot/builder.mbt",
     line: 4,
@@ -2685,7 +2685,7 @@ let entries_1 : Array[ApiEntry] = [
     kind: "fn",
     signature: "pub fn BotError::to_string(Self) -> String",
     doc: "",
-    file: "discord/src/bot/bot.mbt",
+    file: "discord/src/bot/backlog.mbt",
     line: 1,
   },
   {
@@ -2703,7 +2703,7 @@ let entries_1 : Array[ApiEntry] = [
     kind: "fn",
     signature: "pub fn BotSession::to_json(Self) -> Json",
     doc: "",
-    file: "discord/src/bot/bot.mbt",
+    file: "discord/src/bot/backlog.mbt",
     line: 1,
   },
   {
@@ -3532,7 +3532,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub async fn GatewayCtx::fetch_guild_members(Self, @model.Id[@model.GuildMarker], @model.MemberSelect, presences? : Bool, timeout_ms? : Int) -> FetchedMembers",
     doc: "Fetch every matching member chunk with a process-unique nonce. Requires\nGUILD_MEMBERS for `All` and GUILD_PRESENCES when requesting presences.\nThe deadline includes sending; raises `GatewayRequestTimeout` on timeout,\n`GatewayRateLimited` for a matching RATE_LIMITED response, and\n`ShardNotManaged` for a remote shard. All expectations are cancelled on exit.",
     file: "discord/src/bot/gateway_commands.mbt",
-    line: 87,
+    line: 109,
   },
   {
     pkg: "gaato/discord/bot",
@@ -4139,7 +4139,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub struct RemoteCooldownStore {\n  // private fields\n}",
     doc: "Cross-process cooldown windows using the coordinator's clock.\n\nFailOpen is the default: cooldowns damp abuse, so an outage should not take\nevery command offline. RemoteRateLimiter remains fail-closed because avoiding\nDiscord's 429 bans is a correctness concern. Cancellation always propagates.",
     file: "discord/src/coordinator/remote.mbt",
-    line: 316,
+    line: 295,
   },
   {
     pkg: "gaato/discord/coordinator",
@@ -4148,7 +4148,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn RemoteCooldownStore::close(Self) -> Unit",
     doc: "Close the connection permanently. Later acquisitions use `when_unreachable`.",
     file: "discord/src/coordinator/remote.mbt",
-    line: 358,
+    line: 337,
   },
   {
     pkg: "gaato/discord/coordinator",
@@ -4157,7 +4157,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub async fn RemoteCooldownStore::connect(String, timeout_ms? : Int, when_unreachable? : UnreachablePolicy, on_error? : (Error) -> Unit) -> Self",
     doc: "Open a dedicated connection, independent of blocking HTTP acquisitions.\nEach acquisition has no retries and a `timeout_ms` deadline, including queue\nand reconnect time. Transport failures and timeouts call `on_error`, then\nuse `when_unreachable`: Acquired for FailOpen, or Active for the requested window\nfor FailClosed. Other errors propagate. The default error hook does nothing.\nAn initial connection outage is reported but still returns a store; later\nacquisitions attempt to reconnect within the same deadline.",
     file: "discord/src/coordinator/remote.mbt",
-    line: 331,
+    line: 310,
   },
   {
     pkg: "gaato/discord/coordinator",
@@ -4166,7 +4166,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub async fn RemoteCooldownStore::ping(Self) -> Unit",
     doc: "Check connectivity within the deadline, without retries or a fallback.",
     file: "discord/src/coordinator/remote.mbt",
-    line: 364,
+    line: 343,
   },
   {
     pkg: "gaato/discord/coordinator",
@@ -4184,7 +4184,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub struct RemoteIdentifyQueue {\n  // private fields\n}",
     doc: "Cross-process implementation of `IdentifyQueue`.",
     file: "discord/src/coordinator/remote.mbt",
-    line: 161,
+    line: 151,
   },
   {
     pkg: "gaato/discord/coordinator",
@@ -4193,7 +4193,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn RemoteIdentifyQueue::close(Self) -> Unit",
     doc: "Close the coordinator connection; in-flight and later requests fail.",
     file: "discord/src/coordinator/remote.mbt",
-    line: 175,
+    line: 165,
   },
   {
     pkg: "gaato/discord/coordinator",
@@ -4202,7 +4202,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub async fn RemoteIdentifyQueue::connect(String) -> Self",
     doc: "Open the initial coordinator connection.\n\nLater transport failures reconnect automatically with bounded backoff.",
     file: "discord/src/coordinator/remote.mbt",
-    line: 169,
+    line: 159,
   },
   {
     pkg: "gaato/discord/coordinator",
@@ -4211,7 +4211,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub async fn RemoteIdentifyQueue::ping(Self) -> Unit",
     doc: "Round-trip a ping through the coordinator to verify connectivity.",
     file: "discord/src/coordinator/remote.mbt",
-    line: 181,
+    line: 171,
   },
   {
     pkg: "gaato/discord/coordinator",
@@ -4229,7 +4229,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub struct RemoteRateLimiter {\n  // private fields\n}",
     doc: "Cross-process implementation of `RateLimiter`.",
     file: "discord/src/coordinator/remote.mbt",
-    line: 200,
+    line: 190,
   },
   {
     pkg: "gaato/discord/coordinator",
@@ -4247,7 +4247,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn RemoteRateLimiter::close(Self) -> Unit",
     doc: "Close both coordinator connections; in-flight and later requests fail.",
     file: "discord/src/coordinator/remote.mbt",
-    line: 227,
+    line: 217,
   },
   {
     pkg: "gaato/discord/coordinator",
@@ -4256,7 +4256,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub async fn RemoteRateLimiter::connect(String) -> Self",
     doc: "Open the initial coordinator connections.\n\nLater transport failures reconnect automatically with bounded backoff.",
     file: "discord/src/coordinator/remote.mbt",
-    line: 210,
+    line: 200,
   },
   {
     pkg: "gaato/discord/coordinator",
@@ -4265,7 +4265,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub async fn RemoteRateLimiter::ping(Self) -> Unit",
     doc: "Round-trip a ping through the coordinator to verify connectivity.",
     file: "discord/src/coordinator/remote.mbt",
-    line: 235,
+    line: 225,
   },
   {
     pkg: "gaato/discord/coordinator",
@@ -4283,7 +4283,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub(all) enum UnreachablePolicy {\n  FailOpen\n  FailClosed\n} derive(Eq, @debug.Debug)",
     doc: "Admission policy when the cooldown coordinator is unreachable.",
     file: "discord/src/coordinator/remote.mbt",
-    line: 305,
+    line: 284,
   },
   {
     pkg: "gaato/discord/endpoint_http",
@@ -4292,7 +4292,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub struct InteractionsServer {\n  // private fields\n}",
     doc: "An HTTP server dispatching Discord interactions on native or moonrun Wasm.",
     file: "discord/src/endpoint_http/endpoint_http.mbt",
-    line: 205,
+    line: 230,
   },
   {
     pkg: "gaato/discord/endpoint_http",
@@ -4301,7 +4301,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn InteractionsServer::addr(Self) -> String",
     doc: "Return the actual listening address, including an OS-assigned port.",
     file: "discord/src/endpoint_http/endpoint_http.mbt",
-    line: 212,
+    line: 237,
   },
   {
     pkg: "gaato/discord/endpoint_http",
@@ -4310,7 +4310,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub async fn InteractionsServer::close(Self) -> Unit noraise",
     doc: "Stop accepting requests and cancel active connection handlers.",
     file: "discord/src/endpoint_http/endpoint_http.mbt",
-    line: 218,
+    line: 243,
   },
   {
     pkg: "gaato/discord/endpoint_http",
@@ -4328,7 +4328,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub async fn[X] serve_interactions(@async.TaskGroup[X], @app.App, addr~ : String, public_key~ : String, access~ : @app.RestAccess, application_id? : @model.Id[@model.ApplicationMarker], path? : String, deadline_ms? : Int, max_body_bytes? : Int, body_timeout_ms? : Int) -> InteractionsServer",
     doc: "Start a Discord HTTP-interactions server in `group` on native or moonrun Wasm.\n\nUse port zero in `addr` to let the OS choose a free port, then read the\nresolved address from `InteractionsServer::addr`.\n\nA request body larger than `max_body_bytes` gets 413, and one not received\nwithin `body_timeout_ms` gets 408; both close the connection. Discord's\ninteraction payloads are far below the 1 MiB default. Non-positive limits\nraise `ServerConfigError` before the server listens.",
     file: "discord/src/endpoint_http/endpoint_http.mbt",
-    line: 236,
+    line: 261,
   },
   {
     pkg: "gaato/discord/framework",
@@ -4877,7 +4877,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub async fn Framework::process_with(Self, @model.Interaction, gate~ : ResponseGate) -> Bool",
     doc: "Route one interaction through a caller-provided initial-response gate.",
     file: "discord/src/framework/framework.mbt",
-    line: 252,
+    line: 266,
   },
   {
     pkg: "gaato/discord/framework",
@@ -4904,7 +4904,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub async fn Framework::wait_for_component(Self, custom_id~ : String, user? : @model.Id[@model.UserMarker], timeout_ms? : Int) -> ComponentCtx?",
     doc: "Wait for the next component interaction whose custom id matches exactly\nand whose invoking user matches `user`, when provided. Returns `None` on\ntimeout. Waiters win over registered component handlers, which makes\nmulti-step flows (confirm buttons, pagination) straightforward inside one\nhandler.",
     file: "discord/src/framework/framework.mbt",
-    line: 363,
+    line: 374,
   },
   {
     pkg: "gaato/discord/framework",
@@ -5165,7 +5165,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub async fn ResponseCapture::get(Self) -> CapturedResponse",
     doc: "Wait for and remove the captured callback.",
     file: "discord/src/framework/gate.mbt",
-    line: 349,
+    line: 354,
   },
   {
     pkg: "gaato/discord/framework",
@@ -5174,7 +5174,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn ResponseCapture::try_get(Self) -> CapturedResponse? raise",
     doc: "Remove the captured callback without waiting, if one is available.",
     file: "discord/src/framework/gate.mbt",
-    line: 355,
+    line: 360,
   },
   {
     pkg: "gaato/discord/framework",
@@ -5201,7 +5201,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn ResponseGate::capture(@model.Interaction, deadline_ms? : Int) -> (Self, ResponseCapture)",
     doc: "Construct an in-memory gate and a receiver for the first callback value.\nThe deadline is measured from this call.",
     file: "discord/src/framework/gate.mbt",
-    line: 156,
+    line: 157,
   },
   {
     pkg: "gaato/discord/framework",
@@ -5210,7 +5210,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn ResponseGate::close_placeholder(Self) -> Unit",
     doc: "Record that the original response no longer shows the deferred\nplaceholder. Response helpers call this after editing or deleting the\noriginal response, or after sending a followup.",
     file: "discord/src/framework/gate.mbt",
-    line: 309,
+    line: 314,
   },
   {
     pkg: "gaato/discord/framework",
@@ -5219,7 +5219,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn ResponseGate::expire(Self) -> Unit",
     doc: "Close an unused callback window. Other states remain unchanged.\n\n```mbt\ntest \"expire an unused callback window\" {\n  let gate = @framework.ResponseGate(ApplicationCommand, (_, _) => ())\n  assert_eq(gate.state(), Pending)\n  gate.expire()\n  assert_eq(gate.state(), Expired)\n  assert_false(gate.is_pending())\n}\n```",
     file: "discord/src/framework/gate.mbt",
-    line: 335,
+    line: 340,
   },
   {
     pkg: "gaato/discord/framework",
@@ -5228,7 +5228,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn ResponseGate::is_pending(Self) -> Bool",
     doc: "Whether the initial callback can still be sent.",
     file: "discord/src/framework/gate.mbt",
-    line: 343,
+    line: 348,
   },
   {
     pkg: "gaato/discord/framework",
@@ -5237,7 +5237,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn ResponseGate::placeholder_open(Self) -> Bool",
     doc: "Whether a deferred message's loading placeholder is still showing: the\ncallback was `DeferredChannelMessageWithSource` and the original response\nhas not been edited, deleted, or answered with a followup since.",
     file: "discord/src/framework/gate.mbt",
-    line: 301,
+    line: 306,
   },
   {
     pkg: "gaato/discord/framework",
@@ -5246,7 +5246,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn ResponseGate::remaining_ms(Self) -> Int?",
     doc: "Milliseconds left before the callback window closes, clamped at zero, or\n`None` when this gate has no deadline.",
     file: "discord/src/framework/gate.mbt",
-    line: 272,
+    line: 287,
   },
   {
     pkg: "gaato/discord/framework",
@@ -5255,7 +5255,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn ResponseGate::rest(@http.Client, @model.Interaction, deadline_ms? : Int) -> Self",
     doc: "Construct a gate that delivers its callback through Discord's REST API.\nThe deadline is measured from this call, so construct the gate as soon as\nthe interaction arrives.",
     file: "discord/src/framework/gate.mbt",
-    line: 133,
+    line: 134,
   },
   {
     pkg: "gaato/discord/framework",
@@ -5264,7 +5264,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub async fn ResponseGate::send(Self, @model.InteractionResponse, files? : Array[@http.FileUpload]) -> Unit",
     doc: "Validate and deliver the one allowed initial interaction callback.\nA call made while another callback is being delivered waits for that\ndelivery to settle, then observes its outcome.",
     file: "discord/src/framework/gate.mbt",
-    line: 203,
+    line: 204,
   },
   {
     pkg: "gaato/discord/framework",
@@ -5273,7 +5273,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn ResponseGate::state(Self) -> ResponseState",
     doc: "The current state of this interaction's initial callback. A pending\ncallback whose deadline has passed reads as `Expired`.",
     file: "discord/src/framework/gate.mbt",
-    line: 316,
+    line: 321,
   },
   {
     pkg: "gaato/discord/framework",
@@ -5282,7 +5282,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn ResponseGate::token_remaining_ms(Self) -> Int",
     doc: "Milliseconds left before the interaction token expires, counted from this\ngate's construction (when the executor received the interaction). Zero once\nit has expired.",
     file: "discord/src/framework/gate.mbt",
-    line: 286,
+    line: 295,
   },
   {
     pkg: "gaato/discord/framework",
@@ -5336,7 +5336,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn classify_rest_callback_failure(Error) -> DeliveryFailure",
     doc: "Classify a failed `POST /interactions/{id}/{token}/callback`.\n\nUnknown Interaction (10062) closes the window. Already Acknowledged (40060),\nrate limits, server errors, and transport failures are uncertain. Other\nclient errors are definitive refusals of that payload.",
     file: "discord/src/framework/gate.mbt",
-    line: 111,
+    line: 112,
   },
   {
     pkg: "gaato/discord/framework",
@@ -5405,8 +5405,8 @@ let entries_2 : Array[ApiEntry] = [
     pkg: "gaato/discord/gateway",
     name: "InflateError",
     kind: "suberror",
-    signature: "pub(all) suberror InflateError {\n  InflateError(status~ : Int)\n  InvalidUtf8\n  Unsupported\n} derive(@debug.Debug)",
-    doc: "Raised when a compressed Gateway stream cannot be initialized or decoded.",
+    signature: "pub(all) suberror InflateError {\n  Malformed(message~ : String)\n  InvalidUtf8\n} derive(@debug.Debug)",
+    doc: "Raised when a compressed Gateway stream cannot be decoded.",
     file: "discord/src/gateway/inflater.mbt",
     line: 3,
   },
@@ -5421,7 +5421,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub(open) trait Inflater {\n  fn push(Self, Bytes) -> String? raise\n}",
     doc: "Stateful decoder seam for Gateway compression. Implementations retain one\ninflate context across messages. `None` means the Z_SYNC_FLUSH suffix has\nnot arrived yet.",
     file: "discord/src/gateway/inflater.mbt",
-    line: 14,
+    line: 13,
   },
   {
     pkg: "gaato/discord/gateway",
@@ -5601,7 +5601,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn connect_websocket(String) -> &GatewayTransport",
     doc: "Connect to the gateway over WebSocket (the default connector).",
     file: "discord/src/gateway/transport.mbt",
-    line: 99,
+    line: 79,
   },
   {
     pkg: "gaato/discord/gateway",
@@ -5611,15 +5611,6 @@ let entries_3 : Array[ApiEntry] = [
     doc: "Classify a close code into the action to take, per the Discord docs.\n\n- fatal: authentication failure or invalid shard/intent configuration —\n  reconnecting cannot succeed;\n- re-identify: the session is gone (invalid seq, session timeout);\n- resume: everything else (transient errors, unclean closes), provided a\n  session exists.",
     file: "discord/src/gateway/state.mbt",
     line: 40,
-  },
-  {
-    pkg: "gaato/discord/gateway",
-    name: "zlib_stream_supported",
-    kind: "fn",
-    signature: "pub fn zlib_stream_supported() -> Bool",
-    doc: "Whether this backend can inflate Discord's `zlib-stream` transport\ncompression. False here: leave `compress` off.",
-    file: "discord/src/gateway/compression_unsupported.mbt",
-    line: 4,
   },
   {
     pkg: "gaato/discord/http",
@@ -5979,7 +5970,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::add_thread_member(Self, @model.Id[@model.UserMarker]) -> Unit raise DiscordHttpError",
     doc: "Add a user to this channel. This channel must be a thread.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 387,
+    line: 389,
   },
   {
     pkg: "gaato/discord/http",
@@ -5988,7 +5979,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::bulk_delete(Self, Array[@model.Id[@model.MessageMarker]], reason? : String) -> Unit raise DiscordHttpError",
     doc: "Delete between 2 and 100 messages from this channel.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 516,
+    line: 518,
   },
   {
     pkg: "gaato/discord/http",
@@ -5997,7 +5988,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::create_invite(Self, max_age? : Int, max_uses? : Int, temporary? : Bool, unique? : Bool, target_type? : @model.InviteTargetType, target_user_id? : @model.Id[@model.UserMarker], target_application_id? : @model.Id[@model.ApplicationMarker], role_ids? : Array[@model.Id[@model.RoleMarker]], target_user_ids? : Array[@model.Id[@model.UserMarker]], target_users_file? : FileUpload, reason? : String) -> @model.Invite raise DiscordHttpError",
     doc: "Create an invite for this channel.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 251,
+    line: 253,
   },
   {
     pkg: "gaato/discord/http",
@@ -6006,7 +5997,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::create_stage_instance(Self, String, privacy_level? : @model.StagePrivacyLevel, send_start_notification? : Bool, guild_scheduled_event_id? : @model.Id[@model.ScheduledEventMarker], reason? : String) -> @model.StageInstance raise DiscordHttpError",
     doc: "Create a stage instance. This channel must be a stage channel.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 540,
+    line: 542,
   },
   {
     pkg: "gaato/discord/http",
@@ -6015,7 +6006,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::create_webhook(Self, String, avatar? : String, reason? : String) -> @model.Webhook raise DiscordHttpError",
     doc: "Create an incoming webhook for this channel.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 227,
+    line: 229,
   },
   {
     pkg: "gaato/discord/http",
@@ -6033,7 +6024,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::delete_permission(Self, @model.Id[@model.GenericMarker], reason? : String) -> Unit raise DiscordHttpError",
     doc: "Delete a permission overwrite from this channel.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 303,
+    line: 305,
   },
   {
     pkg: "gaato/discord/http",
@@ -6042,7 +6033,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::delete_stage_instance(Self, reason? : String) -> Unit raise DiscordHttpError",
     doc: "Delete the stage instance. This channel must be a stage channel.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 584,
+    line: 586,
   },
   {
     pkg: "gaato/discord/http",
@@ -6060,7 +6051,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::edit_permissions(Self, @model.Id[@model.GenericMarker], @model.OverwriteType, allow? : @model.Permissions, deny? : @model.Permissions, reason? : String) -> Unit raise DiscordHttpError",
     doc: "Create or replace a permission overwrite for this channel.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 283,
+    line: 285,
   },
   {
     pkg: "gaato/discord/http",
@@ -6069,7 +6060,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::edit_stage_instance(Self, topic? : String, privacy_level? : @model.StagePrivacyLevel, reason? : String) -> @model.StageInstance raise DiscordHttpError",
     doc: "Edit the stage instance. This channel must be a stage channel.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 568,
+    line: 570,
   },
   {
     pkg: "gaato/discord/http",
@@ -6087,7 +6078,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::follow(Self, @model.Id[@model.ChannelMarker], reason? : String) -> @model.FollowedChannel raise DiscordHttpError",
     doc: "Follow this announcement channel. `webhook_channel_id` is the target\nchannel that receives messages and requires `MANAGE_WEBHOOKS` there.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 318,
+    line: 320,
   },
   {
     pkg: "gaato/discord/http",
@@ -6096,7 +6087,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::group_dm_add_recipient(Self, @model.Id[@model.UserMarker], String, nick? : String) -> Unit raise DiscordHttpError",
     doc: "Add a user to this group DM.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 346,
+    line: 348,
   },
   {
     pkg: "gaato/discord/http",
@@ -6105,7 +6096,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::group_dm_remove_recipient(Self, @model.Id[@model.UserMarker]) -> Unit raise DiscordHttpError",
     doc: "Remove a user from this group DM.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 362,
+    line: 364,
   },
   {
     pkg: "gaato/discord/http",
@@ -6114,7 +6105,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::invites(Self) -> Array[@model.Invite] raise DiscordHttpError",
     doc: "List invites created for this channel.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 219,
+    line: 221,
   },
   {
     pkg: "gaato/discord/http",
@@ -6123,7 +6114,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::join_thread(Self) -> Unit raise DiscordHttpError",
     doc: "Join the current user to this channel. This channel must be a thread.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 371,
+    line: 373,
   },
   {
     pkg: "gaato/discord/http",
@@ -6132,7 +6123,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::joined_private_archived_threads(Self, before? : @model.Id[@model.ChannelMarker], limit? : Int) -> @model.ArchivedThreads raise DiscordHttpError",
     doc: "List private archived threads in this channel joined by the current user.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 446,
+    line: 448,
   },
   {
     pkg: "gaato/discord/http",
@@ -6141,7 +6132,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::leave_thread(Self) -> Unit raise DiscordHttpError",
     doc: "Remove the current user from this channel. This channel must be a thread.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 379,
+    line: 381,
   },
   {
     pkg: "gaato/discord/http",
@@ -6166,9 +6157,9 @@ let entries_3 : Array[ApiEntry] = [
     name: "ChannelRef::pins",
     kind: "fn",
     signature: "pub async fn ChannelRef::pins(Self) -> Array[@model.Message] raise DiscordHttpError",
-    doc: "List every pinned message in this channel.",
+    doc: "List every pinned message in this channel through Discord's deprecated\narray-returning endpoint. `pins_page` pages the current endpoint.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 201,
+    line: 203,
   },
   {
     pkg: "gaato/discord/http",
@@ -6177,7 +6168,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::pins_page(Self, before? : @model.Timestamp, limit? : Int) -> @model.ChannelPins raise DiscordHttpError",
     doc: "Fetch one page from Discord's current paginated channel-pins endpoint.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 209,
+    line: 211,
   },
   {
     pkg: "gaato/discord/http",
@@ -6186,7 +6177,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::private_archived_threads(Self, before? : @model.Timestamp, limit? : Int) -> @model.ArchivedThreads raise DiscordHttpError",
     doc: "List private archived threads in this channel.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 436,
+    line: 438,
   },
   {
     pkg: "gaato/discord/http",
@@ -6195,7 +6186,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::public_archived_threads(Self, before? : @model.Timestamp, limit? : Int) -> @model.ArchivedThreads raise DiscordHttpError",
     doc: "List public archived threads in this channel.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 426,
+    line: 428,
   },
   {
     pkg: "gaato/discord/http",
@@ -6204,7 +6195,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::remove_thread_member(Self, @model.Id[@model.UserMarker]) -> Unit raise DiscordHttpError",
     doc: "Remove a user from this channel. This channel must be a thread.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 396,
+    line: 398,
   },
   {
     pkg: "gaato/discord/http",
@@ -6222,7 +6213,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::send_soundboard_sound(Self, @model.Id[@model.SoundboardSoundMarker], source_guild_id? : @model.Id[@model.GuildMarker]) -> Unit raise DiscordHttpError",
     doc: "Play a soundboard sound in this voice channel.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 530,
+    line: 532,
   },
   {
     pkg: "gaato/discord/http",
@@ -6231,7 +6222,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::set_voice_status(Self, status? : String, reason? : String) -> Unit raise DiscordHttpError",
     doc: "Set this voice channel's status, or clear it by omitting `status`.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 332,
+    line: 334,
   },
   {
     pkg: "gaato/discord/http",
@@ -6240,7 +6231,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::stage_instance(Self) -> @model.StageInstance raise DiscordHttpError",
     doc: "Fetch the stage instance. This channel must be a stage channel.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 560,
+    line: 562,
   },
   {
     pkg: "gaato/discord/http",
@@ -6249,7 +6240,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::start_forum_thread(Self, String, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], sticker_ids? : Array[@model.Id[@model.StickerMarker]], files? : Array[FileUpload], flags? : @model.MessageFlags, allowed_mentions? : @model.AllowedMentions, auto_archive_duration? : @model.ThreadAutoArchiveDuration, rate_limit_per_user? : Int, applied_tags? : Array[@model.Id[@model.GenericMarker]], reason? : String) -> @model.Channel raise DiscordHttpError",
     doc: "Start a thread with a starter message in this forum or media channel.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 482,
+    line: 484,
   },
   {
     pkg: "gaato/discord/http",
@@ -6258,7 +6249,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::start_thread(Self, String, typ? : @model.ChannelType, auto_archive_duration? : @model.ThreadAutoArchiveDuration, invitable? : Bool, rate_limit_per_user? : Int, reason? : String) -> @model.Channel raise DiscordHttpError",
     doc: "Start a thread in this channel without attaching it to a message.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 460,
+    line: 462,
   },
   {
     pkg: "gaato/discord/http",
@@ -6267,7 +6258,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::thread_member(Self, @model.Id[@model.UserMarker], with_member? : Bool) -> @model.ThreadMember raise DiscordHttpError",
     doc: "Fetch a user's membership record. This channel must be a thread.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 405,
+    line: 407,
   },
   {
     pkg: "gaato/discord/http",
@@ -6276,7 +6267,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::thread_members(Self, with_member? : Bool, after? : @model.Id[@model.UserMarker], limit? : Int) -> Array[@model.ThreadMember] raise DiscordHttpError",
     doc: "List this channel's members. This channel must be a thread.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 415,
+    line: 417,
   },
   {
     pkg: "gaato/discord/http",
@@ -6294,7 +6285,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::webhooks(Self) -> Array[@model.Webhook] raise DiscordHttpError",
     doc: "List webhooks created for this channel.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 243,
+    line: 245,
   },
   {
     pkg: "gaato/discord/http",
@@ -6357,7 +6348,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn Client::add_thread_member(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.UserMarker]) -> Unit raise DiscordHttpError",
     doc: "Add a user to a thread channel.",
     file: "discord/src/http/api_channel.mbt",
-    line: 669,
+    line: 671,
   },
   {
     pkg: "gaato/discord/http",
@@ -6510,7 +6501,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn Client::create_channel_invite(Self, @model.Id[@model.ChannelMarker], max_age? : Int, max_uses? : Int, temporary? : Bool, unique? : Bool, target_type? : @model.InviteTargetType, target_user_id? : @model.Id[@model.UserMarker], target_application_id? : @model.Id[@model.ApplicationMarker], role_ids? : Array[@model.Id[@model.RoleMarker]], target_user_ids? : Array[@model.Id[@model.UserMarker]], target_users_file? : FileUpload, audit_reason? : String) -> @model.Invite raise DiscordHttpError",
     doc: "Create an invite for a channel. `target_type` makes a voice-channel\ninvite open a stream (`Stream`, requires `target_user_id`) or an embedded\napplication (`EmbeddedApplication`, requires `target_application_id`).\n`role_ids` grants roles to accepting users (requires `MANAGE_ROLES`);\n`target_user_ids` (up to 1000) or `target_users_file` (a CSV of user ids,\nsent as multipart form data) restricts who may accept it; send at most one\nof the two.",
     file: "discord/src/http/api_channel.mbt",
-    line: 243,
+    line: 245,
   },
   {
     pkg: "gaato/discord/http",
@@ -6663,7 +6654,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn Client::create_reaction(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], String) -> Unit raise DiscordHttpError",
     doc: "Add a reaction. Pass the emoji in raw form: a unicode emoji such as\n\"\\u{1F525}\", or name:id for custom emoji. The route percent-encodes it.",
     file: "discord/src/http/api_channel.mbt",
-    line: 373,
+    line: 375,
   },
   {
     pkg: "gaato/discord/http",
@@ -6708,7 +6699,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn Client::delete_all_reactions(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker]) -> Unit raise DiscordHttpError",
     doc: "Delete every reaction from a message.",
     file: "discord/src/http/api_channel.mbt",
-    line: 410,
+    line: 412,
   },
   {
     pkg: "gaato/discord/http",
@@ -6717,7 +6708,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn Client::delete_all_reactions_for_emoji(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], String) -> Unit raise DiscordHttpError",
     doc: "Delete every reaction matching an emoji. The emoji is passed raw (unicode\nor name:id); the route percent-encodes it.",
     file: "discord/src/http/api_channel.mbt",
-    line: 421,
+    line: 423,
   },
   {
     pkg: "gaato/discord/http",
@@ -6762,7 +6753,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn Client::delete_channel_permission(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.GenericMarker], audit_reason? : String) -> Unit raise DiscordHttpError",
     doc: "Delete a channel permission overwrite.",
     file: "discord/src/http/api_channel.mbt",
-    line: 213,
+    line: 215,
   },
   {
     pkg: "gaato/discord/http",
@@ -6897,7 +6888,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn Client::delete_own_reaction(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], String) -> Unit raise DiscordHttpError",
     doc: "Delete the bot user's reaction. The emoji is passed raw (unicode or\nname:id); the route percent-encodes it.",
     file: "discord/src/http/api_channel.mbt",
-    line: 385,
+    line: 387,
   },
   {
     pkg: "gaato/discord/http",
@@ -6924,7 +6915,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn Client::delete_user_reaction(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], String, @model.Id[@model.UserMarker]) -> Unit raise DiscordHttpError",
     doc: "Delete another user's reaction. The emoji is passed raw (unicode or\nname:id); the route percent-encodes it.",
     file: "discord/src/http/api_channel.mbt",
-    line: 397,
+    line: 399,
   },
   {
     pkg: "gaato/discord/http",
@@ -6969,7 +6960,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn Client::edit_channel_permissions(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.GenericMarker], @model.OverwriteType, allow? : @model.Permissions, deny? : @model.Permissions, audit_reason? : String) -> Unit raise DiscordHttpError",
     doc: "Create or replace a channel permission overwrite. Omitted `allow`/`deny`\ndefault to no permissions on the Discord side.",
     file: "discord/src/http/api_channel.mbt",
-    line: 189,
+    line: 191,
   },
   {
     pkg: "gaato/discord/http",
@@ -7095,7 +7086,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn Client::follow_announcement_channel(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.ChannelMarker], audit_reason? : String) -> @model.FollowedChannel raise DiscordHttpError",
     doc: "Follow an announcement channel, forwarding its messages to another\nchannel through the returned webhook.",
     file: "discord/src/http/api_channel.mbt",
-    line: 303,
+    line: 305,
   },
   {
     pkg: "gaato/discord/http",
@@ -7185,7 +7176,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn Client::get_channel_invites(Self, @model.Id[@model.ChannelMarker]) -> Array[@model.Invite] raise DiscordHttpError",
     doc: "List invites created for a channel.",
     file: "discord/src/http/api_channel.mbt",
-    line: 228,
+    line: 230,
   },
   {
     pkg: "gaato/discord/http",
@@ -7203,7 +7194,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn Client::get_channel_pins(Self, @model.Id[@model.ChannelMarker], before? : @model.Timestamp, limit? : Int) -> @model.ChannelPins raise DiscordHttpError",
     doc: "Fetch one page of channel pins, newest first. Use the final entry's\n`pinned_at` as `before` while `has_more` is true.",
     file: "discord/src/http/api_channel.mbt",
-    line: 164,
+    line: 166,
   },
   {
     pkg: "gaato/discord/http",
@@ -7214,10 +7205,6 @@ let entries_3 : Array[ApiEntry] = [
     file: "discord/src/http/api_webhook.mbt",
     line: 45,
   },
-]
-
-///|
-let entries_4 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/http",
     name: "Client::get_current_application",
@@ -7227,6 +7214,10 @@ let entries_4 : Array[ApiEntry] = [
     file: "discord/src/http/api_application.mbt",
     line: 3,
   },
+]
+
+///|
+let entries_4 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/http",
     name: "Client::get_current_authorization_information",
@@ -7664,9 +7655,9 @@ let entries_4 : Array[ApiEntry] = [
     name: "Client::get_pinned_messages",
     kind: "fn",
     signature: "pub async fn Client::get_pinned_messages(Self, @model.Id[@model.ChannelMarker]) -> Array[@model.Message] raise DiscordHttpError",
-    doc: "List every pinned message in a channel.",
+    doc: "List every pinned message in a channel through Discord's deprecated\narray-returning endpoint. `get_channel_pins` pages the current endpoint.",
     file: "discord/src/http/api_channel.mbt",
-    line: 154,
+    line: 156,
   },
   {
     pkg: "gaato/discord/http",
@@ -7684,7 +7675,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::get_reactions(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], String, typ? : @model.ReactionType, limit? : Int, after? : @model.Id[@model.UserMarker]) -> Array[@model.User] raise DiscordHttpError",
     doc: "List users who reacted with an emoji. The emoji is passed raw (unicode or\nname:id); the route percent-encodes it. `typ` selects normal or burst (super)\nreactions.",
     file: "discord/src/http/api_channel.mbt",
-    line: 435,
+    line: 437,
   },
   {
     pkg: "gaato/discord/http",
@@ -7729,7 +7720,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::get_thread_member(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.UserMarker], with_member? : Bool) -> @model.ThreadMember raise DiscordHttpError",
     doc: "Fetch a user's membership record for a thread channel.",
     file: "discord/src/http/api_channel.mbt",
-    line: 657,
+    line: 659,
   },
   {
     pkg: "gaato/discord/http",
@@ -7792,7 +7783,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::group_dm_add_recipient(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.UserMarker], String, nick? : String) -> Unit raise DiscordHttpError",
     doc: "Add a user to a group DM. `access_token` is the recipient's OAuth2 token\nwith the `gdm.join` scope and is sent as a JSON body field.",
     file: "discord/src/http/api_channel.mbt",
-    line: 349,
+    line: 351,
   },
   {
     pkg: "gaato/discord/http",
@@ -7801,7 +7792,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::group_dm_remove_recipient(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.UserMarker]) -> Unit raise DiscordHttpError",
     doc: "Remove a user from a group DM.",
     file: "discord/src/http/api_channel.mbt",
-    line: 362,
+    line: 364,
   },
   {
     pkg: "gaato/discord/http",
@@ -7855,7 +7846,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::join_thread(Self, @model.Id[@model.ChannelMarker]) -> Unit raise DiscordHttpError",
     doc: "Join the current user to a thread channel.",
     file: "discord/src/http/api_channel.mbt",
-    line: 585,
+    line: 587,
   },
   {
     pkg: "gaato/discord/http",
@@ -7873,7 +7864,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::leave_thread(Self, @model.Id[@model.ChannelMarker]) -> Unit raise DiscordHttpError",
     doc: "Remove the current user from a thread channel.",
     file: "discord/src/http/api_channel.mbt",
-    line: 594,
+    line: 596,
   },
   {
     pkg: "gaato/discord/http",
@@ -7882,7 +7873,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::list_active_guild_threads(Self, @model.Id[@model.GuildMarker]) -> @model.ActiveGuildThreads raise DiscordHttpError",
     doc: "List every active thread in a guild.",
     file: "discord/src/http/api_channel.mbt",
-    line: 737,
+    line: 739,
   },
   {
     pkg: "gaato/discord/http",
@@ -7981,7 +7972,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::list_joined_private_archived_threads(Self, @model.Id[@model.ChannelMarker], before? : @model.Id[@model.ChannelMarker], limit? : Int) -> @model.ArchivedThreads raise DiscordHttpError",
     doc: "List private archived threads joined by the current user.",
     file: "discord/src/http/api_channel.mbt",
-    line: 721,
+    line: 723,
   },
   {
     pkg: "gaato/discord/http",
@@ -7990,7 +7981,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::list_private_archived_threads(Self, @model.Id[@model.ChannelMarker], before? : @model.Timestamp, limit? : Int) -> @model.ArchivedThreads raise DiscordHttpError",
     doc: "List private archived threads in a channel.",
     file: "discord/src/http/api_channel.mbt",
-    line: 705,
+    line: 707,
   },
   {
     pkg: "gaato/discord/http",
@@ -7999,7 +7990,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::list_public_archived_threads(Self, @model.Id[@model.ChannelMarker], before? : @model.Timestamp, limit? : Int) -> @model.ArchivedThreads raise DiscordHttpError",
     doc: "List public archived threads in a channel.",
     file: "discord/src/http/api_channel.mbt",
-    line: 689,
+    line: 691,
   },
   {
     pkg: "gaato/discord/http",
@@ -8035,7 +8026,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::list_thread_members(Self, @model.Id[@model.ChannelMarker], with_member? : Bool, after? : @model.Id[@model.UserMarker], limit? : Int) -> Array[@model.ThreadMember] raise DiscordHttpError",
     doc: "List members of a thread channel.",
     file: "discord/src/http/api_channel.mbt",
-    line: 643,
+    line: 645,
   },
   {
     pkg: "gaato/discord/http",
@@ -8440,7 +8431,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::remove_thread_member(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.UserMarker]) -> Unit raise DiscordHttpError",
     doc: "Remove a user from a thread channel.",
     file: "discord/src/http/api_channel.mbt",
-    line: 679,
+    line: 681,
   },
   {
     pkg: "gaato/discord/http",
@@ -8449,7 +8440,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::request(Self, Route, body? : Json, audit_reason? : String, files? : Array[FileUpload], headers? : Map[String, String]) -> Json raise DiscordHttpError",
     doc: "Send a request through the rate limiter, retrying on 429 (bounded).\n\nThis is also the raw escape hatch: typed endpoint wrappers build a `Route`\nplus JSON body and decode the returned JSON, while unwrapped endpoints use\n`Route::custom`. Optional `headers` are merged after the client's base\nheaders, so caller-supplied values such as `authorization` take precedence.\n\n`request_timeout_ms` bounds each network attempt, including reading its\nresponse body. Rate-limit waits, 429 back-off, and user middleware are\noutside it. A timed-out attempt raises `Timeout` and is not retried because\nit may already have reached Discord. For a whole-operation deadline,\ncompose `@async.with_timeout` around the call.",
     file: "discord/src/http/request.mbt",
-    line: 191,
+    line: 209,
   },
   {
     pkg: "gaato/discord/http",
@@ -8503,7 +8494,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::set_voice_channel_status(Self, @model.Id[@model.ChannelMarker], status? : String, audit_reason? : String) -> Unit raise DiscordHttpError",
     doc: "Set a voice channel's status, or clear it by omitting `status`.",
     file: "discord/src/http/api_channel.mbt",
-    line: 327,
+    line: 329,
   },
   {
     pkg: "gaato/discord/http",
@@ -8530,7 +8521,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::start_thread_from_message(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], String, auto_archive_duration? : @model.ThreadAutoArchiveDuration, rate_limit_per_user? : Int, audit_reason? : String) -> @model.Channel raise DiscordHttpError",
     doc: "Start a thread whose initial message is an existing channel message.",
     file: "discord/src/http/api_channel.mbt",
-    line: 461,
+    line: 463,
   },
   {
     pkg: "gaato/discord/http",
@@ -8539,7 +8530,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::start_thread_in_forum_or_media_channel(Self, @model.Id[@model.ChannelMarker], String, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], sticker_ids? : Array[@model.Id[@model.StickerMarker]], files? : Array[FileUpload], flags? : @model.MessageFlags, allowed_mentions? : @model.AllowedMentions, auto_archive_duration? : @model.ThreadAutoArchiveDuration, rate_limit_per_user? : Int, applied_tags? : Array[@model.Id[@model.GenericMarker]], audit_reason? : String) -> @model.Channel raise DiscordHttpError",
     doc: "Start a thread in a forum or media channel. The thread's starter message\nis created in the same request from the message fields; at least one of\n`content`, `embeds`, `components`, `sticker_ids`, or `files` must be\nprovided.",
     file: "discord/src/http/api_channel.mbt",
-    line: 520,
+    line: 522,
   },
   {
     pkg: "gaato/discord/http",
@@ -8548,7 +8539,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::start_thread_without_message(Self, @model.Id[@model.ChannelMarker], String, typ? : @model.ChannelType, auto_archive_duration? : @model.ThreadAutoArchiveDuration, invitable? : Bool, rate_limit_per_user? : Int, audit_reason? : String) -> @model.Channel raise DiscordHttpError",
     doc: "Start a thread that is not attached to an existing message.\n\nDiscord currently defaults `typ` to a private thread and plans to make the\nfield required in a future API version, so pass it explicitly.",
     file: "discord/src/http/api_channel.mbt",
-    line: 491,
+    line: 493,
   },
   {
     pkg: "gaato/discord/http",
@@ -9018,10 +9009,6 @@ let entries_4 : Array[ApiEntry] = [
     file: "discord/src/http/handles_guild_assets.mbt",
     line: 170,
   },
-]
-
-///|
-let entries_5 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/http",
     name: "GuildRef::create_role",
@@ -9031,6 +9018,10 @@ let entries_5 : Array[ApiEntry] = [
     file: "discord/src/http/handles_guild.mbt",
     line: 327,
   },
+]
+
+///|
+let entries_5 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/http",
     name: "GuildRef::create_scheduled_event",
@@ -10178,7 +10169,7 @@ let entries_5 : Array[ApiEntry] = [
     pkg: "gaato/discord/http",
     name: "VERSION",
     kind: "const",
-    signature: "pub const VERSION : String = \"0.8.0\"",
+    signature: "pub const VERSION : String = \"0.9.0\"",
     doc: "Library version, sent in the User-Agent header.",
     file: "discord/src/http/client.mbt",
     line: 30,
@@ -10822,10 +10813,6 @@ let entries_5 : Array[ApiEntry] = [
     file: "discord/src/interaction/spec.mbt",
     line: 5,
   },
-]
-
-///|
-let entries_6 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/interaction",
     name: "CommandSpec::limit_violations",
@@ -10835,6 +10822,10 @@ let entries_6 : Array[ApiEntry] = [
     file: "discord/src/interaction/spec.mbt",
     line: 21,
   },
+]
+
+///|
+let entries_6 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/interaction",
     name: "CommandSpec::message",
@@ -12626,10 +12617,6 @@ let entries_6 : Array[ApiEntry] = [
     file: "discord/src/model/attachment.mbt",
     line: 128,
   },
-]
-
-///|
-let entries_7 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "AttachmentFlags::none",
@@ -12639,6 +12626,10 @@ let entries_7 : Array[ApiEntry] = [
     file: "discord/src/model/attachment.mbt",
     line: 63,
   },
+]
+
+///|
+let entries_7 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "AttachmentFlags::to_json",
@@ -14430,10 +14421,6 @@ let entries_7 : Array[ApiEntry] = [
     file: "discord/src/model/command.mbt",
     line: 49,
   },
-]
-
-///|
-let entries_8 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "EntryPointCommandHandlerType::to_int",
@@ -14443,6 +14430,10 @@ let entries_8 : Array[ApiEntry] = [
     file: "discord/src/model/command.mbt",
     line: 38,
   },
+]
+
+///|
+let entries_8 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "EntryPointCommandHandlerType::to_json",
@@ -16234,10 +16225,6 @@ let entries_8 : Array[ApiEntry] = [
     file: "discord/src/model/intents.mbt",
     line: 180,
   },
-]
-
-///|
-let entries_9 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "Intents::auto_moderation_execution",
@@ -16247,6 +16234,10 @@ let entries_9 : Array[ApiEntry] = [
     file: "discord/src/model/intents.mbt",
     line: 186,
   },
+]
+
+///|
+let entries_9 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "Intents::bits",
@@ -18038,10 +18029,6 @@ let entries_9 : Array[ApiEntry] = [
     file: "discord/src/model/permissions.mbt",
     line: 19,
   },
-]
-
-///|
-let entries_10 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "Permissions::bypass_slowmode",
@@ -18051,6 +18038,10 @@ let entries_10 : Array[ApiEntry] = [
     file: "discord/src/model/permissions.mbt",
     line: 320,
   },
+]
+
+///|
+let entries_10 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "Permissions::change_nickname",
@@ -19842,10 +19833,6 @@ let entries_10 : Array[ApiEntry] = [
     file: "discord/src/model/monetization.mbt",
     line: 265,
   },
-]
-
-///|
-let entries_11 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "Subscription::to_json",
@@ -19855,6 +19842,10 @@ let entries_11 : Array[ApiEntry] = [
     file: "discord/src/model/activity_instance.mbt",
     line: 1,
   },
+]
+
+///|
+let entries_11 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "SubscriptionId",
@@ -21646,10 +21637,6 @@ let entries_11 : Array[ApiEntry] = [
     file: "discord/src/util/permissions.mbt",
     line: 211,
   },
-]
-
-///|
-let entries_12 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/util",
     name: "avatar_decoration_url",
@@ -21659,6 +21646,10 @@ let entries_12 : Array[ApiEntry] = [
     file: "discord/src/util/cdn.mbt",
     line: 220,
   },
+]
+
+///|
+let entries_12 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/util",
     name: "base_permissions",

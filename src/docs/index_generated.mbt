@@ -2,7 +2,7 @@
 
 ///|
 /// The gaato/discord release both indexes were generated from.
-pub const DISCORD_VERSION : String = "0.8.0"
+pub const DISCORD_VERSION : String = "0.9.0"
 
 ///|
 pub let sections : Array[Section] = [
@@ -27,13 +27,7 @@ pub let sections : Array[Section] = [
       #|A bot that adds voice also needs Node.js on `PATH` for native builds: the
       #|`gaato/discord_voice` module and its `gaato/dave` dependency declare prebuild
       #|hooks that Moon runs with `node` (see [Voice](10-voice.mbt.md)).
-      #|`gaato/discord` itself has no build hooks.
-      #|
-      #|All native builds compile the Gateway package's `zlib_stream.c`, which always
-      #|includes `<zlib.h>`, regardless of whether Gateway compression is enabled.
-      #|Install the zlib development headers (`zlib1g-dev` on Debian/Ubuntu or
-      #|`zlib-devel` on Fedora/openSUSE). The zlib shared library is also needed at
-      #|runtime if the bot enables zlib-stream compression.
+      #|`gaato/discord` itself has no build hooks and no C library dependencies.
     ),
   },
   {
@@ -1325,22 +1319,14 @@ pub let sections : Array[Section] = [
       #|}
       #|```
       #|
-      #|On native, each compressed Gateway connection requests `compress=zlib-stream`
-      #|and retains one inflate context, including across consecutive Gateway
-      #|messages. Only server-to-client binary messages are decompressed; identify,
-      #|heartbeat, and other client-to-server payloads remain uncompressed text.
+      #|Each compressed Gateway connection requests `compress=zlib-stream` and
+      #|retains one inflate context, including across consecutive Gateway messages.
+      #|Only server-to-client binary messages are decompressed; identify, heartbeat,
+      #|and other client-to-server payloads remain uncompressed text.
       #|
-      #|Compression is available only on native; `zlib_stream_supported()` reports
-      #|whether the current backend can use it. On JavaScript and Wasm,
-      #|`BotBuilder::build` rejects `compress=true` with
-      #|`BotConfigError::CompressionUnavailable`.
-      #|
-      #|The zlib shared library is loaded at runtime on native (like the async runtime loads
-      #|OpenSSL), so neither this library nor applications using it need extra link
-      #|flags; building only requires the zlib header. If the shared library is
-      #|missing at runtime, enabling compression raises before any connection is
-      #|attempted. A successful compressed connection emits `ShardCompressionEnabled`
-      #|telemetry.
+      #|The inflater is pure MoonBit, so compression works the same on native,
+      #|JavaScript, and Wasm and needs no zlib library. A successful compressed
+      #|connection emits `ShardCompressionEnabled` telemetry.
     ),
   },
   {
