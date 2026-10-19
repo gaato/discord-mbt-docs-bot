@@ -6490,9 +6490,9 @@ let entries_3 : Array[ApiEntry] = [
     name: "Client::Client",
     kind: "fn",
     signature: "pub fn Client::Client(String, base_url? : String, api_version? : Int, limiter? : &@sdk-runtime.RateLimiter, transport? : &@gaato/http.Transport, max_connections? : Int, request_timeout_ms? : Int, max_retries? : Int, default_allowed_mentions? : @model.AllowedMentions, clock? : &@clock.Clock) -> Self",
-    doc: "Create a client. `token` is the raw bot token (without the `Bot ` prefix).\n\n`request_timeout_ms` (default 30000) bounds each network attempt, including\nreading its response body. Rate-limit waits, retry back-off, and user HTTP\nmiddleware are outside it. For a whole-operation deadline, compose\n`@async.with_timeout` around the call.\n\n`max_retries` (default 4) bounds how often one call is sent again. Only a\ncall Discord cannot have acted on is resent: after a 429, once the delay\nit asks for has passed, and after a transport failure or timeout that\nproves no byte was sent (`DiscordHttpError::is_unsent`), with backoff.\nEvery resend goes through the rate limiter again. A failure after\nconnecting, or a timed-out exchange, may have reached Discord and is\nraised at once.\n\n`transport` is the `gaato/http` `Transport` that performs the wire\nexchange, below request validation, middleware, rate limiting, retries,\nstatus mapping, and decoding. By default the client creates a\n`gaato/http-async` `AsyncTransport` with `request_timeout_ms`, a\nkeep-alive pool of up to `max_connections` parked connections, and a\n64 MiB bound on each buffered response body, and closes it in `close`. A\nsupplied transport is shared: the client never closes it,\n`max_connections` and the body bound do not apply to it, and each attempt\nthrough it is still bounded by `request_timeout_ms`.\n\n`limiter` is a `gaato/sdk-runtime` `RateLimiter`; the default is an\n`@ratelimit.rate_limiter()` with Discord's per-bucket and global accounting.\n\n`clock` (default: the wall clock) drives the client's time: 429 and\nresend back-off, the default rate limiter's windows, the attempt deadline\naround a supplied transport, telemetry durations, and the typing\nkeepalive of `ChannelRef::with_typing`, and the default transport's phase\nlimits and idle connections.",
+    doc: "Create a client. `token` is the raw bot token (without the `Bot ` prefix).\n\n`request_timeout_ms` (default 30000) bounds each network attempt, including\nreading its response body. Rate-limit waits, retry back-off, and user HTTP\nmiddleware are outside it. For a whole-operation deadline, compose\n`@async.with_timeout` around the call.\n\n`max_retries` (default 4) bounds how often one call is sent again. Every\nresend goes through the rate limiter again, and a call is resent only\nwhere Discord's documentation allows it or it cannot cause a second\neffect:\n\n- a 429, for any method, once the delay Discord asks for (the body's\n  `retry_after`, then `Retry-After`) has passed, however long; except a\n  429 that is not Discord's rate limit (no JSON content type and no\n  Discord rate-limit header, as from Cloudflare in front of Discord), which\n  names no wait and raises at once;\n- a 502, for any method, with backoff: Discord asks to \"wait a bit and\n  retry\";\n- a transport failure or timeout that proves no byte was sent\n  (`DiscordHttpError::is_unsent`), for any method, with backoff;\n- another 5xx, and a failure or timeout after sending, with backoff, only\n  for an idempotent call: `GET`, `HEAD`, `PUT`, `DELETE`, `OPTIONS`, or a\n  message create with a `nonce` and `enforce_nonce: true`, which Discord\n  does not create twice. A `POST` or `PATCH` that may have reached\n  Discord is raised at once.\n\nThe backoff is 500 ms, doubling up to 30 s, within ±20 %. Anything else,\n401 and 403 included, is Discord's answer and is never resent.\n\n`transport` is the `gaato/http` `Transport` that performs the wire\nexchange, below request validation, middleware, rate limiting, retries,\nstatus mapping, and decoding. By default the client creates a\n`gaato/http-async` `AsyncTransport` with `request_timeout_ms`, a\nkeep-alive pool of up to `max_connections` parked connections, and a\n64 MiB bound on each buffered response body, and closes it in `close`. A\nsupplied transport is shared: the client never closes it,\n`max_connections` and the body bound do not apply to it, and each attempt\nthrough it is still bounded by `request_timeout_ms`, by the\n`gaato/sdk-runtime` client's `Timeouts` on `clock`. A supplied transport\ncannot say how far an attempt got, so one that runs out of time fails\nwith `Timeout(phase=Unknown)`, as does every attempt when\n`request_timeout_ms` is not positive.\n\n`limiter` is a `gaato/sdk-runtime` `RateLimiter`; the default is an\n`@ratelimit.rate_limiter()` with Discord's per-bucket and global accounting.\n\n`clock` (default: the wall clock) drives the client's time: 429 and\nresend back-off, the default rate limiter's windows, the attempt timeout\naround a supplied transport, telemetry durations, the window of\n`invalid_requests`, the typing keepalive of `ChannelRef::with_typing`,\nand the default transport's phase limits and idle connections.",
     file: "discord/src/http/client.mbt",
-    line: 73,
+    line: 94,
   },
   {
     pkg: "gaato/discord/http",
@@ -6645,7 +6645,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub fn Client::close(Self) -> Unit",
     doc: "Close the client's own transport (parked keep-alive connections) and\nreject future requests, including those of an offline client. A supplied\ntransport is left open. A request already inside an offline handler is not\ncancelled by this method.",
     file: "discord/src/http/client.mbt",
-    line: 299,
+    line: 348,
   },
   {
     pkg: "gaato/discord/http",
@@ -8012,6 +8012,15 @@ let entries_4 : Array[ApiEntry] = [
   },
   {
     pkg: "gaato/discord/http",
+    name: "Client::invalid_requests",
+    kind: "fn",
+    signature: "pub fn Client::invalid_requests(Self) -> Int",
+    doc: "How many of this client's requests in the past ten minutes Discord counts\nas invalid: those answered with 401, 403 or 429, except a 429 with\n`X-RateLimit-Scope: shared`. Every attempt counts, resends included.\n\nDiscord allows 10,000 invalid requests per ten minutes from one address;\npast that, Discord restricts the address for a while (its documentation\ncalls this a Cloudflare ban), for every client on it. The count moves in ten-second steps, so a request leaves it between\n590 and 600 seconds after it was answered, and covers only this client:\nadd up the clients that share an address. An offline client sends nothing\nand always reports 0.",
+    file: "discord/src/http/client.mbt",
+    line: 240,
+  },
+  {
+    pkg: "gaato/discord/http",
     name: "Client::invite_ref",
     kind: "fn",
     signature: "pub fn Client::invite_ref(Self, String) -> InviteRef",
@@ -8242,7 +8251,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub fn Client::middleware(Self, async (HttpRequest, async (HttpRequest) -> HttpResponse) -> HttpResponse) -> Unit",
     doc: "Install middleware around each logical REST call. The first installed\nmiddleware is outermost. `next` performs rate limiting, the wire\nexchange, and bounded retries.",
     file: "discord/src/http/client.mbt",
-    line: 199,
+    line: 248,
   },
   {
     pkg: "gaato/discord/http",
@@ -8467,7 +8476,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub fn Client::offline(async (HttpRequest) -> HttpResponse, default_allowed_mentions? : @model.AllowedMentions, clock? : &@clock.Clock) -> Self",
     doc: "Create a client with no network. `handler` answers every logical REST\ncall in place of the rate limiter, the wire exchange, and retries; it\nhas the same shape as the `next` continuation of `HttpMiddleware`, so an\noffline client is the innermost step of the same chain. Request validation,\ninstalled middleware, status-code-to-error mapping, and typed decoding run\nexactly as they do online, and nothing falls back to Discord.\n\nThere is no token, base URL, timeout, or retry: a 429 from `handler`\nsurfaces as `DiscordHttpError::RateLimited` at once. An error raised by\n`handler` propagates as itself when it is a `DiscordHttpError` and as\n`DiscordHttpError::Transport(phase=Unknown, ..)` otherwise. Each call\nemits the same `HttpRequest` and `HttpRateLimited` telemetry as a single\nnetwork attempt, its duration read from `clock` (default: the wall\nclock), which also drives `ChannelRef::with_typing`.\n\n# Example\n```mbt\nasync test {\n  let calls : Array[@http.Route] = []\n  let client = @http.Client::offline(request => {\n    calls.push(request.route)\n    match request.route {\n      GetGateway => { status: 200, headers: {}, body: { \"url\": \"wss://x\" }, }\n      _ => { status: 404, headers: {}, body: { \"code\": 0, \"message\": \"no\" }, }\n    }\n  })\n  inspect(client.get_gateway(), content=\"wss://x\")\n  assert_true(calls is [GetGateway])\n}\n```",
     file: "discord/src/http/client.mbt",
-    line: 173,
+    line: 206,
   },
   {
     pkg: "gaato/discord/http",
@@ -8476,7 +8485,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub fn Client::on_telemetry(Self, (@telemetry.TelemetryEvent) -> Unit raise) -> Unit",
     doc: "Observe structured HTTP telemetry. Hooks run synchronously and should\nreturn promptly. A hook failure is reported through `on_warn`.",
     file: "discord/src/http/client.mbt",
-    line: 206,
+    line: 255,
   },
   {
     pkg: "gaato/discord/http",
@@ -8485,7 +8494,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub fn Client::on_warn(Self, (String) -> Unit) -> Unit",
     doc: "Set the warning sink used for telemetry-hook failures.",
     file: "discord/src/http/client.mbt",
-    line: 235,
+    line: 284,
   },
   {
     pkg: "gaato/discord/http",
@@ -8620,7 +8629,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::request(Self, Route, body? : Json, audit_reason? : String, files? : Array[FileUpload], headers? : Map[String, String]) -> Json raise DiscordHttpError",
     doc: "Send a request through the rate limiter, retrying on 429 (bounded).\n\nThis is also the raw escape hatch: typed endpoint wrappers build a `Route`\nplus JSON body and decode the returned JSON, while unwrapped endpoints use\n`Route::custom`. Optional `headers` are merged after the client's base\nheaders, so caller-supplied values such as `authorization` take precedence.\n\n`request_timeout_ms` bounds each network attempt, including reading its\nresponse body. Rate-limit waits, retry back-off, and user middleware are\noutside it. A failed or timed-out attempt is resent only when it proves\nnothing reached Discord (`DiscordHttpError::is_unsent`); otherwise it\nraises `Transport` or `Timeout` at once, because Discord may already have\nacted on it. For a whole-operation deadline, compose `@async.with_timeout`\naround the call.",
     file: "discord/src/http/request.mbt",
-    line: 186,
+    line: 205,
   },
   {
     pkg: "gaato/discord/http",
@@ -9009,6 +9018,10 @@ let entries_4 : Array[ApiEntry] = [
     file: "discord/src/http/handles_application.mbt",
     line: 530,
   },
+]
+
+///|
+let entries_5 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/http",
     name: "GuildChannelPosition",
@@ -9018,10 +9031,6 @@ let entries_4 : Array[ApiEntry] = [
     file: "discord/src/http/api_guild.mbt",
     line: 240,
   },
-]
-
-///|
-let entries_5 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/http",
     name: "GuildChannelPosition::GuildChannelPosition",
@@ -10358,10 +10367,10 @@ let entries_5 : Array[ApiEntry] = [
     pkg: "gaato/discord/http",
     name: "VERSION",
     kind: "const",
-    signature: "pub const VERSION : String = \"0.11.0\"",
+    signature: "pub const VERSION : String = \"0.12.1\"",
     doc: "Library version, sent in the User-Agent header.",
     file: "discord/src/http/client.mbt",
-    line: 31,
+    line: 33,
   },
   {
     pkg: "gaato/discord/http",
@@ -10813,6 +10822,10 @@ let entries_5 : Array[ApiEntry] = [
     file: "discord/src/interaction/options.mbt",
     line: 62,
   },
+]
+
+///|
+let entries_6 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/interaction",
     name: "CommandOptions::focused_input",
@@ -10822,10 +10835,6 @@ let entries_5 : Array[ApiEntry] = [
     file: "discord/src/interaction/options.mbt",
     line: 73,
   },
-]
-
-///|
-let entries_6 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/interaction",
     name: "CommandOptions::from_data",
@@ -12617,6 +12626,10 @@ let entries_6 : Array[ApiEntry] = [
     file: "discord/src/model/markers.mbt",
     line: 4,
   },
+]
+
+///|
+let entries_7 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "ApplicationRoleConnection",
@@ -12626,10 +12639,6 @@ let entries_6 : Array[ApiEntry] = [
     file: "discord/src/model/oauth2.mbt",
     line: 134,
   },
-]
-
-///|
-let entries_7 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "ApplicationRoleConnection::to_json",
@@ -14421,6 +14430,10 @@ let entries_7 : Array[ApiEntry] = [
     file: "discord/src/model/embed.mbt",
     line: 267,
   },
+]
+
+///|
+let entries_8 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "EmbedVideo::to_json",
@@ -14430,10 +14443,6 @@ let entries_7 : Array[ApiEntry] = [
     file: "discord/src/model/activity_instance.mbt",
     line: 1,
   },
-]
-
-///|
-let entries_8 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "Emoji",
@@ -16225,6 +16234,10 @@ let entries_8 : Array[ApiEntry] = [
     file: "discord/src/model/timestamp.mbt",
     line: 140,
   },
+]
+
+///|
+let entries_9 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "IncidentsData",
@@ -16234,10 +16247,6 @@ let entries_8 : Array[ApiEntry] = [
     file: "discord/src/model/guild.mbt",
     line: 51,
   },
-]
-
-///|
-let entries_9 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "IncidentsData::to_json",
@@ -18029,6 +18038,10 @@ let entries_9 : Array[ApiEntry] = [
     file: "discord/src/model/onboarding.mbt",
     line: 44,
   },
+]
+
+///|
+let entries_10 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "OnboardingPromptType::from_int",
@@ -18038,10 +18051,6 @@ let entries_9 : Array[ApiEntry] = [
     file: "discord/src/model/onboarding.mbt",
     line: 60,
   },
-]
-
-///|
-let entries_10 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "OnboardingPromptType::to_int",
@@ -19833,6 +19842,10 @@ let entries_10 : Array[ApiEntry] = [
     file: "discord/src/model/activity_instance.mbt",
     line: 1,
   },
+]
+
+///|
+let entries_11 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "Sticker",
@@ -19842,10 +19855,6 @@ let entries_10 : Array[ApiEntry] = [
     file: "discord/src/model/sticker.mbt",
     line: 3,
   },
-]
-
-///|
-let entries_11 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "Sticker::to_json",
@@ -21603,12 +21612,21 @@ let entries_11 : Array[ApiEntry] = [
   },
   {
     pkg: "gaato/discord/ratelimit",
+    name: "is_discord_rate_limit",
+    kind: "fn",
+    signature: "pub fn is_discord_rate_limit(@http.Headers) -> Bool",
+    doc: "Whether a 429 is Discord's own rate limit, which tells the client what to\nwait for: Discord documents its 429s with a JSON body (`retry_after`,\n`global`) and the `X-RateLimit-Scope` header, and sends `X-RateLimit-Global`\nfor a global limit. A 429 with none of these comes from something in front\nof Discord, such as Cloudflare. It names no bucket and no reliable wait,\nand since 401, 403 and 429 count towards the address's invalid-request\nlimit (10,000 per ten minutes), it is better not to send again soon.",
+    file: "discord/src/ratelimit/ratelimit.mbt",
+    line: 129,
+  },
+  {
+    pkg: "gaato/discord/ratelimit",
     name: "rate_limiter",
     kind: "fn",
     signature: "pub fn rate_limiter(global_limit? : Int, clock? : &@clock.Clock) -> @sdk-runtime.WindowLimiter",
-    doc: "REST rate limiting through sdk-runtime's requester-driven `RateLimiter`\ncontract. Each completed acquire is paired with a release carrying response\nheaders, or status 0 when no response arrived. `rate_limiter()` configures\n`WindowLimiter` for Discord; `coordinator` offers the cross-process\n`RemoteRateLimiter` through the same contract.\n\nDiscord's REST rate limiter: per-bucket accounting from\n`x-ratelimit-remaining` / `x-ratelimit-reset-after`, one request in flight\nper bucket, a global window of `global_limit` requests per second (skipped\nfor interaction/webhook routes), a 429 carrying `x-ratelimit-global`\nblocking every bucket, and one second of backoff for a 429 without Retry-After.",
+    doc: "REST rate limiting through sdk-runtime's requester-driven `RateLimiter`\ncontract. Each completed acquire is paired with a release carrying response\nheaders, or status 0 when no response arrived. `rate_limiter()` configures\n`WindowLimiter` for Discord; `coordinator` offers the cross-process\n`RemoteRateLimiter` through the same contract.\n\nDiscord's REST rate limiter:\n\n- per-bucket accounting from `x-ratelimit-remaining` /\n  `x-ratelimit-reset-after`, with one request in flight per route bucket;\n- routes that Discord counts in one bucket share that accounting: a\n  response's `x-ratelimit-bucket` hash, together with the route's major\n  parameter (its channel, guild, or webhook), names the state that every\n  route answered with it reads and updates (`server_key`);\n- a global window of `global_limit` requests per second, skipped for\n  interaction and webhook routes;\n- a 429 empties its bucket until its `Retry-After`; one with\n  `x-ratelimit-scope: global` or `x-ratelimit-global` blocks every\n  non-exempt bucket instead, and one with `x-ratelimit-scope: shared`\n  (a resource's limit, which Discord does not hold against the bot) only\n  records the bucket's headers;\n- a 429 that is not Discord's rate limit (`is_discord_rate_limit`) says\n  nothing about which bucket to hold, while every further invalid request\n  counts towards the address's limit: it blocks every non-exempt bucket\n  too;\n- one second for a 429 without `Retry-After`.",
     file: "discord/src/ratelimit/ratelimit.mbt",
-    line: 13,
+    line: 28,
   },
   {
     pkg: "gaato/discord/telemetry",
@@ -21628,6 +21646,10 @@ let entries_11 : Array[ApiEntry] = [
     file: "discord/src/testkit/fixtures.mbt",
     line: 2,
   },
+]
+
+///|
+let entries_12 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/testkit",
     name: "SelectKind",
@@ -21646,10 +21668,6 @@ let entries_11 : Array[ApiEntry] = [
     file: "discord/src/testkit/fixtures.mbt",
     line: 168,
   },
-]
-
-///|
-let entries_12 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/testkit",
     name: "button",
