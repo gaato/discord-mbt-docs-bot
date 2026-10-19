@@ -2,7 +2,7 @@
 
 ///|
 /// The gaato/discord release both indexes were generated from.
-pub const DISCORD_VERSION : String = "0.9.0"
+pub const DISCORD_VERSION : String = "0.11.0"
 
 ///|
 pub let sections : Array[Section] = [
@@ -447,6 +447,13 @@ pub let sections : Array[Section] = [
       #|commands in the selected scope, while always preserving the Entry Point
       #|command. Use `unowned=Keep` on `sync_commands` or `sync_unowned=Keep` on
       #|`BotBuilder` for a scope shared with other command owners.
+      #|
+      #|To see what a sync would do before it does it, call
+      #|`app.plan_commands(client, application_id, scope~)`: it fetches each scope
+      #|and returns a `CommandPlan` without changing anything. `plan.report()` lists
+      #|what would be created, updated, and deleted; `plan.apply(client)` performs
+      #|it. Check `deleted` this way before the first sync of an application whose
+      #|commands other tools also register.
       #|
       #|```mbt check
       #|///|
@@ -1306,26 +1313,90 @@ pub let sections : Array[Section] = [
   {
     chapter: "Events and intents",
     file: "04-events-intents.mbt.md",
+    title: "Redelivered events",
+    anchor: "redelivered-events",
+    body: (
+      #|A Gateway RESUME replays the events a shard missed, and a process that
+      #|restarts from a saved session (see `Bot::sessions`) resumes from the sequence
+      #|it last saved, so events it handled after that save arrive again. An
+      #|`INTERACTION_CREATE` can be replayed the same way. The library does not
+      #|deduplicate: it cannot know which of your side effects completed before a
+      #|crash. Make handlers whose effects must not repeat idempotent. Events that
+      #|happen once per object can be keyed by that object: an interaction by its id,
+      #|`MESSAGE_CREATE` and `MESSAGE_DELETE` by the message id with the event name:
+      #|
+      #|```mbt check
+      #|///|
+      #|/// Ids handled within the last `ttl_ms`. In memory this only covers replays
+      #|/// within one process; keep the same record in durable storage (a database
+      #|/// or KV store) when duplicates across a restart matter.
+      #|struct SeenIds {
+      #|  ttl_ms : Int64
+      #|  seen : Map[String, Int64]
+      #|}
+      #|
+      #|///|
+      #|/// Record `id` at `now_ms`; false when it was already handled recently.
+      #|fn SeenIds::first_time(self : SeenIds, id : String, now_ms : Int64) -> Bool {
+      #|  let expired = self.seen
+      #|    .iter()
+      #|    .filter(entry => now_ms - entry.1 >= self.ttl_ms)
+      #|    .map(entry => entry.0)
+      #|    .collect()
+      #|  for key in expired {
+      #|    self.seen.remove(key)
+      #|  }
+      #|  if self.seen.contains(id) {
+      #|    return false
+      #|  }
+      #|  self.seen[id] = now_ms
+      #|  true
+      #|}
+      #|
+      #|///|
+      #|test "a replayed interaction is handled once" {
+      #|  let seen = SeenIds::{ ttl_ms: 900_000L, seen: Map([]), }
+      #|  assert_true(seen.first_time("interaction:500000000000000001", 0L))
+      #|  assert_false(seen.first_time("interaction:500000000000000001", 1_000L))
+      #|  assert_true(seen.first_time("interaction:500000000000000001", 900_000L))
+      #|}
+      #|```
+      #|
+      #|Fifteen minutes covers an interaction: its token expires then, so a later
+      #|replay cannot be answered anyway.
+      #|
+      #|Events that legitimately repeat for one object — `MESSAGE_UPDATE`,
+      #|reactions, member updates — carry no per-delivery id, so a key like this would
+      #|also drop real later events. Write those handlers to apply the state the event
+      #|carries (set, not increment), so a replay sets the same state again.
+    ),
+  },
+  {
+    chapter: "Events and intents",
+    file: "04-events-intents.mbt.md",
     title: "Gateway compression",
     anchor: "gateway-compression",
     body: (
-      #|Gateway `zlib-stream` transport compression is opt-in. Pass `compress=true`
-      #|to `BotBuilder(...)` (or `Shard::start` at the lower level):
+      #|Gateway transport compression is opt-in. Pass `compression` to
+      #|`BotBuilder(...)` (or `Shard::start` at the lower level): `ZstdStream` or
+      #|`ZlibStream`. `compress=true` is the older spelling of `ZlibStream`.
       #|
       #|```mbt check
       #|///|
       #|fn compressed_bot(app : @discord.App, token : String) -> @discord.BotBuilder {
-      #|  @discord.BotBuilder(app, token~, compress=true)
+      #|  @discord.BotBuilder(app, token~, compression=ZstdStream)
       #|}
       #|```
       #|
-      #|Each compressed Gateway connection requests `compress=zlib-stream` and
-      #|retains one inflate context, including across consecutive Gateway messages.
+      #|Each compressed Gateway connection requests `compress=zstd-stream` (or
+      #|`zlib-stream`) and retains one decoder context, including across consecutive
+      #|Gateway messages.
       #|Only server-to-client binary messages are decompressed; identify, heartbeat,
       #|and other client-to-server payloads remain uncompressed text.
       #|
-      #|The inflater is pure MoonBit, so compression works the same on native,
-      #|JavaScript, and Wasm and needs no zlib library. A successful compressed
+      #|Both decoders are pure MoonBit (`moonbit-community/flate` and `gaato/zstd`),
+      #|so compression works the same on native, JavaScript, and Wasm and needs no
+      #|zlib or zstd library. A successful compressed
       #|connection emits `ShardCompressionEnabled` telemetry.
     ),
   },
@@ -1385,12 +1456,27 @@ pub let sections : Array[Section] = [
       #|values, while list getters return fresh outer arrays.
       #|
       #|`CacheLimits` can set an entry cap, TTL, or both for each resource. Guild,
-      #|channel, and user limits are global; role, member, voice-state, and presence
-      #|limits are per guild; message limits are per channel. Entry caps evict in
-      #|FIFO insertion order, and re-storing an entity refreshes its position. TTLs
-      #|use fixed, non-sliding deadlines set at write time: reads do not extend them,
-      #|and lazy expiry requires no background timer. Messages default to 100 entries
-      #|per channel when enabled.
+      #|channel, DM-channel, user, and recent-user limits are global; role, member,
+      #|voice-state, and presence limits are per guild; message limits are per
+      #|channel. Entry caps evict in FIFO insertion order, and re-storing an entity
+      #|refreshes its position. TTLs use fixed, non-sliding deadlines set at write
+      #|time: reads do not extend them, and lazy expiry requires no background timer.
+      #|
+      #|The defaults keep a long-running bot's cache bounded. Guild-scoped state
+      #|(channels, threads, roles, members, voice states, presences, and their
+      #|messages) leaves with its guild, so it is bounded by what Discord holds per
+      #|guild times the guilds the bot is in. Messages, when enabled, keep the
+      #|newest 100 per channel. Channels without a guild (DMs) share an LRU of 128, `dm_channels`,
+      #|and leave with their messages. A user stays only while something cached
+      #|holds it: a member entry, a cached message it wrote, or being the current
+      #|user. Users seen without a holder (a ban, a member who left, an interaction,
+      #|the author of a message the cache does not keep) go to an LRU of the 128
+      #|most recent, `recent_users`, which `user()` also reads. Pass `CacheLimit()`
+      #|for `messages`, `dm_channels`, or `recent_users` to lift that bound.
+      #|
+      #|Archived threads are not served from the cache: Discord stops sending their
+      #|events, so a thread leaves when it is archived, and a private one when the
+      #|bot is removed from it. Fetch archived threads over REST.
       #|
       #|Limit guilds, roles, or voice states only when degraded derived-state accuracy
       #|is acceptable. Missing required guild or role data makes `permissions()`
@@ -1800,11 +1886,19 @@ pub let sections : Array[Section] = [
       #|status and headers, or with status 0 when no response arrived.
       #|
       #|`Client(request_timeout_ms=30000)` bounds each single network attempt,
-      #|including reading its response body. Rate-limit waits, 429 back-off, and user
-      #|HTTP middleware are not bounded by it. Command sync can legitimately wait
-      #|about a minute for the bulk-overwrite-commands bucket. A timed-out attempt
-      #|raises `DiscordHttpError::Timeout` and is not retried: Discord may already
-      #|have received it, so retrying a non-idempotent POST could duplicate it.
+      #|including reading its response body. Rate-limit waits, retry back-off, and
+      #|user HTTP middleware are not bounded by it. Command sync can legitimately wait
+      #|about a minute for the bulk-overwrite-commands bucket.
+      #|
+      #|`DiscordHttpError::Transport` and `DiscordHttpError::Timeout` carry the
+      #|`phase` of the exchange that failed. In `Pool` (waiting for a connection, or
+      #|a closed client) and `Dial` (connecting, TLS, or a proxy tunnel) no byte of
+      #|the request was sent, and `error.is_unsent()` is true. The client resends
+      #|such a failure itself, with backoff and through the rate limiter, up to
+      #|`Client(max_retries=4)` times, for every method: Discord never saw it, so a
+      #|`POST` cannot be duplicated. A failure or timeout in any later phase (`Write`,
+      #|`Head`, `Body`, or `Unknown`) is raised at once, because Discord may already
+      #|have acted on it.
       #|
       #|For a whole-operation deadline, compose `@async.with_timeout` around the
       #|call. This also bounds middleware and rate-limit waiting. The example uses a
@@ -1844,7 +1938,7 @@ pub let sections : Array[Section] = [
     anchor: "request-middleware",
     body: (
       #|`Client::middleware` wraps each logical REST call, outside the per-attempt
-      #|timeout. The rate limiter, wire exchange, and bounded 429 retries all run
+      #|timeout. The rate limiter, wire exchange, and bounded retries all run
       #|inside `next`:
       #|
       #|```mbt check
@@ -2782,7 +2876,22 @@ pub let sections : Array[Section] = [
       #|a transport failure, Identify and REST requests reconnect with bounded exponential
       #|backoff. Protocol errors from the server remain fatal and are not retried. If
       #|a process disconnects after acquiring a REST bucket, the server releases that
-      #|bucket during connection cleanup.
+      #|bucket during connection cleanup. Connections use TCP keepalive, so a process
+      #|whose host dies without closing its connection is cleaned up the same way
+      #|within about 25 seconds.
+      #|
+      #|Identify and REST acquisitions can wait for minutes, because Identify spacing
+      #|grows with the shard count and some REST buckets reset only after ten minutes,
+      #|so they have no deadline. Instead, while one waits, the client pings the
+      #|coordinator over a separate connection every 10 seconds. If a ping goes
+      #|unanswered for 5 seconds, the client treats the coordinator as hung and
+      #|abandons the attempt, then reconnects and retries as after a transport failure.
+      #|
+      #|The coordinator keeps all of its state in memory. Restarting it forgets the
+      #|REST buckets and their rate-limit windows, the global window, and the Identify
+      #|spacing, as well as cooldown windows. Requests waiting during a restart
+      #|reconnect and continue against the new coordinator, which relearns bucket
+      #|limits from the next responses; schedule restarts away from Identify bursts.
     ),
   },
   {
@@ -2804,11 +2913,11 @@ pub let sections : Array[Section] = [
       #|    let cooldown = @coordinator.RemoteCooldownStore::connect(
       #|      coordinator.addr(),
       #|      timeout_ms=1000,
-      #|      on_error=error => println("cooldown coordinator: \{error}"),
       #|    )
       #|    defer cooldown.close()
       #|    let app = @app.AppBuilder(
       #|      cooldown_store=(cooldown : &@cooldown.CooldownStore),
+      #|      cooldown_outage=Allow,
       #|    )
       #|    app.command(
       #|      @app.slash(
@@ -2830,18 +2939,20 @@ pub let sections : Array[Section] = [
       #|windows. The coordinator owns the clock and keeps windows in memory; restarting
       #|it clears those windows.
       #|
-      #|The `gaato/discord/cooldown` trait is portable to JS and native, while
-      #|`RemoteCooldownStore` is native-only. Other deployments can implement
+      #|The `gaato/discord/cooldown` trait is portable to every target, while
+      #|`RemoteCooldownStore` runs on native and Wasm. Other deployments can implement
       #|`CooldownStore` over shared storage and pass it through the same App parameter.
       #|
-      #|The remote store defaults to `when_unreachable=FailOpen`. A timeout or disconnect
-      #|calls `on_error` and admits the command: cooldowns damp abuse, and an outage
-      #|should not take every command offline. Use `when_unreachable=FailClosed` to deny the
-      #|attempt with `retry_after_ms` equal to the requested window instead. The
-      #|default error hook does nothing, so install it to observe outages. Initial
-      #|connection outages also call the hook and return a store that can reconnect.
-      #|Cancellation always propagates, as do protocol errors. `ping()` reports errors
-      #|directly instead of applying the admission policy.
+      #|When the coordinator times out or disconnects, the remote store answers
+      #|`Unavailable` and the App applies `AppBuilder(cooldown_outage~)`. The default,
+      #|`Allow`, runs the command without a cooldown: cooldowns damp abuse, and an
+      #|outage should not take every command offline. `Refuse` denies the attempt with
+      #|`retry_after_ms` equal to the requested window instead. Either way the first
+      #|failure of each outage reaches `on_warn` as
+      #|`AppWarning::CooldownUnavailable`, so an outage is visible without extra
+      #|wiring. A coordinator that is down at startup still yields a store that can
+      #|reconnect. Cancellation always propagates, as do protocol errors. `ping()`
+      #|reports errors directly.
       #|
       #|Each cooldown store has its own connection, independent of blocking
       #|`http_acquire` requests. Acquisition makes one attempt with no retries;
@@ -2866,8 +2977,8 @@ pub let sections : Array[Section] = [
       #||---|---|
       #|| `{"op":"ping"}` | Immediately returns `{"ok":true}`. |
       #|| `{"op":"identify_acquire","shard_id":N}` | Returns success after the shard's Identify bucket and spacing permit it. |
-      #|| `{"op":"http_acquire","bucket":"...","global_exempt":false}` | Returns success when the REST request may start. |
-      #|| `{"op":"http_release","bucket":"...","status":N,"headers":{...}}` | Applies lowercase Discord rate-limit headers, releases the bucket, then returns success. |
+      #|| `{"op":"http_acquire","bucket":"...","global_exempt":false,"leases":"string"}` | Returns `{"ok":true,"lease":"..."}` when the REST request may start. The lease is an opaque string. A request without `"leases":"string"` comes from a client that predates string leases and is refused before any bucket is reserved. |
+      #|| `{"op":"http_release","bucket":"...","lease":"...","status":N,"headers":{...}}` | Applies lowercase Discord rate-limit headers and releases the bucket if `lease` still owns it, then returns success. A stale lease changes nothing. |
       #|| `{"op":"cooldown_acquire","key":"...","window_ms":"10000"}` | Immediately returns `{"ok":true,"retry_after_ms":"0"}` when acquired, or the remaining window in milliseconds. |
       #|
       #|Cooldown `window_ms` and `retry_after_ms` are decimal strings, preserving Int64
@@ -2876,8 +2987,8 @@ pub let sections : Array[Section] = [
       #|
       #|Unknown or malformed operations return `{"ok":false,"error":"..."}`. The
       #|server keeps the connection open after these protocol-level errors. Transport
-      #|failures close the connection. Identify and REST use bounded retries; cooldown
-      #|acquisition applies its unreachable policy and tries to reconnect on the next call.
+      #|failures close the connection. Identify and REST use bounded retries; a cooldown
+      #|acquisition answers `Unavailable` and tries to reconnect on the next call.
     ),
   },
   {
@@ -2926,7 +3037,7 @@ pub let sections : Array[Section] = [
     body: (
       #|| Chain | What `next` wraps | What stays outside |
       #||---|---|---|
-      #|| `Client::middleware` | One logical REST call, including rate-limit acquisition, the wire exchange, and bounded 429 retries | Status-code mapping, typed response decoding, and the caller's code |
+      #|| `Client::middleware` | One logical REST call, including rate-limit acquisition, the wire exchange, and bounded retries | Status-code mapping, typed response decoding, and the caller's code |
       #|| `App::middleware` | Checks, command cooldowns, and command, component, or modal handler dispatch, inside the `ErrorPolicy` boundary | Autocomplete, Gateway events, and services |
       #|| `BotBuilder::middleware` | Typed and raw Gateway handler fan-out for one decoded event | Cache updates, decode-error observation, collectors, and interaction routing |
     ),
@@ -2938,13 +3049,14 @@ pub let sections : Array[Section] = [
     anchor: "http-middleware",
     body: (
       #|An HTTP middleware receives `HttpRequest` before transport encoding. `next`
-      #|returns the final `HttpResponse` after any internal 429 retries and before a
+      #|returns the final `HttpResponse` after any internal retries and before a
       #|Discord error status becomes `DiscordHttpError::Api`.
       #|
       #|`request_timeout_ms` bounds each network attempt inside `next`, including
       #|reading its response body. User middleware before and after `next`, rate-limit
-      #|waits, and 429 back-off are outside that timeout. Timed-out attempts raise
-      #|`DiscordHttpError::Timeout` without retrying. For a whole-operation deadline,
+      #|waits, and retry back-off are outside that timeout. A timed-out attempt
+      #|raises `DiscordHttpError::Timeout` without retrying unless it timed out before
+      #|anything was sent. For a whole-operation deadline,
       #|compose `@async.with_timeout` around the call; see the tested example in
       #|[REST client](05-rest.mbt.md#rate-limit-behavior). Allow for legitimate waits:
       #|command sync may wait about a minute for the bulk-overwrite-commands bucket.
@@ -3638,12 +3750,15 @@ pub let sections : Array[Section] = [
     anchor: "region-changes-and-reconnects",
     body: (
       #|`VoiceConnection` resumes its voice WebSocket when possible and requests new
-      #|credentials when Discord requires a fresh session. The `VoiceClient` also
-      #|watches for a guild `VOICE_SERVER_UPDATE`. The current public voice API cannot
-      #|inject new credentials into an active connection, so the watcher disconnects
-      #|and joins the same channel again; callers holding the old handle should fetch
-      #|the guild connection again with `VoiceClient::connection` after a region
-      #|move.
+      #|credentials when Discord requires a fresh session. When Discord moves the
+      #|session to another voice server (a later `VOICE_SERVER_UPDATE` for the guild),
+      #|the connection identifies on the new server with the session it has: the
+      #|handle, its subscriptions, and the bot's place in the channel stay. An update
+      #|with a null endpoint means the server went away: the connection drops it, shows
+      #|`Reconnecting`, and waits for the next update, rejoining if none comes within
+      #|the join's `timeout_ms`. When something else moves the bot to another channel,
+      #|`VoiceConnection::channel_id` follows, and DAVE and a rejoin use the new
+      #|channel.
       #|
       #|See `examples/voice_player` for an executable that reads configuration
       #|from `DISCORD_TOKEN`, `GUILD_ID`, `CHANNEL_ID`, and `AUDIO_FILE`.
@@ -4129,13 +4244,19 @@ pub let sections : Array[Section] = [
       #|  raises `ResponseGateError::Expired`.
       #|
       #|If the sink raises, `classify(error)` returns a `DeliveryFailure`. `Rejected`
-      #|returns the gate to `Pending`, so a different initial callback may be sent;
-      #|`Expired` closes the window; `Uncertain` leaves it `Unconfirmed`. The REST
-      #|classifier (`classify_rest_callback_failure`) treats JSON error code 10062
-      #|(Unknown Interaction) as `Expired`. Client-side `DiscordHttpError::Validation`
-      #|and other HTTP 4xx API errors are `Rejected`, except status 429 and error code
-      #|40060 (already acknowledged). Server errors, transport errors, and timeouts are
-      #|`Uncertain`. Cancellation always becomes `Unconfirmed` and never calls the
+      #|(the callback was refused) and `Unsent` (it never reached Discord) return the
+      #|gate to `Pending`, so an initial callback may still be sent; `Expired` closes
+      #|the window; `Uncertain` leaves it `Unconfirmed`. The REST classifier
+      #|(`classify_rest_callback_failure`) treats JSON error code 10062 (Unknown
+      #|Interaction) as `Expired`. Client-side `DiscordHttpError::Validation` and
+      #|other HTTP 4xx API errors are `Rejected`, except status 429 and error code
+      #|40060 (already acknowledged). A transport failure or timeout for which
+      #|`is_unsent()` holds is `Unsent`: Discord accepts one initial callback, and one
+      #|that never arrived cannot be a second. The client has already resent it as
+      #|often as `max_retries` allows, so the gate does not retry it again; the window
+      #|stays open for the next callback the handler, the error policy, or the
+      #|auto-defer watchdog sends. Server errors and other transport errors and
+      #|timeouts are `Uncertain`. Cancellation always becomes `Unconfirmed` and never calls the
       #|classifier. A `send` made while another callback is in flight waits for that
       #|delivery to finish, then sees its result.
       #|

@@ -6,7 +6,7 @@ import {
 }
 
 // Values
-pub const DISCORD_VERSION : String = "0.9.0"
+pub const DISCORD_VERSION : String = "0.11.0"
 
 pub fn find_by_key(Array[Section], String) -> Section?
 
