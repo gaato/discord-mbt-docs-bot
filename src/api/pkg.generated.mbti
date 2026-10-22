@@ -12,7 +12,7 @@ pub fn find_by_key(Array[ApiEntry], String) -> ApiEntry?
 
 pub fn resolve(Array[ApiEntry], String) -> ApiEntry?
 
-pub fn search(Array[ApiEntry], String, limit? : Int) -> Array[ApiEntry]
+pub fn search(Array[ApiEntry], String, limit? : Int32) -> Array[ApiEntry]
 
 // Errors
 
@@ -24,7 +24,7 @@ pub(all) struct ApiEntry {
   signature : String
   doc : String
   file : String
-  line : Int
+  line : Int32
 } derive(Eq, @debug.Debug)
 pub fn ApiEntry::key(Self) -> String
 pub fn ApiEntry::label(Self) -> String

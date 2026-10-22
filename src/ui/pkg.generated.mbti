@@ -9,17 +9,17 @@ import {
 }
 
 // Values
-pub let api_route : @app.ComponentRoute[(Int, String)]
+pub let api_route : @app.ComponentRoute[(Int32, String)]
 
-pub fn api_view(@api.ApiEntry, page~ : Int) -> Array[@model.Component] raise @app.CustomIdError
+pub fn api_view(@api.ApiEntry, page~ : Int32) -> Array[@model.Component] raise @app.CustomIdError
 
-pub fn custom_id(@docs.Section, page~ : Int) -> String raise @app.CustomIdError
+pub fn custom_id(@docs.Section, page~ : Int32) -> String raise @app.CustomIdError
 
-pub let docs_route : @app.ComponentRoute[(Int, String)]
+pub let docs_route : @app.ComponentRoute[(Int32, String)]
 
 pub fn register(@app.AppBuilder, Array[@docs.Section], Array[@api.ApiEntry]) -> Unit
 
-pub fn view(Array[@docs.Section], @docs.Section, page~ : Int) -> Array[@model.Component] raise @app.CustomIdError
+pub fn view(Array[@docs.Section], @docs.Section, page~ : Int32) -> Array[@model.Component] raise @app.CustomIdError
 
 // Errors
 
