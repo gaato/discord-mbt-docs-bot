@@ -54,11 +54,7 @@ jobs:
           moon info
       - name: Test
         if: steps.versions.outputs.changed
-        run: |
-          moon check --target native --deny-warn
-          moon check --target js --deny-warn
-          moon test --target native
-          moon test --target js
+        run: scripts/gates.sh
       - name: Push
         id: push
         if: steps.versions.outputs.changed

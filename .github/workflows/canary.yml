@@ -1,0 +1,21 @@
+name: Canary
+
+# Runs scripts/gates.sh, the test job of deploy.yml, on the latest and nightly
+# toolchains. The canary only tests: deploying needs secrets and stays in
+# deploy.yml. zlib1g-dev is for the native gateway.
+
+on:
+  schedule:
+    # 07:17 JST, after gaato/moonbit-docker rebuilds the latest and nightly images.
+    - cron: "17 22 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  canary:
+    uses: gaato/.github/.github/workflows/moonbit-canary.yml@main
+    with:
+      gates: scripts/gates.sh
+      setup: apt-get update && apt-get install -y --no-install-recommends zlib1g-dev

@@ -29,11 +29,8 @@ jobs:
       - name: Install zlib headers for the native gateway
         run: apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends zlib1g-dev
       - run: moon update
-      - run: moon fmt --check
-      - run: moon check --target native --deny-warn
-      - run: moon check --target js --deny-warn
-      - run: moon test --target native
-      - run: moon test --target js
+      # The canary (canary.yml) runs the same script on newer toolchains.
+      - run: scripts/gates.sh
 
   deploy:
     needs: test
