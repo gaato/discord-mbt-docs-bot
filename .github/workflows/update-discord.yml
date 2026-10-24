@@ -19,7 +19,7 @@ permissions:
 jobs:
   bump:
     runs-on: ubuntu-26.04
-    container: ghcr.io/gaato/moonbit:0.10.16
+    container: ghcr.io/gaato/moonbit:0.10.17-d971670cd
     permissions:
       contents: write
     outputs:

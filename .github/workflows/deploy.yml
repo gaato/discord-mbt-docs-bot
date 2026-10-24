@@ -21,7 +21,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-26.04
-    container: ghcr.io/gaato/moonbit:0.10.16
+    container: ghcr.io/gaato/moonbit:0.10.17-d971670cd
     steps:
       - uses: actions/checkout@v5
         with:
@@ -35,7 +35,7 @@ jobs:
   deploy:
     needs: test
     runs-on: ubuntu-26.04
-    container: ghcr.io/gaato/moonbit:0.10.16
+    container: ghcr.io/gaato/moonbit:0.10.17-d971670cd
     environment: cloudflare
     steps:
       - uses: actions/checkout@v5
