@@ -63,7 +63,9 @@ async fn run_interaction(
   // async 0.22: cancellation bypasses `catch`, so the fallback reply lives in
   // `errdefer`, which also runs when the request is cancelled.
   errdefer (if !response_sent {
-    responses.put(WorkerResponse("NoResponse", ""))
+    @async.protect_from_cancel(() => {
+      responses.put(WorkerResponse("NoResponse", ""))
+    })
   })
   @async.with_task_group(group => {
     let interaction : @model.Interaction = @json.from_json(@json.parse(body))

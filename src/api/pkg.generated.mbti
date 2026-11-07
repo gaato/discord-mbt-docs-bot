@@ -17,6 +17,7 @@ pub fn search(Array[ApiEntry], String, limit? : Int32) -> Array[ApiEntry]
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug)
 pub(all) struct ApiEntry {
   pkg : String
   name : String
@@ -25,7 +26,7 @@ pub(all) struct ApiEntry {
   doc : String
   file : String
   line : Int32
-} derive(Eq, @debug.Debug)
+}
 pub fn ApiEntry::key(Self) -> String
 pub fn ApiEntry::label(Self) -> String
 pub fn ApiEntry::pages(Self) -> Array[String]

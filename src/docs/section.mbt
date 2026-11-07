@@ -2,13 +2,14 @@
 /// One `##` section of a discord.mbt guide chapter, or the chapter intro
 /// (the text between the `#` title and the first `##` heading, with an
 /// empty `anchor`).
+#derive(Debug, Eq)
 pub(all) struct Section {
   chapter : String
   file : String
   title : String
   anchor : String
   body : String
-} derive(Debug, Eq)
+}
 
 ///|
 /// Stable identifier used as the autocomplete choice value.

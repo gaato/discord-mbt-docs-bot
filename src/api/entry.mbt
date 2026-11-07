@@ -1,5 +1,6 @@
 ///|
 /// One public discord.mbt declaration and its source documentation.
+#derive(Debug, Eq)
 pub(all) struct ApiEntry {
   pkg : String
   name : String
@@ -8,7 +9,7 @@ pub(all) struct ApiEntry {
   doc : String
   file : String
   line : Int32
-} derive(Debug, Eq)
+}
 
 ///|
 /// Stable identifier used as the autocomplete value and component state.
