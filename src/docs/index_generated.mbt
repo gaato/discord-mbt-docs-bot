@@ -2,7 +2,7 @@
 
 ///|
 /// The gaato/discord release both indexes were generated from.
-pub const DISCORD_VERSION : String = "0.13.0"
+pub const DISCORD_VERSION : String = "0.14.0"
 
 ///|
 pub let sections : Array[Section] = [
@@ -211,10 +211,11 @@ pub let sections : Array[Section] = [
       #|
       #|```mbt check
       #|///|
+      #|#derive(Debug)
       #|struct PaintArgs {
       #|  color : String
       #|  coats : Int32
-      #|} derive(Debug)
+      #|}
       #|
       #|///|
       #|let paint_args : @discord.Args[PaintArgs] = @discord.Args::map2(
@@ -705,10 +706,11 @@ pub let sections : Array[Section] = [
       #|
       #|```mbt check
       #|///|
+      #|#derive(Debug)
       #|struct Feedback {
       #|  topic : String
       #|  details : String?
-      #|} derive(Debug)
+      #|}
       #|
       #|///|
       #|let feedback : @discord.Modal[Int32, Feedback] = @discord.modal(
@@ -3000,7 +3002,7 @@ pub let sections : Array[Section] = [
       #|async test "shared cooldown store wiring" {
       #|  @async.with_task_group(group => {
       #|    let coordinator = @coordinator.Coordinator::serve(group, addr="127.0.0.1:0")
-      #|    defer coordinator.close()
+      #|    defer @async.protect_from_cancel(() => coordinator.close())
       #|    let cooldown = @coordinator.RemoteCooldownStore::connect(
       #|      coordinator.addr(),
       #|      timeout_ms=1000,
