@@ -60,7 +60,7 @@ async fn run_interaction(
   responses : @aqueue.Queue[WorkerResponse],
 ) -> Unit {
   let mut response_sent = false
-  // async 0.22: cancellation bypasses `catch`, so the fallback reply lives in
+  // Cancellation bypasses `catch`, so the fallback reply lives in
   // `errdefer`, which also runs when the request is cancelled.
   errdefer (if !response_sent {
     @async.protect_from_cancel(() => {

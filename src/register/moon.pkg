@@ -2,10 +2,14 @@ import {
   "gaato/discord",
   "gaato/discord-mbt-docs-bot/app",
   "gaato/discord/model",
-  "moonbitlang/async",
+  "moonbitlang/core/async",
   "moonbitlang/core/env",
 }
 
 supported_targets = "native"
 
 pkgtype(kind: "executable")
+
+options(
+  "allow-experimental-packages": [ "moonbitlang/core/async" ],
+)

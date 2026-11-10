@@ -2,7 +2,7 @@
 
 ///|
 /// The gaato/discord release both indexes were generated from.
-pub const DISCORD_VERSION : String = "0.14.0"
+pub const DISCORD_VERSION : String = "0.15.0"
 
 ///|
 pub let sections : Array[Section] = [
@@ -41,7 +41,7 @@ pub let sections : Array[Section] = [
       #|```sh
       #|moon update
       #|moon add gaato/discord
-      #|moon add moonbitlang/async
+      #|moon add moonbitlang/core/async
       #|```
       #|
       #|The resulting `moon.mod` contains module dependencies equivalent to:
@@ -50,7 +50,7 @@ pub let sections : Array[Section] = [
       #|///|
       #|import {
       #|  "gaato/discord",
-      #|  "moonbitlang/async",
+      #|  "moonbitlang/core/async",
       #|}
       #|```
       #|
@@ -59,8 +59,8 @@ pub let sections : Array[Section] = [
       #|```mbt nocheck
       #|import {
       #|  "gaato/discord",
-      #|  "moonbitlang/async",
-      #|  "moonbitlang/async/signal",
+      #|  "moonbitlang/core/async",
+      #|  "moonbitlang/core/async/signal",
       #|  "moonbitlang/core/env",
       #|}
       #|
@@ -916,7 +916,7 @@ pub let sections : Array[Section] = [
       #|  defer client.close()
       #|  let fw = @framework.Framework(client, @model.Id::parse("400000000000000001"))
       #|  let invoker : @model.UserId = @model.Id::parse("200000000000000001")
-      #|  @async.with_task_group((group : @async.TaskGroup[Unit]) => {
+      #|  @async.with_task_group((group : @async.TaskGroup) => {
       #|    let pending = group.spawn(no_wait=true, () => {
       #|      fw.wait_for_component(
       #|        custom_id="confirm:guide",
@@ -1826,7 +1826,7 @@ pub let sections : Array[Section] = [
       #|  client : @dhttp.Client,
       #|  channel_id : @model.ChannelId,
       #|) -> @model.Message {
-      #|  let report = @fs.read_file("report.png").binary()
+      #|  let report = @fs.read_binary("report.png")
       #|  client.create_message(channel_id, content="Here you go", files=[
       #|    FileUpload("report.png", report, content_type="image/png"),
       #|  ])
@@ -1866,8 +1866,8 @@ pub let sections : Array[Section] = [
       #|`next_page()` returns `Array[T]?`, where `None` is the terminal state.
       #|`next_page`, `collect`, and `each` consume the same paginator state and must be
       #|called sequentially. A `collect` that stops partway through a page keeps the
-      #|rest for the next call. `Paginator[T]` is the `gaato/sdk-runtime` paginator
-      #|with `DiscordHttpError` as its error, so the callback of `each` may be async.
+      #|rest for the next call. `Paginator[T]` wraps the `gaato/mttp/client` paginator
+      #|and raises `DiscordHttpError`; the callback of `each` may be async.
       #|See the `Client::paginate_messages` documentation for cursor direction details.
     ),
   },
@@ -1929,10 +1929,11 @@ pub let sections : Array[Section] = [
       #|nothing beyond the resend's own wait, and any other 429 holds its bucket.
       #|Typed and custom
       #|routes use the same request path, so no separate limiter integration is
-      #|required. A custom limiter implements the `gaato/sdk-runtime` `RateLimiter`
+      #|required. A custom limiter implements the `gaato/mttp/client` `RateLimiter`
       #|trait and is passed through `Client(limiter=...)`. The client calls its
-      #|`release` exactly once for every `acquire` that returned, with the response's
-      #|status and headers, or with status 0 when no response arrived.
+      #|`acquire` to obtain an `Admission`, then `release` exactly once with that token
+      #|and the response's status and headers, or status 0 when no response heads
+      #|arrived. Headers remain available when reading the response body fails.
       #|
       #|`Client(request_timeout_ms=30000)` bounds each single network attempt,
       #|including reading its response body. Rate-limit waits, retry back-off, and
@@ -1944,8 +1945,9 @@ pub let sections : Array[Section] = [
       #|a closed client) and `Dial` (connecting, TLS, or a proxy tunnel) no byte of
       #|the request was sent, and `error.is_unsent()` is true. A failure or timeout in
       #|any later phase (`Write`, `Head`, `Body`, or `Unknown`) may have reached
-      #|Discord. Through a `transport=` you supply, a timed-out attempt is always
-      #|`Unknown`, since the client cannot see how far it got.
+      #|Discord. The whole-attempt deadline around any `backend=` (including the
+      #|default backend) reports `Unknown`, since that timer cannot see how far the
+      #|exchange got. A backend's own earlier phase failure retains its phase.
       #|
       #|The client resends a call itself, through the rate limiter, up to
       #|`Client(max_retries=4)` times, only when Discord's documentation allows it or
@@ -2118,7 +2120,7 @@ pub let sections : Array[Section] = [
       #|///|
       #|async fn dispatch_interaction(
       #|  app : @discord.App,
-      #|  group : @async.TaskGroup[Unit],
+      #|  group : @async.TaskGroup,
       #|  token : String,
       #|  body : Json,
       #|) -> Json? {
@@ -2134,7 +2136,7 @@ pub let sections : Array[Section] = [
       #|///|
       #|async fn serve_with_existing_client(
       #|  app : @discord.App,
-      #|  group : @async.TaskGroup[Unit],
+      #|  group : @async.TaskGroup,
       #|  client : @dhttp.Client,
       #|  application_id : @model.ApplicationId,
       #|) -> @discord.InteractionEndpoint {
@@ -3732,7 +3734,7 @@ pub let sections : Array[Section] = [
       #|  channel_id : @model.ChannelId,
       #|) -> Unit {
       #|  let connection = voice.join(ctx, guild_id, channel_id, timeout_ms=10_000)
-      #|  let bytes = @fs.read_file("audio.ogg").binary()
+      #|  let bytes = @fs.read_binary("audio.ogg")
       #|  let source = @voice.OggOpusSource::from_bytes(bytes)
       #|  connection.play((source : &@voice.AudioSource))
       #|}

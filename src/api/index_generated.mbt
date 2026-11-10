@@ -348,10 +348,10 @@ let entries_0 : Array[ApiEntry] = [
     pkg: "gaato/discord",
     name: "serve_interactions",
     kind: "fn",
-    signature: "pub async fn[X] serve_interactions(@async.TaskGroup[X], @app.App, addr~ : String, public_key~ : String, access~ : @app.RestAccess, application_id? : @model.Id[@model.ApplicationMarker], path? : String, deadline_ms? : Int32, max_body_bytes? : Int32, body_timeout_ms? : Int32, header_timeout_ms? : Int32, max_connections? : Int32) -> @endpoint_http.InteractionsServer",
-    doc: "Start a Discord HTTP-interactions server in `group` on native or moonrun Wasm.\n\nUse port zero in `addr` to let the OS choose a free port, then read the\nresolved address from `InteractionsServer::addr`.\n\nA request body larger than `max_body_bytes` gets 413, and one not received\nwithin `body_timeout_ms` gets 408; both close the connection. Discord's\ninteraction payloads are far below the 1 MiB default. A connection whose\nnext request head does not arrive within `header_timeout_ms`, idle\nkeep-alive time included, is closed. At most `max_connections` clients\nare served at once; more wait to be accepted. Non-positive limits raise\n`ServerConfigError` before the server listens.",
+    signature: "pub async fn serve_interactions(@async.TaskGroup, @app.App, addr~ : String, public_key~ : String, access~ : @app.RestAccess, application_id? : @model.Id[@model.ApplicationMarker], path? : String, deadline_ms? : Int32, max_body_bytes? : Int32, body_timeout_ms? : Int32, header_timeout_ms? : Int32, max_connections? : Int32) -> @endpoint_http.InteractionsServer",
+    doc: "Start a Discord HTTP-interactions server in `group` on native or moonrun Wasm.\n\nUse port zero in `addr` to let the OS choose a free port, then read the\nresolved address from `InteractionsServer::addr`.\n\nA request body larger than `max_body_bytes` gets 413, and one not received\nwithin `body_timeout_ms` gets 408; both close the connection. Discord's\ninteraction payloads are far below the 1 MiB default. A connection whose\nnext request head does not arrive within `header_timeout_ms`, idle\nkeep-alive time included, is closed (408 if a partial head arrived).\nRequest heads and trailers are each limited to 16 KiB. A declared body\nover the limit is rejected before signature authentication.\nAt most `max_connections` clients\nare served at once; more wait to be accepted. Non-positive limits raise\n`ListenError::Config(ServerConfigError)` before the server listens.",
     file: "discord/src/endpoint_http/endpoint_http.mbt",
-    line: 284,
+    line: 54,
   },
   {
     pkg: "gaato/discord",
@@ -510,7 +510,7 @@ let entries_0 : Array[ApiEntry] = [
     pkg: "gaato/discord/app",
     name: "App::serve",
     kind: "fn",
-    signature: "pub async fn App::serve(Self, @async.TaskGroup[Unit], access~ : RestAccess, application_id? : @model.Id[@model.ApplicationMarker], clock? : &@clock.Clock) -> InteractionEndpoint",
+    signature: "pub async fn App::serve(Self, @async.TaskGroup, access~ : RestAccess, application_id? : @model.Id[@model.ApplicationMarker], clock? : &@rt.Clock) -> InteractionEndpoint",
     doc: "Build a gateway-free dispatcher.\n\nWith `access=Token(token)` the endpoint owns a client built from the token\nand closes it when `group` finishes; with `access=Client(client)` it uses\nthe caller's client. When `application_id` is omitted, this method resolves\nit through `GET /applications/@me`. Supplying a client and the id avoids\nstartup HTTP requests. `clock` times callback deadlines, handler\nadmission and the App's default cooldown store, and drives the client\nbuilt from a token. Raises `AppConfigError::EmptyToken` for an empty token.\n\nCommand registration is a deploy-time step. Call `app.sync_commands(...)`\nfrom a one-shot program (see `examples/workers_echo/register`), never\nper request.",
     file: "discord/src/app/endpoint.mbt",
     line: 53,
@@ -519,7 +519,7 @@ let entries_0 : Array[ApiEntry] = [
     pkg: "gaato/discord/app",
     name: "App::spawner",
     kind: "fn",
-    signature: "pub fn App::spawner(Self, @async.TaskGroup[Unit], intake? : HandlerIntake) -> async (async () -> Unit) -> Unit",
+    signature: "pub fn App::spawner(Self, @async.TaskGroup, intake? : HandlerIntake) -> async (async () -> Unit) -> Unit",
     doc: "Create a bounded task spawner for an executor-owned task group. Executors\nuse it for non-interaction work such as event handlers; interaction\nhandlers get their own budget inside `attach`. Once `intake` closes, a\ncall returns without spawning, a call waiting for capacity gives up, and a\ntask spawned but not yet started does not run its body.",
     file: "discord/src/app/app.mbt",
     line: 539,
@@ -1885,7 +1885,7 @@ let entries_1 : Array[ApiEntry] = [
     signature: "pub async fn InteractionEndpoint::handle(Self, @json.Json, deadline_ms? : Int32) -> @json.Json?",
     doc: "Decode and dispatch an interaction JSON body.\n\nReturns callback JSON only for `Reply`. Multipart files cannot be expressed\nby this thin JSON API; callers that accept uploads should use\n`handle_interaction` and inspect `InteractionOutcome::Reply.files`.",
     file: "discord/src/app/endpoint.mbt",
-    line: 152,
+    line: 154,
   },
   {
     pkg: "gaato/discord/app",
@@ -4193,7 +4193,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn Coordinator::addr(Self) -> String",
     doc: "Return the actual listening address, including an OS-assigned port.",
     file: "discord/src/coordinator/server.mbt",
-    line: 112,
+    line: 113,
   },
   {
     pkg: "gaato/discord/coordinator",
@@ -4202,16 +4202,16 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub async fn Coordinator::close(Self) -> Unit noraise",
     doc: "Stop accepting clients and close active coordinator connections.\n\nShutdown cancels the internal task group; cancellation wakes every\nconnection handler, and `run_forever` then closes each client socket and\nthe listener itself (its documented contract forbids closing them here).",
     file: "discord/src/coordinator/server.mbt",
-    line: 122,
+    line: 123,
   },
   {
     pkg: "gaato/discord/coordinator",
     name: "Coordinator::serve",
     kind: "fn",
-    signature: "pub async fn[X] Coordinator::serve(@async.TaskGroup[X], addr~ : String, max_concurrency? : Int32, identify_spacing_ms? : Int32, global_limit? : Int32) -> Self",
+    signature: "pub async fn Coordinator::serve(@async.TaskGroup, addr~ : String, max_concurrency? : Int32, identify_spacing_ms? : Int32, global_limit? : Int32) -> Self",
     doc: "Start a JSON-lines coordinator in `group`.\n\nUse port zero in `addr` to let the OS choose a free port, then pass\n`coordinator.addr()` to remote clients.",
     file: "discord/src/coordinator/server.mbt",
-    line: 38,
+    line: 39,
   },
   {
     pkg: "gaato/discord/coordinator",
@@ -4229,7 +4229,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub struct RemoteCooldownStore {\n  // private fields\n}",
     doc: "Cross-process cooldown windows using the coordinator's clock.\n\nAn unreachable coordinator yields `Unavailable`, and the App applies its\n`cooldown_outage` policy and warns once per outage. RemoteRateLimiter, by\ncontrast, fails closed because avoiding Discord's 429 bans is a\ncorrectness concern. Cancellation always propagates.",
     file: "discord/src/coordinator/remote.mbt",
-    line: 417,
+    line: 425,
   },
   {
     pkg: "gaato/discord/coordinator",
@@ -4238,7 +4238,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn RemoteCooldownStore::close(Self) -> Unit",
     doc: "Close the connection permanently. Later acquisitions yield `Unavailable`.",
     file: "discord/src/coordinator/remote.mbt",
-    line: 449,
+    line: 457,
   },
   {
     pkg: "gaato/discord/coordinator",
@@ -4247,7 +4247,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub async fn RemoteCooldownStore::connect(String, timeout_ms? : Int32) -> Self",
     doc: "Open a dedicated connection, independent of blocking HTTP acquisitions.\nEach acquisition has no retries and a `timeout_ms` deadline, including queue\nand reconnect time; a transport failure or timeout yields `Unavailable`.\nOther errors propagate. A coordinator unreachable at startup still returns\na store; later acquisitions attempt to reconnect within the same deadline.",
     file: "discord/src/coordinator/remote.mbt",
-    line: 428,
+    line: 436,
   },
   {
     pkg: "gaato/discord/coordinator",
@@ -4256,7 +4256,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub async fn RemoteCooldownStore::ping(Self) -> Unit",
     doc: "Check connectivity within the deadline, without retries or a fallback.",
     file: "discord/src/coordinator/remote.mbt",
-    line: 455,
+    line: 463,
   },
   {
     pkg: "gaato/discord/coordinator",
@@ -4274,7 +4274,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub struct RemoteIdentifyQueue {\n  // private fields\n}",
     doc: "Cross-process implementation of `IdentifyQueue`.",
     file: "discord/src/coordinator/remote.mbt",
-    line: 273,
+    line: 275,
   },
   {
     pkg: "gaato/discord/coordinator",
@@ -4283,7 +4283,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn RemoteIdentifyQueue::close(Self) -> Unit",
     doc: "Close the coordinator connection; in-flight and later requests fail.",
     file: "discord/src/coordinator/remote.mbt",
-    line: 287,
+    line: 289,
   },
   {
     pkg: "gaato/discord/coordinator",
@@ -4292,7 +4292,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub async fn RemoteIdentifyQueue::connect(String) -> Self",
     doc: "Open the initial coordinator connection.\n\nLater transport failures reconnect automatically with bounded backoff.",
     file: "discord/src/coordinator/remote.mbt",
-    line: 281,
+    line: 283,
   },
   {
     pkg: "gaato/discord/coordinator",
@@ -4301,7 +4301,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub async fn RemoteIdentifyQueue::ping(Self) -> Unit",
     doc: "Round-trip a ping through the coordinator to verify connectivity.",
     file: "discord/src/coordinator/remote.mbt",
-    line: 293,
+    line: 295,
   },
   {
     pkg: "gaato/discord/coordinator",
@@ -4319,13 +4319,13 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub struct RemoteRateLimiter {\n  // private fields\n}",
     doc: "Cross-process implementation of `RateLimiter`.",
     file: "discord/src/coordinator/remote.mbt",
-    line: 313,
+    line: 315,
   },
   {
     pkg: "gaato/discord/coordinator",
     name: "RemoteRateLimiter::acquire",
     kind: "fn",
-    signature: "pub async fn RemoteRateLimiter::acquire(Self, String, global_exempt~ : Bool) -> Unit",
+    signature: "pub async fn RemoteRateLimiter::acquire(Self, String, global_exempt~ : Bool) -> @client.Admission",
     doc: "",
     file: "discord/src/coordinator/line.mbt",
     line: 1,
@@ -4337,7 +4337,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn RemoteRateLimiter::close(Self) -> Unit",
     doc: "Close both coordinator connections; in-flight and later requests fail.",
     file: "discord/src/coordinator/remote.mbt",
-    line: 340,
+    line: 343,
   },
   {
     pkg: "gaato/discord/coordinator",
@@ -4346,7 +4346,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub async fn RemoteRateLimiter::connect(String) -> Self",
     doc: "Open the initial coordinator connections.\n\nLater transport failures reconnect automatically with bounded backoff.",
     file: "discord/src/coordinator/remote.mbt",
-    line: 323,
+    line: 326,
   },
   {
     pkg: "gaato/discord/coordinator",
@@ -4355,13 +4355,13 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub async fn RemoteRateLimiter::ping(Self) -> Unit",
     doc: "Round-trip a ping through the coordinator to verify connectivity.",
     file: "discord/src/coordinator/remote.mbt",
-    line: 348,
+    line: 351,
   },
   {
     pkg: "gaato/discord/coordinator",
     name: "RemoteRateLimiter::release",
     kind: "fn",
-    signature: "pub async fn RemoteRateLimiter::release(Self, String, status~ : Int32, headers~ : @http.Headers) -> Unit",
+    signature: "pub async fn RemoteRateLimiter::release(Self, @client.Admission, status~ : Int32, headers~ : @http.Headers) -> Unit",
     doc: "",
     file: "discord/src/coordinator/line.mbt",
     line: 1,
@@ -4373,7 +4373,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub struct InteractionsServer {\n  // private fields\n}",
     doc: "An HTTP server dispatching Discord interactions on native or moonrun Wasm.",
     file: "discord/src/endpoint_http/endpoint_http.mbt",
-    line: 250,
+    line: 17,
   },
   {
     pkg: "gaato/discord/endpoint_http",
@@ -4382,7 +4382,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn InteractionsServer::addr(Self) -> String",
     doc: "Return the actual listening address, including an OS-assigned port.",
     file: "discord/src/endpoint_http/endpoint_http.mbt",
-    line: 257,
+    line: 24,
   },
   {
     pkg: "gaato/discord/endpoint_http",
@@ -4391,25 +4391,16 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub async fn InteractionsServer::close(Self) -> Unit noraise",
     doc: "Stop accepting requests and cancel active connection handlers.",
     file: "discord/src/endpoint_http/endpoint_http.mbt",
-    line: 263,
-  },
-  {
-    pkg: "gaato/discord/endpoint_http",
-    name: "ServerConfigError",
-    kind: "suberror",
-    signature: "pub(all) suberror ServerConfigError {\n  InvalidMaxBodyBytes(value~ : Int32)\n  InvalidBodyTimeoutMs(value~ : Int32)\n  InvalidHeaderTimeoutMs(value~ : Int32)\n  InvalidMaxConnections(value~ : Int32)\n}",
-    doc: "Configuration rejected by `serve_interactions` before it starts listening.",
-    file: "discord/src/endpoint_http/endpoint_http.mbt",
-    line: 19,
+    line: 30,
   },
   {
     pkg: "gaato/discord/endpoint_http",
     name: "serve_interactions",
     kind: "fn",
-    signature: "pub async fn[X] serve_interactions(@async.TaskGroup[X], @app.App, addr~ : String, public_key~ : String, access~ : @app.RestAccess, application_id? : @model.Id[@model.ApplicationMarker], path? : String, deadline_ms? : Int32, max_body_bytes? : Int32, body_timeout_ms? : Int32, header_timeout_ms? : Int32, max_connections? : Int32) -> InteractionsServer",
-    doc: "Start a Discord HTTP-interactions server in `group` on native or moonrun Wasm.\n\nUse port zero in `addr` to let the OS choose a free port, then read the\nresolved address from `InteractionsServer::addr`.\n\nA request body larger than `max_body_bytes` gets 413, and one not received\nwithin `body_timeout_ms` gets 408; both close the connection. Discord's\ninteraction payloads are far below the 1 MiB default. A connection whose\nnext request head does not arrive within `header_timeout_ms`, idle\nkeep-alive time included, is closed. At most `max_connections` clients\nare served at once; more wait to be accepted. Non-positive limits raise\n`ServerConfigError` before the server listens.",
+    signature: "pub async fn serve_interactions(@async.TaskGroup, @app.App, addr~ : String, public_key~ : String, access~ : @app.RestAccess, application_id? : @model.Id[@model.ApplicationMarker], path? : String, deadline_ms? : Int32, max_body_bytes? : Int32, body_timeout_ms? : Int32, header_timeout_ms? : Int32, max_connections? : Int32) -> InteractionsServer",
+    doc: "Start a Discord HTTP-interactions server in `group` on native or moonrun Wasm.\n\nUse port zero in `addr` to let the OS choose a free port, then read the\nresolved address from `InteractionsServer::addr`.\n\nA request body larger than `max_body_bytes` gets 413, and one not received\nwithin `body_timeout_ms` gets 408; both close the connection. Discord's\ninteraction payloads are far below the 1 MiB default. A connection whose\nnext request head does not arrive within `header_timeout_ms`, idle\nkeep-alive time included, is closed (408 if a partial head arrived).\nRequest heads and trailers are each limited to 16 KiB. A declared body\nover the limit is rejected before signature authentication.\nAt most `max_connections` clients\nare served at once; more wait to be accepted. Non-positive limits raise\n`ListenError::Config(ServerConfigError)` before the server listens.",
     file: "discord/src/endpoint_http/endpoint_http.mbt",
-    line: 284,
+    line: 54,
   },
   {
     pkg: "gaato/discord/framework",
@@ -4883,7 +4874,7 @@ let entries_2 : Array[ApiEntry] = [
     pkg: "gaato/discord/framework",
     name: "Framework::Framework",
     kind: "fn",
-    signature: "pub fn Framework::Framework(@http.Client, @model.Id[@model.ApplicationMarker], clock? : &@clock.Clock) -> Self",
+    signature: "pub fn Framework::Framework(@http.Client, @model.Id[@model.ApplicationMarker], clock? : &@rt.Clock) -> Self",
     doc: "Create an empty interaction router bound to a REST client and application\nid. Most bots configure routes through `@app.App` and let an executor\ncall `App::attach` instead of registering here directly. `clock` times\ncallback deadlines, token lifetimes, and component waits.",
     file: "discord/src/framework/framework.mbt",
     line: 76,
@@ -4901,7 +4892,7 @@ let entries_2 : Array[ApiEntry] = [
     pkg: "gaato/discord/framework",
     name: "Framework::clock",
     kind: "fn",
-    signature: "pub fn Framework::clock(Self) -> &@clock.Clock",
+    signature: "pub fn Framework::clock(Self) -> &@rt.Clock",
     doc: "The clock this router times interactions with, for executors that wait\nalongside it.",
     file: "discord/src/framework/framework.mbt",
     line: 97,
@@ -5315,7 +5306,7 @@ let entries_2 : Array[ApiEntry] = [
     pkg: "gaato/discord/framework",
     name: "ResponseGate::ResponseGate",
     kind: "fn",
-    signature: "pub fn ResponseGate::ResponseGate(@model.InteractionType, async (@model.InteractionResponse, Array[@http.FileUpload]?) -> Unit, classify? : (Error) -> DeliveryFailure, deadline_ms? : Int32, clock? : &@clock.Clock) -> Self",
+    signature: "pub fn ResponseGate::ResponseGate(@model.InteractionType, async (@model.InteractionResponse, Array[@http.FileUpload]?) -> Unit, classify? : (Error) -> DeliveryFailure, deadline_ms? : Int32, clock? : &@rt.Clock) -> Self",
     doc: "Construct a gate around an injected callback sink.\n\n`classify` decides how a failed delivery leaves the callback window; it\ndefaults to `Uncertain`. Cancellation is always `Uncertain`, regardless of\nthe classifier. With `deadline_ms`, the window closes that many\nmilliseconds after construction: a later `send` expires the gate instead\nof contacting Discord. `clock` times the deadline and the token lifetime.",
     file: "discord/src/framework/gate.mbt",
     line: 94,
@@ -5324,7 +5315,7 @@ let entries_2 : Array[ApiEntry] = [
     pkg: "gaato/discord/framework",
     name: "ResponseGate::capture",
     kind: "fn",
-    signature: "pub fn ResponseGate::capture(@model.Interaction, deadline_ms? : Int32, clock? : &@clock.Clock) -> (Self, ResponseCapture)",
+    signature: "pub fn ResponseGate::capture(@model.Interaction, deadline_ms? : Int32, clock? : &@rt.Clock) -> (Self, ResponseCapture)",
     doc: "Construct an in-memory gate and a receiver for the first callback value.\nThe deadline is measured from this call.",
     file: "discord/src/framework/gate.mbt",
     line: 177,
@@ -5378,7 +5369,7 @@ let entries_2 : Array[ApiEntry] = [
     pkg: "gaato/discord/framework",
     name: "ResponseGate::rest",
     kind: "fn",
-    signature: "pub fn ResponseGate::rest(@http.Client, @model.Interaction, deadline_ms? : Int32, clock? : &@clock.Clock) -> Self",
+    signature: "pub fn ResponseGate::rest(@http.Client, @model.Interaction, deadline_ms? : Int32, clock? : &@rt.Clock) -> Self",
     doc: "Construct a gate that delivers its callback through Discord's REST API.\nThe deadline is measured from this call, so construct the gate as soon as\nthe interaction arrives.",
     file: "discord/src/framework/gate.mbt",
     line: 152,
@@ -5410,10 +5401,6 @@ let entries_2 : Array[ApiEntry] = [
     file: "discord/src/framework/gate.mbt",
     line: 317,
   },
-]
-
-///|
-let entries_3 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/framework",
     name: "ResponseGateError",
@@ -5423,6 +5410,10 @@ let entries_3 : Array[ApiEntry] = [
     file: "discord/src/framework/gate.mbt",
     line: 4,
   },
+]
+
+///|
+let entries_3 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/framework",
     name: "ResponseState",
@@ -5508,7 +5499,7 @@ let entries_3 : Array[ApiEntry] = [
     pkg: "gaato/discord/gateway",
     name: "CommandLimiter::CommandLimiter",
     kind: "fn",
-    signature: "pub fn CommandLimiter::CommandLimiter(limit? : Int32, window_ms? : Int32, clock? : &@clock.Clock) -> Self",
+    signature: "pub fn CommandLimiter::CommandLimiter(limit? : Int32, window_ms? : Int32, clock? : &@rt.Clock) -> Self",
     doc: "Create a limiter allowing `limit` sends per sliding window (60 seconds by default).",
     file: "discord/src/gateway/command_limit.mbt",
     line: 14,
@@ -5715,7 +5706,7 @@ let entries_3 : Array[ApiEntry] = [
     pkg: "gaato/discord/gateway",
     name: "Shard::start",
     kind: "fn",
-    signature: "pub fn[X] Shard::start(@async.TaskGroup[X], token~ : String, intents~ : @model.Intents, capabilities? : @model.GatewayCapabilities, gateway_url? : String, shard_id? : Int32, shard_count? : Int32, identify_queue? : &@queue.IdentifyQueue, event_filter? : (@model.EventKind) -> Bool, connector? : async (String) -> &GatewayTransport, compress? : Bool, compression? : GatewayCompression, inflater_factory? : () -> &Inflater raise, max_message_bytes? : Int32, queue_capacity? : Int32, telemetry? : (@telemetry.TelemetryEvent) -> Unit, clock? : &@clock.Clock, rand? : @random.Rand, session? : Session, presence? : @model.UpdatePresence) -> Self",
+    signature: "pub fn Shard::start(@async.TaskGroup, token~ : String, intents~ : @model.Intents, capabilities? : @model.GatewayCapabilities, gateway_url? : String, shard_id? : Int32, shard_count? : Int32, identify_queue? : &@queue.IdentifyQueue, event_filter? : (@model.EventKind) -> Bool, connector? : async (String) -> &GatewayTransport, compress? : Bool, compression? : GatewayCompression, inflater_factory? : () -> &Inflater raise, max_message_bytes? : Int32, queue_capacity? : Int32, telemetry? : (@telemetry.TelemetryEvent) -> Unit, clock? : &@rt.Clock, rand? : @random.Rand, session? : Session, presence? : @model.UpdatePresence) -> Self",
     doc: "Spawn a shard into `group` and return its handle. `session` seeds a saved\nsession so the first connection attempts RESUME at its `resume_url`.\nThe initial presence is retained with a copy of its activities array.\nA message larger than `max_message_bytes`, compressed or inflated, ends\nthe connection and the shard resumes; a limit below 1 closes the shard\nfatally with code 0 before it connects.\n`compression` asks Discord for transport compression; `compress=true` is\nthe older spelling of `compression=ZlibStream`, and `compression` wins\nwhen both are given. `inflater_factory` replaces the decoder built for it.",
     file: "discord/src/gateway/shard.mbt",
     line: 216,
@@ -6150,7 +6141,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::add_thread_member(Self, @model.Id[@model.UserMarker]) -> Unit raise DiscordHttpError",
     doc: "Add a user to this channel. This channel must be a thread.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 415,
+    line: 417,
   },
   {
     pkg: "gaato/discord/http",
@@ -6159,7 +6150,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::bulk_delete(Self, Array[@model.Id[@model.MessageMarker]], reason? : String) -> Unit raise DiscordHttpError",
     doc: "Delete between 2 and 100 messages from this channel.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 544,
+    line: 546,
   },
   {
     pkg: "gaato/discord/http",
@@ -6168,7 +6159,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::create_invite(Self, max_age? : Int32, max_uses? : Int32, temporary? : Bool, unique? : Bool, target_type? : @model.InviteTargetType, target_user_id? : @model.Id[@model.UserMarker], target_application_id? : @model.Id[@model.ApplicationMarker], role_ids? : Array[@model.Id[@model.RoleMarker]], target_user_ids? : Array[@model.Id[@model.UserMarker]], target_users_file? : FileUpload, reason? : String) -> @model.Invite raise DiscordHttpError",
     doc: "Create an invite for this channel.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 253,
+    line: 255,
   },
   {
     pkg: "gaato/discord/http",
@@ -6177,7 +6168,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::create_stage_instance(Self, String, privacy_level? : @model.StagePrivacyLevel, send_start_notification? : Bool, guild_scheduled_event_id? : @model.Id[@model.ScheduledEventMarker], reason? : String) -> @model.StageInstance raise DiscordHttpError",
     doc: "Create a stage instance. This channel must be a stage channel.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 568,
+    line: 570,
   },
   {
     pkg: "gaato/discord/http",
@@ -6186,7 +6177,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::create_webhook(Self, String, avatar? : String, reason? : String) -> @model.Webhook raise DiscordHttpError",
     doc: "Create an incoming webhook for this channel.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 229,
+    line: 231,
   },
   {
     pkg: "gaato/discord/http",
@@ -6195,7 +6186,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::delete(Self, reason? : String) -> @model.Channel raise DiscordHttpError",
     doc: "Delete or close this channel.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 192,
+    line: 194,
   },
   {
     pkg: "gaato/discord/http",
@@ -6204,7 +6195,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::delete_permission(Self, @model.Id[@model.GenericMarker], reason? : String) -> Unit raise DiscordHttpError",
     doc: "Delete a permission overwrite from this channel.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 305,
+    line: 307,
   },
   {
     pkg: "gaato/discord/http",
@@ -6213,7 +6204,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::delete_stage_instance(Self, reason? : String) -> Unit raise DiscordHttpError",
     doc: "Delete the stage instance. This channel must be a stage channel.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 612,
+    line: 614,
   },
   {
     pkg: "gaato/discord/http",
@@ -6222,7 +6213,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::edit(Self, name? : String, typ? : @model.ChannelType, topic? : String, clear_topic? : Bool, nsfw? : Bool, parent_id? : @model.Id[@model.ChannelMarker], clear_parent_id? : Bool, rate_limit_per_user? : Int32, position? : Int32, bitrate? : Int32, user_limit? : Int32, permission_overwrites? : Array[@model.Overwrite], rtc_region? : String, clear_rtc_region? : Bool, video_quality_mode? : @model.VideoQualityMode, clear_video_quality_mode? : Bool, default_auto_archive_duration? : @model.ThreadAutoArchiveDuration, available_tags? : Array[@model.ForumTagRequest], default_reaction_emoji? : @model.DefaultReaction, clear_default_reaction_emoji? : Bool, default_thread_rate_limit_per_user? : Int32, default_sort_order? : @model.SortOrderType, clear_default_sort_order? : Bool, default_forum_layout? : @model.ForumLayoutType, icon? : String, flags? : @model.ChannelFlags, archived? : Bool, auto_archive_duration? : @model.ThreadAutoArchiveDuration, locked? : Bool, invitable? : Bool, applied_tags? : Array[@model.Id[@model.GenericMarker]], reason? : String) -> @model.Channel raise DiscordHttpError",
     doc: "Edit this channel. The `archived`/`auto_archive_duration`/`locked`/\n`invitable`/`applied_tags` knobs only apply when this channel is a thread.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 118,
+    line: 120,
   },
   {
     pkg: "gaato/discord/http",
@@ -6231,7 +6222,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::edit_permissions(Self, @model.Id[@model.GenericMarker], @model.OverwriteType, allow? : @model.Permissions, deny? : @model.Permissions, reason? : String) -> Unit raise DiscordHttpError",
     doc: "Create or replace a permission overwrite for this channel.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 285,
+    line: 287,
   },
   {
     pkg: "gaato/discord/http",
@@ -6240,7 +6231,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::edit_stage_instance(Self, topic? : String, privacy_level? : @model.StagePrivacyLevel, reason? : String) -> @model.StageInstance raise DiscordHttpError",
     doc: "Edit the stage instance. This channel must be a stage channel.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 596,
+    line: 598,
   },
   {
     pkg: "gaato/discord/http",
@@ -6258,7 +6249,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::follow(Self, @model.Id[@model.ChannelMarker], reason? : String) -> @model.FollowedChannel raise DiscordHttpError",
     doc: "Follow this announcement channel. `webhook_channel_id` is the target\nchannel that receives messages and requires `MANAGE_WEBHOOKS` there.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 346,
+    line: 348,
   },
   {
     pkg: "gaato/discord/http",
@@ -6267,7 +6258,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::group_dm_add_recipient(Self, @model.Id[@model.UserMarker], String, nick? : String) -> Unit raise DiscordHttpError",
     doc: "Add a user to this group DM.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 374,
+    line: 376,
   },
   {
     pkg: "gaato/discord/http",
@@ -6276,7 +6267,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::group_dm_remove_recipient(Self, @model.Id[@model.UserMarker]) -> Unit raise DiscordHttpError",
     doc: "Remove a user from this group DM.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 390,
+    line: 392,
   },
   {
     pkg: "gaato/discord/http",
@@ -6285,7 +6276,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::invites(Self) -> Array[@model.Invite] raise DiscordHttpError",
     doc: "List invites created for this channel.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 221,
+    line: 223,
   },
   {
     pkg: "gaato/discord/http",
@@ -6294,7 +6285,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::join_thread(Self) -> Unit raise DiscordHttpError",
     doc: "Join the current user to this channel. This channel must be a thread.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 399,
+    line: 401,
   },
   {
     pkg: "gaato/discord/http",
@@ -6303,7 +6294,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::joined_private_archived_threads(Self, before? : @model.Id[@model.ChannelMarker], limit? : Int32) -> @model.ArchivedThreads raise DiscordHttpError",
     doc: "List private archived threads in this channel joined by the current user.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 474,
+    line: 476,
   },
   {
     pkg: "gaato/discord/http",
@@ -6312,7 +6303,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::leave_thread(Self) -> Unit raise DiscordHttpError",
     doc: "Remove the current user from this channel. This channel must be a thread.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 407,
+    line: 409,
   },
   {
     pkg: "gaato/discord/http",
@@ -6321,7 +6312,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::member_permissions(Self, @model.Id[@model.UserMarker], implicit? : Bool) -> @model.Permissions raise DiscordHttpError",
     doc: "Fetch a member's computed permissions in this channel; see\n`Client::get_channel_member_permissions`.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 320,
+    line: 322,
   },
   {
     pkg: "gaato/discord/http",
@@ -6330,13 +6321,13 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub fn ChannelRef::message_ref(Self, @model.Id[@model.MessageMarker]) -> MessageRef",
     doc: "Bind a message id in this channel to the client.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 108,
+    line: 110,
   },
   {
     pkg: "gaato/discord/http",
     name: "ChannelRef::messages",
     kind: "fn",
-    signature: "pub fn ChannelRef::messages(Self, before? : @model.Id[@model.MessageMarker], after? : @model.Id[@model.MessageMarker], around? : @model.Id[@model.MessageMarker], page_size? : Int32) -> @sdk-runtime.Paginator[@model.Message, DiscordHttpError] raise DiscordHttpError",
+    signature: "pub fn ChannelRef::messages(Self, before? : @model.Id[@model.MessageMarker], after? : @model.Id[@model.MessageMarker], around? : @model.Id[@model.MessageMarker], page_size? : Int32) -> Paginator[@model.Message] raise DiscordHttpError",
     doc: "Paginate messages in this channel.",
     file: "discord/src/http/handles_channel.mbt",
     line: 49,
@@ -6348,7 +6339,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::pins(Self) -> Array[@model.Message] raise DiscordHttpError",
     doc: "List every pinned message in this channel through Discord's deprecated\narray-returning endpoint. `pins_page` pages the current endpoint.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 203,
+    line: 205,
   },
   {
     pkg: "gaato/discord/http",
@@ -6357,7 +6348,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::pins_page(Self, before? : @model.Timestamp, limit? : Int32) -> @model.ChannelPins raise DiscordHttpError",
     doc: "Fetch one page from Discord's current paginated channel-pins endpoint.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 211,
+    line: 213,
   },
   {
     pkg: "gaato/discord/http",
@@ -6366,7 +6357,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::private_archived_threads(Self, before? : @model.Timestamp, limit? : Int32) -> @model.ArchivedThreads raise DiscordHttpError",
     doc: "List private archived threads in this channel.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 464,
+    line: 466,
   },
   {
     pkg: "gaato/discord/http",
@@ -6375,7 +6366,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::public_archived_threads(Self, before? : @model.Timestamp, limit? : Int32) -> @model.ArchivedThreads raise DiscordHttpError",
     doc: "List public archived threads in this channel.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 454,
+    line: 456,
   },
   {
     pkg: "gaato/discord/http",
@@ -6384,7 +6375,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::remove_thread_member(Self, @model.Id[@model.UserMarker]) -> Unit raise DiscordHttpError",
     doc: "Remove a user from this channel. This channel must be a thread.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 424,
+    line: 426,
   },
   {
     pkg: "gaato/discord/http",
@@ -6393,7 +6384,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::role_permissions(Self, @model.Id[@model.RoleMarker], implicit? : Bool) -> @model.Permissions raise DiscordHttpError",
     doc: "Fetch the permissions a role and `@everyone` have in this channel; see\n`Client::get_channel_role_permissions`.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 335,
+    line: 337,
   },
   {
     pkg: "gaato/discord/http",
@@ -6411,7 +6402,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::send_soundboard_sound(Self, @model.Id[@model.SoundboardSoundMarker], source_guild_id? : @model.Id[@model.GuildMarker]) -> Unit raise DiscordHttpError",
     doc: "Play a soundboard sound in this voice channel.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 558,
+    line: 560,
   },
   {
     pkg: "gaato/discord/http",
@@ -6420,7 +6411,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::set_voice_status(Self, status? : String, reason? : String) -> Unit raise DiscordHttpError",
     doc: "Set this voice channel's status, or clear it by omitting `status`.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 360,
+    line: 362,
   },
   {
     pkg: "gaato/discord/http",
@@ -6429,7 +6420,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::stage_instance(Self) -> @model.StageInstance raise DiscordHttpError",
     doc: "Fetch the stage instance. This channel must be a stage channel.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 588,
+    line: 590,
   },
   {
     pkg: "gaato/discord/http",
@@ -6438,7 +6429,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::start_forum_thread(Self, String, content? : String, embeds? : Array[@model.Embed], components? : Array[@model.Component], sticker_ids? : Array[@model.Id[@model.StickerMarker]], files? : Array[FileUpload], flags? : @model.MessageFlags, allowed_mentions? : @model.AllowedMentions, auto_archive_duration? : @model.ThreadAutoArchiveDuration, rate_limit_per_user? : Int32, applied_tags? : Array[@model.Id[@model.GenericMarker]], reason? : String) -> @model.Channel raise DiscordHttpError",
     doc: "Start a thread with a starter message in this forum or media channel.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 510,
+    line: 512,
   },
   {
     pkg: "gaato/discord/http",
@@ -6447,7 +6438,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::start_thread(Self, String, typ? : @model.ChannelType, auto_archive_duration? : @model.ThreadAutoArchiveDuration, invitable? : Bool, rate_limit_per_user? : Int32, reason? : String) -> @model.Channel raise DiscordHttpError",
     doc: "Start a thread in this channel without attaching it to a message.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 488,
+    line: 490,
   },
   {
     pkg: "gaato/discord/http",
@@ -6456,7 +6447,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::thread_member(Self, @model.Id[@model.UserMarker], with_member? : Bool) -> @model.ThreadMember raise DiscordHttpError",
     doc: "Fetch a user's membership record. This channel must be a thread.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 433,
+    line: 435,
   },
   {
     pkg: "gaato/discord/http",
@@ -6465,7 +6456,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::thread_members(Self, with_member? : Bool, after? : @model.Id[@model.UserMarker], limit? : Int32) -> Array[@model.ThreadMember] raise DiscordHttpError",
     doc: "List this channel's members. This channel must be a thread.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 443,
+    line: 445,
   },
   {
     pkg: "gaato/discord/http",
@@ -6483,7 +6474,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn ChannelRef::webhooks(Self) -> Array[@model.Webhook] raise DiscordHttpError",
     doc: "List webhooks created for this channel.",
     file: "discord/src/http/handles_channel.mbt",
-    line: 245,
+    line: 247,
   },
   {
     pkg: "gaato/discord/http",
@@ -6507,8 +6498,8 @@ let entries_3 : Array[ApiEntry] = [
     pkg: "gaato/discord/http",
     name: "Client::Client",
     kind: "fn",
-    signature: "pub fn Client::Client(String, base_url? : String, api_version? : Int32, limiter? : &@sdk-runtime.RateLimiter, transport? : &@gaato/http.Transport, max_connections? : Int32, request_timeout_ms? : Int32, max_retries? : Int32, default_allowed_mentions? : @model.AllowedMentions, clock? : &@clock.Clock) -> Self",
-    doc: "Create a client. `token` is the raw bot token (without the `Bot ` prefix).\n\n`request_timeout_ms` (default 30000) bounds each network attempt, including\nreading its response body. Rate-limit waits, retry back-off, and user HTTP\nmiddleware are outside it. For a whole-operation deadline, compose\n`@async.with_timeout` around the call.\n\n`max_retries` (default 4) bounds how often one call is sent again. Every\nresend goes through the rate limiter again, and a call is resent only\nwhere Discord's documentation allows it or it cannot cause a second\neffect:\n\n- a 429, for any method, once the delay Discord asks for (the body's\n  `retry_after`, then `Retry-After`) has passed, however long; except a\n  429 that is not Discord's rate limit (no JSON content type and no\n  Discord rate-limit header, as from Cloudflare in front of Discord), which\n  names no wait and raises at once;\n- a 502, for any method, with backoff: Discord asks to \"wait a bit and\n  retry\";\n- a transport failure or timeout that proves no byte was sent\n  (`DiscordHttpError::is_unsent`), for any method, with backoff;\n- another 5xx, and a failure or timeout after sending, with backoff, only\n  for an idempotent call: `GET`, `HEAD`, `PUT`, `DELETE`, `OPTIONS`, or a\n  message create with a `nonce` and `enforce_nonce: true`, which Discord\n  does not create twice. A `POST` or `PATCH` that may have reached\n  Discord is raised at once.\n\nThe backoff is 500 ms, doubling up to 30 s, within ±20 %. Anything else,\n401 and 403 included, is Discord's answer and is never resent.\n\n`transport` is the `gaato/http` `Transport` that performs the wire\nexchange, below request validation, middleware, rate limiting, retries,\nstatus mapping, and decoding. By default the client creates a\n`gaato/http-async` `AsyncTransport` with `request_timeout_ms`, a\nkeep-alive pool of up to `max_connections` parked connections, and a\n64 MiB bound on each buffered response body, and closes it in `close`. A\nsupplied transport is shared: the client never closes it,\n`max_connections` and the body bound do not apply to it, and each attempt\nthrough it is still bounded by `request_timeout_ms`, by the\n`gaato/sdk-runtime` client's `Timeouts` on `clock`. A supplied transport\ncannot say how far an attempt got, so one that runs out of time fails\nwith `Timeout(phase=Unknown)`, as does every attempt when\n`request_timeout_ms` is not positive.\n\n`limiter` is a `gaato/sdk-runtime` `RateLimiter`; the default is an\n`@ratelimit.rate_limiter()` with Discord's per-bucket and global accounting.\n\n`clock` (default: the wall clock) drives the client's time: 429 and\nresend back-off, the default rate limiter's windows, the attempt timeout\naround a supplied transport, telemetry durations, the window of\n`invalid_requests`, the typing keepalive of `ChannelRef::with_typing`,\nand the default transport's phase limits and idle connections.",
+    signature: "pub fn Client::Client(String, base_url? : String, api_version? : Int32, limiter? : &@client.RateLimiter, backend? : &@gaato/http.Backend, max_connections? : Int32, request_timeout_ms? : Int32, max_retries? : Int32, default_allowed_mentions? : @model.AllowedMentions, clock? : &@rt.Clock) -> Self",
+    doc: "Create a client. `token` is the raw bot token (without the `Bot ` prefix).\n\n`request_timeout_ms` (default 30000) bounds each network attempt, including\nreading its response body. Rate-limit waits, retry back-off, and user HTTP\nmiddleware are outside it. For a whole-operation deadline, compose\n`@async.with_timeout` around the call.\n\n`max_retries` (default 4) bounds how often one call is sent again. Every\nresend goes through the rate limiter again, and a call is resent only\nwhere Discord's documentation allows it or it cannot cause a second\neffect:\n\n- a 429, for any method, once the delay Discord asks for (the body's\n  `retry_after`, then `Retry-After`) has passed, however long; except a\n  429 that is not Discord's rate limit (no JSON content type and no\n  Discord rate-limit header, as from Cloudflare in front of Discord), which\n  names no wait and raises at once;\n- a 502, for any method, with backoff: Discord asks to \"wait a bit and\n  retry\";\n- a transport failure or timeout that proves no byte was sent\n  (`DiscordHttpError::is_unsent`), for any method, with backoff;\n- another 5xx, and a failure or timeout after sending, with backoff, only\n  for an idempotent call: `GET`, `HEAD`, `PUT`, `DELETE`, `OPTIONS`, or a\n  message create with a `nonce` and `enforce_nonce: true`, which Discord\n  does not create twice. A `POST` or `PATCH` that may have reached\n  Discord is raised at once.\n\nThe backoff is 500 ms, doubling up to 30 s, within ±20 %. Anything else,\n401 and 403 included, is Discord's answer and is never resent.\n\n`backend` is the `gaato/http` `Backend` that performs the wire\nexchange, below request validation, middleware, rate limiting, retries,\nstatus mapping, and decoding. By default the client creates a\n`gaato/http-async/backend` `AsyncBackend` with up to `max_connections`\nidle connections per origin and a 64 MiB wire-body bound, and closes it\nin `close`. A supplied backend is shared: the client never closes it,\nand `max_connections` does not configure it. In both cases the mttp\nclient bounds decoded response bodies to 64 MiB and each attempt to\n`request_timeout_ms`, using `clock`. This outer deadline reports\n`Timeout(phase=Unknown)`; an earlier backend failure retains its phase.\nA non-positive attempt timeout fails immediately with `Unknown`.\n\n`limiter` is a `gaato/mttp/client` `RateLimiter`; the default is an\n`@ratelimit.rate_limiter()` with Discord's per-bucket and global accounting.\n\n`clock` (default: the wall clock) drives the client's time: 429 and\nresend back-off, the default rate limiter's windows, the attempt timeout\naround either backend, telemetry durations, the window of\n`invalid_requests`, and the typing keepalive of `ChannelRef::with_typing`.\nThe owned AsyncBackend's connection-pool expiry and phase deadlines use\nthe same clock. A supplied backend keeps its own clocks.",
     file: "discord/src/http/client.mbt",
     line: 94,
   },
@@ -6661,9 +6652,9 @@ let entries_3 : Array[ApiEntry] = [
     name: "Client::close",
     kind: "fn",
     signature: "pub fn Client::close(Self) -> Unit",
-    doc: "Close the client's own transport (parked keep-alive connections) and\nreject future requests, including those of an offline client. A supplied\ntransport is left open. A request already inside an offline handler is not\ncancelled by this method.",
+    doc: "Close the client's own backend (including idle keep-alive connections) and\nreject future requests, including those of an offline client. A supplied\nbackend is left open. A request already inside an offline handler is not\ncancelled by this method.",
     file: "discord/src/http/client.mbt",
-    line: 348,
+    line: 346,
   },
   {
     pkg: "gaato/discord/http",
@@ -7214,10 +7205,6 @@ let entries_3 : Array[ApiEntry] = [
     file: "discord/src/http/api_interaction.mbt",
     line: 60,
   },
-]
-
-///|
-let entries_4 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/http",
     name: "Client::edit_webhook_message",
@@ -7227,6 +7214,10 @@ let entries_4 : Array[ApiEntry] = [
     file: "discord/src/http/api_webhook.mbt",
     line: 305,
   },
+]
+
+///|
+let entries_4 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/http",
     name: "Client::emoji_ref",
@@ -8071,7 +8062,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub fn Client::invalid_requests(Self) -> Int32",
     doc: "How many of this client's requests in the past ten minutes Discord counts\nas invalid: those answered with 401, 403 or 429, except a 429 with\n`X-RateLimit-Scope: shared`. Every attempt counts, resends included.\n\nDiscord allows 10,000 invalid requests per ten minutes from one address;\npast that, Discord restricts the address for a while (its documentation\ncalls this a Cloudflare ban), for every client on it. The count moves in ten-second steps, so a request leaves it between\n590 and 600 seconds after it was answered, and covers only this client:\nadd up the clients that share an address. An offline client sends nothing\nand always reports 0.",
     file: "discord/src/http/client.mbt",
-    line: 240,
+    line: 235,
   },
   {
     pkg: "gaato/discord/http",
@@ -8305,7 +8296,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub fn Client::middleware(Self, async (HttpRequest, async (HttpRequest) -> HttpResponse) -> HttpResponse) -> Unit",
     doc: "Install middleware around each logical REST call. The first installed\nmiddleware is outermost. `next` performs rate limiting, the wire\nexchange, and bounded retries.",
     file: "discord/src/http/client.mbt",
-    line: 248,
+    line: 243,
   },
   {
     pkg: "gaato/discord/http",
@@ -8527,10 +8518,10 @@ let entries_4 : Array[ApiEntry] = [
     pkg: "gaato/discord/http",
     name: "Client::offline",
     kind: "fn",
-    signature: "pub fn Client::offline(async (HttpRequest) -> HttpResponse, default_allowed_mentions? : @model.AllowedMentions, clock? : &@clock.Clock) -> Self",
+    signature: "pub fn Client::offline(async (HttpRequest) -> HttpResponse, default_allowed_mentions? : @model.AllowedMentions, clock? : &@rt.Clock) -> Self",
     doc: "Create a client with no network. `handler` answers every logical REST\ncall in place of the rate limiter, the wire exchange, and retries; it\nhas the same shape as the `next` continuation of `HttpMiddleware`, so an\noffline client is the innermost step of the same chain. Request validation,\ninstalled middleware, status-code-to-error mapping, and typed decoding run\nexactly as they do online, and nothing falls back to Discord.\n\nThere is no token, base URL, timeout, or retry: a 429 from `handler`\nsurfaces as `DiscordHttpError::RateLimited` at once. An error raised by\n`handler` propagates as itself when it is a `DiscordHttpError` and as\n`DiscordHttpError::Transport(phase=Unknown, ..)` otherwise. Each call\nemits the same `HttpRequest` and `HttpRateLimited` telemetry as a single\nnetwork attempt, its duration read from `clock` (default: the wall\nclock), which also drives `ChannelRef::with_typing`.\n\n# Example\n```mbt\nasync test {\n  let calls : Array[@http.Route] = []\n  let client = @http.Client::offline(request => {\n    calls.push(request.route)\n    match request.route {\n      GetGateway => { status: 200, headers: {}, body: { \"url\": \"wss://x\" }, }\n      _ => { status: 404, headers: {}, body: { \"code\": 0, \"message\": \"no\" }, }\n    }\n  })\n  inspect(client.get_gateway(), content=\"wss://x\")\n  assert_true(calls is [GetGateway])\n}\n```",
     file: "discord/src/http/client.mbt",
-    line: 206,
+    line: 200,
   },
   {
     pkg: "gaato/discord/http",
@@ -8539,7 +8530,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub fn Client::on_telemetry(Self, (@telemetry.TelemetryEvent) -> Unit raise) -> Unit",
     doc: "Observe structured HTTP telemetry. Hooks run synchronously and should\nreturn promptly. A hook failure is reported through `on_warn`.",
     file: "discord/src/http/client.mbt",
-    line: 255,
+    line: 250,
   },
   {
     pkg: "gaato/discord/http",
@@ -8548,70 +8539,70 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub fn Client::on_warn(Self, (String) -> Unit) -> Unit",
     doc: "Set the warning sink used for telemetry-hook failures.",
     file: "discord/src/http/client.mbt",
-    line: 284,
+    line: 279,
   },
   {
     pkg: "gaato/discord/http",
     name: "Client::paginate_current_user_guilds",
     kind: "fn",
-    signature: "pub fn Client::paginate_current_user_guilds(Self, before? : @model.Id[@model.GuildMarker], after? : @model.Id[@model.GuildMarker], shard? : Int32, with_counts? : Bool, page_size? : Int32) -> @sdk-runtime.Paginator[@model.CurrentUserGuild, DiscordHttpError] raise DiscordHttpError",
+    signature: "pub fn Client::paginate_current_user_guilds(Self, before? : @model.Id[@model.GuildMarker], after? : @model.Id[@model.GuildMarker], shard? : Int32, with_counts? : Bool, page_size? : Int32) -> Paginator[@model.CurrentUserGuild] raise DiscordHttpError",
     doc: "Page through the current user's partial guild objects.",
     file: "discord/src/http/paginator.mbt",
-    line: 370,
+    line: 422,
   },
   {
     pkg: "gaato/discord/http",
     name: "Client::paginate_guild_audit_log",
     kind: "fn",
-    signature: "pub fn Client::paginate_guild_audit_log(Self, @model.Id[@model.GuildMarker], user_id? : @model.Id[@model.UserMarker], action_type? : @model.AuditLogEvent, before? : @model.Id[@model.AuditLogEntryMarker], page_size? : Int32) -> @sdk-runtime.Paginator[@model.AuditLogEntry, DiscordHttpError] raise DiscordHttpError",
+    signature: "pub fn Client::paginate_guild_audit_log(Self, @model.Id[@model.GuildMarker], user_id? : @model.Id[@model.UserMarker], action_type? : @model.AuditLogEvent, before? : @model.Id[@model.AuditLogEntryMarker], page_size? : Int32) -> Paginator[@model.AuditLogEntry] raise DiscordHttpError",
     doc: "Page backward through audit-log entries. Referenced sidecar objects from\neach audit-log response are intentionally not included in the item stream.",
     file: "discord/src/http/paginator.mbt",
-    line: 267,
+    line: 319,
   },
   {
     pkg: "gaato/discord/http",
     name: "Client::paginate_guild_bans",
     kind: "fn",
-    signature: "pub fn Client::paginate_guild_bans(Self, @model.Id[@model.GuildMarker], before? : @model.Id[@model.UserMarker], after? : @model.Id[@model.UserMarker], page_size? : Int32) -> @sdk-runtime.Paginator[@model.GuildBan, DiscordHttpError] raise DiscordHttpError",
+    signature: "pub fn Client::paginate_guild_bans(Self, @model.Id[@model.GuildMarker], before? : @model.Id[@model.UserMarker], after? : @model.Id[@model.UserMarker], page_size? : Int32) -> Paginator[@model.GuildBan] raise DiscordHttpError",
     doc: "Page through guild bans using either a before or after cursor.\nRequires the `BAN_MEMBERS` or `VIEW_AUDIT_LOG` permission.",
     file: "discord/src/http/paginator.mbt",
-    line: 237,
+    line: 289,
   },
   {
     pkg: "gaato/discord/http",
     name: "Client::paginate_guild_members",
     kind: "fn",
-    signature: "pub fn Client::paginate_guild_members(Self, @model.Id[@model.GuildMarker], after? : @model.Id[@model.UserMarker], page_size? : Int32) -> @sdk-runtime.Paginator[@model.GuildMember, DiscordHttpError] raise DiscordHttpError",
+    signature: "pub fn Client::paginate_guild_members(Self, @model.Id[@model.GuildMarker], after? : @model.Id[@model.UserMarker], page_size? : Int32) -> Paginator[@model.GuildMember] raise DiscordHttpError",
     doc: "Page through guild members in ascending user-id order.\n\nUse `each` when the item callback is synchronous. Available paginator\nconstructors cover messages, guild members, bans, audit-log entries,\nscheduled-event users, poll-answer voters, and current-user guilds;\ncursor direction and endpoint maximums are encoded by each constructor.\n\n```mbt\ntest \"visit every guild member\" {\n  async fn print_members(\n    client : @http.Client,\n    guild_id : @model.GuildId,\n  ) -> Unit {\n    client\n    .paginate_guild_members(guild_id)\n    .each(guild_member => println(\"\\{Repr(guild_member.user)}\"))\n  }\n\n  ignore(print_members)\n}\n```",
     file: "discord/src/http/paginator.mbt",
-    line: 215,
+    line: 267,
   },
   {
     pkg: "gaato/discord/http",
     name: "Client::paginate_guild_scheduled_event_users",
     kind: "fn",
-    signature: "pub fn Client::paginate_guild_scheduled_event_users(Self, @model.Id[@model.GuildMarker], @model.Id[@model.ScheduledEventMarker], with_member? : Bool, before? : @model.Id[@model.UserMarker], after? : @model.Id[@model.UserMarker], page_size? : Int32) -> @sdk-runtime.Paginator[@model.GuildScheduledEventUser, DiscordHttpError] raise DiscordHttpError",
+    signature: "pub fn Client::paginate_guild_scheduled_event_users(Self, @model.Id[@model.GuildMarker], @model.Id[@model.ScheduledEventMarker], with_member? : Bool, before? : @model.Id[@model.UserMarker], after? : @model.Id[@model.UserMarker], page_size? : Int32) -> Paginator[@model.GuildScheduledEventUser] raise DiscordHttpError",
     doc: "Page through users interested in a guild scheduled event.",
     file: "discord/src/http/paginator.mbt",
-    line: 295,
+    line: 347,
   },
   {
     pkg: "gaato/discord/http",
     name: "Client::paginate_messages",
     kind: "fn",
-    signature: "pub fn Client::paginate_messages(Self, @model.Id[@model.ChannelMarker], before? : @model.Id[@model.MessageMarker], after? : @model.Id[@model.MessageMarker], around? : @model.Id[@model.MessageMarker], page_size? : Int32) -> @sdk-runtime.Paginator[@model.Message, DiscordHttpError] raise DiscordHttpError",
+    signature: "pub fn Client::paginate_messages(Self, @model.Id[@model.ChannelMarker], before? : @model.Id[@model.MessageMarker], after? : @model.Id[@model.MessageMarker], around? : @model.Id[@model.MessageMarker], page_size? : Int32) -> Paginator[@model.Message] raise DiscordHttpError",
     doc: "Page through channel messages. Without a cursor, pagination starts at the\nnewest messages and continues backward. `around` produces one page only.\n\nStart before or after a known message by supplying one cursor. `before`,\n`after`, and `around` are mutually exclusive. All paginator methods\n(`next_page`, `collect`, `each`) consume the same mutable cursor state;\ndo not call them concurrently. Empty pages and pages shorter than the\nconfigured page size mark the end.\n\n```mbt\ntest \"walk message history newest-first\" {\n  async fn print_history(\n    client : @http.Client,\n    channel_id : @model.ChannelId,\n    newest_known : @model.MessageId,\n  ) -> Unit {\n    let pages = client.paginate_messages(channel_id, page_size=100)\n    for ;; {\n      match pages.next_page() {\n        Some(messages) =>\n          for message in messages {\n            println(\"\\{message.id}: \\{message.content}\")\n          }\n        None => break\n      }\n    }\n    // `collect` bounds the walk instead of draining the full history.\n    let recent = client\n      .paginate_messages(channel_id, before=newest_known, page_size=100)\n      .collect(max=250)\n    ignore(recent)\n  }\n\n  ignore(print_history)\n}\n```",
     file: "discord/src/http/paginator.mbt",
-    line: 144,
+    line: 196,
   },
   {
     pkg: "gaato/discord/http",
     name: "Client::paginate_poll_answer_voters",
     kind: "fn",
-    signature: "pub fn Client::paginate_poll_answer_voters(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], Int32, after? : @model.Id[@model.UserMarker], page_size? : Int32) -> @sdk-runtime.Paginator[@model.User, DiscordHttpError] raise DiscordHttpError",
+    signature: "pub fn Client::paginate_poll_answer_voters(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker], Int32, after? : @model.Id[@model.UserMarker], page_size? : Int32) -> Paginator[@model.User] raise DiscordHttpError",
     doc: "Page forward through users who selected one poll answer.",
     file: "discord/src/http/paginator.mbt",
-    line: 342,
+    line: 394,
   },
   {
     pkg: "gaato/discord/http",
@@ -8683,7 +8674,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::request(Self, Route, body? : @json.Json, audit_reason? : String, files? : Array[FileUpload], headers? : Map[String, String]) -> @json.Json raise DiscordHttpError",
     doc: "Send a request through the rate limiter, retrying on 429 (bounded).\n\nThis is also the raw escape hatch: typed endpoint wrappers build a `Route`\nplus JSON body and decode the returned JSON, while unwrapped endpoints use\n`Route::custom`. Optional `headers` are merged after the client's base\nheaders, so caller-supplied values such as `authorization` take precedence.\n\n`request_timeout_ms` bounds each network attempt, including reading its\nresponse body. Rate-limit waits, retry back-off, and user middleware are\noutside it. A failed or timed-out attempt is resent only when it proves\nnothing reached Discord (`DiscordHttpError::is_unsent`); otherwise it\nraises `Transport` or `Timeout` at once, because Discord may already have\nacted on it. For a whole-operation deadline, compose `@async.with_timeout`\naround the call.",
     file: "discord/src/http/request.mbt",
-    line: 205,
+    line: 190,
   },
   {
     pkg: "gaato/discord/http",
@@ -9018,10 +9009,6 @@ let entries_4 : Array[ApiEntry] = [
     file: "discord/src/http/multipart.mbt",
     line: 23,
   },
-]
-
-///|
-let entries_5 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/http",
     name: "FileUpload::content_type",
@@ -9031,6 +9018,10 @@ let entries_5 : Array[ApiEntry] = [
     file: "discord/src/http/multipart.mbt",
     line: 29,
   },
+]
+
+///|
+let entries_5 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/http",
     name: "FileUpload::filename",
@@ -9179,7 +9170,7 @@ let entries_5 : Array[ApiEntry] = [
     pkg: "gaato/discord/http",
     name: "GuildRef::audit_log",
     kind: "fn",
-    signature: "pub fn GuildRef::audit_log(Self, user_id? : @model.Id[@model.UserMarker], action_type? : @model.AuditLogEvent, before? : @model.Id[@model.AuditLogEntryMarker], page_size? : Int32) -> @sdk-runtime.Paginator[@model.AuditLogEntry, DiscordHttpError] raise DiscordHttpError",
+    signature: "pub fn GuildRef::audit_log(Self, user_id? : @model.Id[@model.UserMarker], action_type? : @model.AuditLogEvent, before? : @model.Id[@model.AuditLogEntryMarker], page_size? : Int32) -> Paginator[@model.AuditLogEntry] raise DiscordHttpError",
     doc: "Paginate this guild's audit-log entries.",
     file: "discord/src/http/handles_guild.mbt",
     line: 123,
@@ -9206,7 +9197,7 @@ let entries_5 : Array[ApiEntry] = [
     pkg: "gaato/discord/http",
     name: "GuildRef::bans",
     kind: "fn",
-    signature: "pub fn GuildRef::bans(Self, before? : @model.Id[@model.UserMarker], after? : @model.Id[@model.UserMarker], page_size? : Int32) -> @sdk-runtime.Paginator[@model.GuildBan, DiscordHttpError] raise DiscordHttpError",
+    signature: "pub fn GuildRef::bans(Self, before? : @model.Id[@model.UserMarker], after? : @model.Id[@model.UserMarker], page_size? : Int32) -> Paginator[@model.GuildBan] raise DiscordHttpError",
     doc: "Paginate bans in this guild. Requires the `BAN_MEMBERS` or\n`VIEW_AUDIT_LOG` permission.",
     file: "discord/src/http/handles_guild.mbt",
     line: 142,
@@ -9476,7 +9467,7 @@ let entries_5 : Array[ApiEntry] = [
     pkg: "gaato/discord/http",
     name: "GuildRef::members",
     kind: "fn",
-    signature: "pub fn GuildRef::members(Self, after? : @model.Id[@model.UserMarker], page_size? : Int32) -> @sdk-runtime.Paginator[@model.GuildMember, DiscordHttpError] raise DiscordHttpError",
+    signature: "pub fn GuildRef::members(Self, after? : @model.Id[@model.UserMarker], page_size? : Int32) -> Paginator[@model.GuildMember] raise DiscordHttpError",
     doc: "Paginate members in this guild.",
     file: "discord/src/http/handles_guild.mbt",
     line: 249,
@@ -10007,7 +9998,7 @@ let entries_5 : Array[ApiEntry] = [
     pkg: "gaato/discord/http",
     name: "MessageRef::poll_answer_voters",
     kind: "fn",
-    signature: "pub fn MessageRef::poll_answer_voters(Self, Int32, after? : @model.Id[@model.UserMarker], page_size? : Int32) -> @sdk-runtime.Paginator[@model.User, DiscordHttpError] raise DiscordHttpError",
+    signature: "pub fn MessageRef::poll_answer_voters(Self, Int32, after? : @model.Id[@model.UserMarker], page_size? : Int32) -> Paginator[@model.User] raise DiscordHttpError",
     doc: "Paginate users who selected one answer in this message's poll.",
     file: "discord/src/http/handles_message.mbt",
     line: 229,
@@ -10068,12 +10059,39 @@ let entries_5 : Array[ApiEntry] = [
   },
   {
     pkg: "gaato/discord/http",
-    name: "Paginator[T]",
-    kind: "type",
-    signature: "pub type Paginator[T] = @sdk-runtime.Paginator[T, DiscordHttpError]",
-    doc: "A stateful, asynchronously fetched sequence of REST result pages: the\n`gaato/sdk-runtime` paginator with `DiscordHttpError` as its error.\n\nCall `next_page`, `each`, or `collect` sequentially; all three consume the\nsame cursor state. Empty and short REST pages both mark the sequence as\nfinished, and the items a `collect` did not use come back first from the\nnext call.",
+    name: "Paginator::collect",
+    kind: "fn",
+    signature: "pub async fn[T] Paginator::collect(Self[T], max~ : Int32) -> Array[T] raise DiscordHttpError",
+    doc: "Collect at most `max` items, keeping the unused page tail for the next call.",
     file: "discord/src/http/paginator.mbt",
-    line: 9,
+    line: 49,
+  },
+  {
+    pkg: "gaato/discord/http",
+    name: "Paginator::each",
+    kind: "fn",
+    signature: "pub async fn[T] Paginator::each(Self[T], async (T) -> Unit raise DiscordHttpError) -> Unit raise DiscordHttpError",
+    doc: "Visit each remaining item sequentially.",
+    file: "discord/src/http/paginator.mbt",
+    line: 30,
+  },
+  {
+    pkg: "gaato/discord/http",
+    name: "Paginator::next_page",
+    kind: "fn",
+    signature: "pub async fn[T] Paginator::next_page(Self[T]) -> Array[T]? raise DiscordHttpError",
+    doc: "Fetch the next page, preserving Discord's typed error contract.",
+    file: "discord/src/http/paginator.mbt",
+    line: 16,
+  },
+  {
+    pkg: "gaato/discord/http",
+    name: "Paginator[T]",
+    kind: "struct",
+    signature: "pub struct Paginator[T] {\n  // private fields\n}",
+    doc: "A stateful, asynchronously fetched sequence of REST result pages: the\na wrapper around the `gaato/mttp/client` paginator that preserves\n`DiscordHttpError` as the raised error type.\n\nCall `next_page`, `each`, or `collect` sequentially; all three consume the\nsame cursor state. Empty and short REST pages both mark the sequence as\nfinished, and the items a `collect` did not use come back first from the\nnext call.",
+    file: "discord/src/http/paginator.mbt",
+    line: 10,
   },
   {
     pkg: "gaato/discord/http",
@@ -10124,7 +10142,7 @@ let entries_5 : Array[ApiEntry] = [
     pkg: "gaato/discord/http",
     name: "Route",
     kind: "enum",
-    signature: "pub(all) enum Route {\n  Custom(request_method~ : @moonbitlang/async/http.RequestMethod, path~ : String, bucket_key~ : String, is_interaction~ : Bool, supports_reason~ : Bool)\n  GetGateway\n  GetGatewayBot\n  GetCurrentApplication\n  EditCurrentApplication\n  GetApplicationActivityInstance(application_id~ : @model.Id[@model.ApplicationMarker], instance_id~ : String)\n  UpdateApplicationIdentityProfile(application_id~ : @model.Id[@model.ApplicationMarker], user_id~ : @model.Id[@model.UserMarker], provider_issued_user_id~ : String)\n  GetApplicationIdentityProfile(application_id~ : @model.Id[@model.ApplicationMarker], user_id~ : @model.Id[@model.UserMarker], provider_issued_user_id~ : String)\n  GetApplicationIdentitiesByUserId(user_id~ : @model.Id[@model.UserMarker], application_id~ : @model.Id[@model.ApplicationMarker])\n  GetApplicationIdentitiesByExternalId(application_id~ : @model.Id[@model.ApplicationMarker], provider_type~ : String, provider_issued_user_id~ : String, query~ : String)\n  DeleteApplicationIdentity(user_id~ : @model.Id[@model.UserMarker], application_id~ : @model.Id[@model.ApplicationMarker], provider_type~ : String, provider_issued_user_id~ : String)\n  GetApplicationRoleConnectionMetadataRecords(application_id~ : @model.Id[@model.ApplicationMarker])\n  UpdateApplicationRoleConnectionMetadataRecords(application_id~ : @model.Id[@model.ApplicationMarker])\n  ListApplicationEmojis(application_id~ : @model.Id[@model.ApplicationMarker])\n  GetApplicationEmoji(application_id~ : @model.Id[@model.ApplicationMarker], emoji_id~ : @model.Id[@model.EmojiMarker])\n  CreateApplicationEmoji(application_id~ : @model.Id[@model.ApplicationMarker])\n  ModifyApplicationEmoji(application_id~ : @model.Id[@model.ApplicationMarker], emoji_id~ : @model.Id[@model.EmojiMarker])\n  DeleteApplicationEmoji(application_id~ : @model.Id[@model.ApplicationMarker], emoji_id~ : @model.Id[@model.EmojiMarker])\n  ListEntitlements(application_id~ : @model.Id[@model.ApplicationMarker], query~ : String)\n  GetEntitlement(application_id~ : @model.Id[@model.ApplicationMarker], entitlement_id~ : @model.Id[@model.EntitlementMarker])\n  CreateTestEntitlement(application_id~ : @model.Id[@model.ApplicationMarker])\n  ConsumeEntitlement(application_id~ : @model.Id[@model.ApplicationMarker], entitlement_id~ : @model.Id[@model.EntitlementMarker])\n  DeleteTestEntitlement(application_id~ : @model.Id[@model.ApplicationMarker], entitlement_id~ : @model.Id[@model.EntitlementMarker])\n  ListSkus(application_id~ : @model.Id[@model.ApplicationMarker])\n  ListSkuSubscriptions(sku_id~ : @model.Id[@model.SkuMarker], query~ : String)\n  GetSkuSubscription(sku_id~ : @model.Id[@model.SkuMarker], subscription_id~ : @model.Id[@model.SubscriptionMarker])\n  GetCurrentUser\n  GetCurrentUserGuilds(query~ : String)\n  GetCurrentUserConnections\n  GetCurrentUserGuildMember(guild_id~ : @model.Id[@model.GuildMarker])\n  GetCurrentUserApplicationRoleConnection(application_id~ : @model.Id[@model.ApplicationMarker])\n  UpdateCurrentUserApplicationRoleConnection(application_id~ : @model.Id[@model.ApplicationMarker])\n  DeleteCurrentUserApplicationRoleConnection(application_id~ : @model.Id[@model.ApplicationMarker])\n  LeaveGuild(guild_id~ : @model.Id[@model.GuildMarker])\n  GetUser(user_id~ : @model.Id[@model.UserMarker])\n  ModifyCurrentUser\n  CreateDm\n  GetCurrentAuthorizationInformation\n  GetCurrentBotApplicationInformation\n  GetChannel(channel_id~ : @model.Id[@model.ChannelMarker])\n  ModifyChannel(channel_id~ : @model.Id[@model.ChannelMarker])\n  DeleteChannel(channel_id~ : @model.Id[@model.ChannelMarker])\n  GetChannelMessages(channel_id~ : @model.Id[@model.ChannelMarker], query~ : String)\n  GetChannelMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  CreateMessage(channel_id~ : @model.Id[@model.ChannelMarker])\n  EditMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  DeleteMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  BulkDeleteMessages(channel_id~ : @model.Id[@model.ChannelMarker])\n  CreateReaction(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker], emoji~ : String)\n  DeleteOwnReaction(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker], emoji~ : String)\n  DeleteUserReaction(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker], emoji~ : String, user_id~ : @model.Id[@model.UserMarker])\n  DeleteAllReactions(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  DeleteAllReactionsForEmoji(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker], emoji~ : String)\n  CrosspostMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  GetReactions(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker], emoji~ : String, query~ : String)\n  GetPollAnswerVoters(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker], answer_id~ : Int32, query~ : String)\n  ExpirePoll(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  SendSoundboardSound(channel_id~ : @model.Id[@model.ChannelMarker])\n  TriggerTypingIndicator(channel_id~ : @model.Id[@model.ChannelMarker])\n  PinMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  UnpinMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  GetChannelPins(channel_id~ : @model.Id[@model.ChannelMarker], query~ : String)\n  GetPinnedMessages(channel_id~ : @model.Id[@model.ChannelMarker])\n  EditChannelPermissions(channel_id~ : @model.Id[@model.ChannelMarker], overwrite_id~ : @model.Id[@model.GenericMarker])\n  DeleteChannelPermission(channel_id~ : @model.Id[@model.ChannelMarker], overwrite_id~ : @model.Id[@model.GenericMarker])\n  GetChannelMemberPermissions(channel_id~ : @model.Id[@model.ChannelMarker], user_id~ : @model.Id[@model.UserMarker], query~ : String)\n  GetChannelRolePermissions(channel_id~ : @model.Id[@model.ChannelMarker], role_id~ : @model.Id[@model.RoleMarker], query~ : String)\n  GetChannelInvites(channel_id~ : @model.Id[@model.ChannelMarker])\n  CreateChannelInvite(channel_id~ : @model.Id[@model.ChannelMarker])\n  FollowAnnouncementChannel(channel_id~ : @model.Id[@model.ChannelMarker])\n  SetVoiceChannelStatus(channel_id~ : @model.Id[@model.ChannelMarker])\n  GroupDmAddRecipient(channel_id~ : @model.Id[@model.ChannelMarker], user_id~ : @model.Id[@model.UserMarker])\n  GroupDmRemoveRecipient(channel_id~ : @model.Id[@model.ChannelMarker], user_id~ : @model.Id[@model.UserMarker])\n  CreateWebhook(channel_id~ : @model.Id[@model.ChannelMarker])\n  GetChannelWebhooks(channel_id~ : @model.Id[@model.ChannelMarker])\n  StartThreadFromMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  StartThreadWithoutMessage(channel_id~ : @model.Id[@model.ChannelMarker])\n  JoinThread(channel_id~ : @model.Id[@model.ChannelMarker])\n  LeaveThread(channel_id~ : @model.Id[@model.ChannelMarker])\n  ListThreadMembers(channel_id~ : @model.Id[@model.ChannelMarker], query~ : String)\n  GetThreadMember(channel_id~ : @model.Id[@model.ChannelMarker], user_id~ : @model.Id[@model.UserMarker], query~ : String)\n  AddThreadMember(channel_id~ : @model.Id[@model.ChannelMarker], user_id~ : @model.Id[@model.UserMarker])\n  RemoveThreadMember(channel_id~ : @model.Id[@model.ChannelMarker], user_id~ : @model.Id[@model.UserMarker])\n  ListPublicArchivedThreads(channel_id~ : @model.Id[@model.ChannelMarker], query~ : String)\n  ListPrivateArchivedThreads(channel_id~ : @model.Id[@model.ChannelMarker], query~ : String)\n  ListJoinedPrivateArchivedThreads(channel_id~ : @model.Id[@model.ChannelMarker], query~ : String)\n  ListActiveGuildThreads(guild_id~ : @model.Id[@model.GuildMarker])\n  SearchGuildMessages(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  GetGuild(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildWithCounts(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  ModifyGuild(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildPreview(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildChannels(guild_id~ : @model.Id[@model.GuildMarker])\n  CreateGuildChannel(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildChannelPositions(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildMember(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  GetGuildMemberPermissions(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  ListGuildMembers(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  SearchGuildMembers(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  ModifyGuildMember(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  ModifyCurrentMember(guild_id~ : @model.Id[@model.GuildMarker])\n  AddGuildMember(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  GetGuildRoles(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildRole(guild_id~ : @model.Id[@model.GuildMarker], role_id~ : @model.Id[@model.RoleMarker])\n  GetGuildRolePermissions(guild_id~ : @model.Id[@model.GuildMarker], role_id~ : @model.Id[@model.RoleMarker])\n  CreateGuildRole(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildRolePositions(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildRole(guild_id~ : @model.Id[@model.GuildMarker], role_id~ : @model.Id[@model.RoleMarker])\n  DeleteGuildRole(guild_id~ : @model.Id[@model.GuildMarker], role_id~ : @model.Id[@model.RoleMarker])\n  AddGuildMemberRole(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker], role_id~ : @model.Id[@model.RoleMarker])\n  RemoveGuildMemberRole(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker], role_id~ : @model.Id[@model.RoleMarker])\n  RemoveGuildMember(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  CreateGuildBan(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  RemoveGuildBan(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  GetGuildBan(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  GetGuildBans(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  BulkGuildBan(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildPruneCount(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  BeginGuildPrune(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildVoiceRegions(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildInvites(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildIntegrations(guild_id~ : @model.Id[@model.GuildMarker])\n  DeleteGuildIntegration(guild_id~ : @model.Id[@model.GuildMarker], integration_id~ : @model.Id[@model.IntegrationMarker])\n  GetGuildVanityUrl(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildWidgetSettings(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildWidget(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildWidget(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildWelcomeScreen(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildWelcomeScreen(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildOnboarding(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildOnboarding(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildIncidentActions(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildAuditLog(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  ListAutoModerationRules(guild_id~ : @model.Id[@model.GuildMarker])\n  GetAutoModerationRule(guild_id~ : @model.Id[@model.GuildMarker], rule_id~ : @model.Id[@model.AutoModerationRuleMarker])\n  CreateAutoModerationRule(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyAutoModerationRule(guild_id~ : @model.Id[@model.GuildMarker], rule_id~ : @model.Id[@model.AutoModerationRuleMarker])\n  DeleteAutoModerationRule(guild_id~ : @model.Id[@model.GuildMarker], rule_id~ : @model.Id[@model.AutoModerationRuleMarker])\n  ListGuildStickers(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildSticker(guild_id~ : @model.Id[@model.GuildMarker], sticker_id~ : @model.Id[@model.StickerMarker])\n  CreateGuildSticker(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildSticker(guild_id~ : @model.Id[@model.GuildMarker], sticker_id~ : @model.Id[@model.StickerMarker])\n  DeleteGuildSticker(guild_id~ : @model.Id[@model.GuildMarker], sticker_id~ : @model.Id[@model.StickerMarker])\n  ListGuildScheduledEvents(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  CreateGuildScheduledEvent(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildScheduledEvent(guild_id~ : @model.Id[@model.GuildMarker], event_id~ : @model.Id[@model.ScheduledEventMarker], query~ : String)\n  ModifyGuildScheduledEvent(guild_id~ : @model.Id[@model.GuildMarker], event_id~ : @model.Id[@model.ScheduledEventMarker])\n  DeleteGuildScheduledEvent(guild_id~ : @model.Id[@model.GuildMarker], event_id~ : @model.Id[@model.ScheduledEventMarker])\n  ListGuildScheduledEventUsers(guild_id~ : @model.Id[@model.GuildMarker], event_id~ : @model.Id[@model.ScheduledEventMarker], query~ : String)\n  ListGuildSoundboardSounds(guild_id~ : @model.Id[@model.GuildMarker])\n  CreateGuildSoundboardSound(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildSoundboardSound(guild_id~ : @model.Id[@model.GuildMarker], sound_id~ : @model.Id[@model.SoundboardSoundMarker])\n  ModifyGuildSoundboardSound(guild_id~ : @model.Id[@model.GuildMarker], sound_id~ : @model.Id[@model.SoundboardSoundMarker])\n  DeleteGuildSoundboardSound(guild_id~ : @model.Id[@model.GuildMarker], sound_id~ : @model.Id[@model.SoundboardSoundMarker])\n  GetGuildWebhooks(guild_id~ : @model.Id[@model.GuildMarker])\n  ListGuildEmojis(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildEmoji(guild_id~ : @model.Id[@model.GuildMarker], emoji_id~ : @model.Id[@model.EmojiMarker])\n  CreateGuildEmoji(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildEmoji(guild_id~ : @model.Id[@model.GuildMarker], emoji_id~ : @model.Id[@model.EmojiMarker])\n  DeleteGuildEmoji(guild_id~ : @model.Id[@model.GuildMarker], emoji_id~ : @model.Id[@model.EmojiMarker])\n  GetSticker(sticker_id~ : @model.Id[@model.StickerMarker])\n  ListStickerPacks\n  GetStickerPack(pack_id~ : @model.Id[@model.StickerPackMarker])\n  ListDefaultSoundboardSounds\n  ListVoiceRegions\n  GetCurrentUserVoiceState(guild_id~ : @model.Id[@model.GuildMarker])\n  GetUserVoiceState(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  ModifyCurrentUserVoiceState(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyUserVoiceState(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  GetGuildTemplate(template_code~ : String)\n  CreateGuildFromTemplate(template_code~ : String)\n  GetGuildTemplates(guild_id~ : @model.Id[@model.GuildMarker])\n  CreateGuildTemplate(guild_id~ : @model.Id[@model.GuildMarker])\n  SyncGuildTemplate(guild_id~ : @model.Id[@model.GuildMarker], template_code~ : String)\n  ModifyGuildTemplate(guild_id~ : @model.Id[@model.GuildMarker], template_code~ : String)\n  DeleteGuildTemplate(guild_id~ : @model.Id[@model.GuildMarker], template_code~ : String)\n  CreateStageInstance\n  GetStageInstance(channel_id~ : @model.Id[@model.ChannelMarker])\n  ModifyStageInstance(channel_id~ : @model.Id[@model.ChannelMarker])\n  DeleteStageInstance(channel_id~ : @model.Id[@model.ChannelMarker])\n  GetInvite(code~ : String, query~ : String)\n  DeleteInvite(code~ : String)\n  UpdateInviteTargetUsers(code~ : String)\n  GetInviteTargetUsersJobStatus(code~ : String)\n  AddInviteTargetUser(code~ : String, user_id~ : @model.Id[@model.UserMarker])\n  RemoveInviteTargetUser(code~ : String, user_id~ : @model.Id[@model.UserMarker])\n  BulkAddInviteTargetUsers(code~ : String)\n  BulkDeleteInviteTargetUsers(code~ : String)\n  GetWebhook(webhook_id~ : @model.Id[@model.WebhookMarker])\n  ModifyWebhook(webhook_id~ : @model.Id[@model.WebhookMarker])\n  DeleteWebhook(webhook_id~ : @model.Id[@model.WebhookMarker])\n  GetWebhookWithToken(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String)\n  ModifyWebhookWithToken(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String)\n  DeleteWebhookWithToken(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String)\n  ExecuteWebhook(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String, query~ : String)\n  ExecuteSlackCompatibleWebhook(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String, query~ : String)\n  ExecuteGithubCompatibleWebhook(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String, query~ : String)\n  GetWebhookMessage(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String, message_id~ : @model.Id[@model.MessageMarker], query~ : String)\n  EditWebhookMessage(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String, message_id~ : @model.Id[@model.MessageMarker], query~ : String)\n  DeleteWebhookMessage(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String, message_id~ : @model.Id[@model.MessageMarker], query~ : String)\n  CreateInteractionResponse(interaction_id~ : @model.Id[@model.InteractionMarker], token~ : String, query~ : String)\n  GetOriginalInteractionResponse(application_id~ : @model.Id[@model.ApplicationMarker], token~ : String)\n  EditOriginalInteractionResponse(application_id~ : @model.Id[@model.ApplicationMarker], token~ : String)\n  DeleteOriginalInteractionResponse(application_id~ : @model.Id[@model.ApplicationMarker], token~ : String)\n  CreateFollowupMessage(application_id~ : @model.Id[@model.ApplicationMarker], token~ : String)\n  GetFollowupMessage(application_id~ : @model.Id[@model.ApplicationMarker], token~ : String, message_id~ : @model.Id[@model.MessageMarker])\n  EditFollowupMessage(application_id~ : @model.Id[@model.ApplicationMarker], token~ : String, message_id~ : @model.Id[@model.MessageMarker])\n  DeleteFollowupMessage(application_id~ : @model.Id[@model.ApplicationMarker], token~ : String, message_id~ : @model.Id[@model.MessageMarker])\n  GetGlobalCommands(application_id~ : @model.Id[@model.ApplicationMarker], query~ : String)\n  CreateGlobalCommand(application_id~ : @model.Id[@model.ApplicationMarker])\n  GetGlobalCommand(application_id~ : @model.Id[@model.ApplicationMarker], command_id~ : @model.Id[@model.CommandMarker])\n  EditGlobalCommand(application_id~ : @model.Id[@model.ApplicationMarker], command_id~ : @model.Id[@model.CommandMarker])\n  DeleteGlobalCommand(application_id~ : @model.Id[@model.ApplicationMarker], command_id~ : @model.Id[@model.CommandMarker])\n  BulkOverwriteGlobalCommands(application_id~ : @model.Id[@model.ApplicationMarker])\n  GetGuildCommands(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  CreateGuildCommand(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildCommand(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker], command_id~ : @model.Id[@model.CommandMarker])\n  EditGuildCommand(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker], command_id~ : @model.Id[@model.CommandMarker])\n  DeleteGuildCommand(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker], command_id~ : @model.Id[@model.CommandMarker])\n  BulkOverwriteGuildCommands(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildApplicationCommandPermissions(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker])\n  GetApplicationCommandPermissions(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker], command_id~ : @model.Id[@model.CommandMarker])\n  EditApplicationCommandPermissions(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker], command_id~ : @model.Id[@model.CommandMarker])\n}",
+    signature: "pub(all) enum Route {\n  Custom(request_method~ : @gaato/http.Method, path~ : String, bucket_key~ : String, is_interaction~ : Bool, supports_reason~ : Bool)\n  GetGateway\n  GetGatewayBot\n  GetCurrentApplication\n  EditCurrentApplication\n  GetApplicationActivityInstance(application_id~ : @model.Id[@model.ApplicationMarker], instance_id~ : String)\n  UpdateApplicationIdentityProfile(application_id~ : @model.Id[@model.ApplicationMarker], user_id~ : @model.Id[@model.UserMarker], provider_issued_user_id~ : String)\n  GetApplicationIdentityProfile(application_id~ : @model.Id[@model.ApplicationMarker], user_id~ : @model.Id[@model.UserMarker], provider_issued_user_id~ : String)\n  GetApplicationIdentitiesByUserId(user_id~ : @model.Id[@model.UserMarker], application_id~ : @model.Id[@model.ApplicationMarker])\n  GetApplicationIdentitiesByExternalId(application_id~ : @model.Id[@model.ApplicationMarker], provider_type~ : String, provider_issued_user_id~ : String, query~ : String)\n  DeleteApplicationIdentity(user_id~ : @model.Id[@model.UserMarker], application_id~ : @model.Id[@model.ApplicationMarker], provider_type~ : String, provider_issued_user_id~ : String)\n  GetApplicationRoleConnectionMetadataRecords(application_id~ : @model.Id[@model.ApplicationMarker])\n  UpdateApplicationRoleConnectionMetadataRecords(application_id~ : @model.Id[@model.ApplicationMarker])\n  ListApplicationEmojis(application_id~ : @model.Id[@model.ApplicationMarker])\n  GetApplicationEmoji(application_id~ : @model.Id[@model.ApplicationMarker], emoji_id~ : @model.Id[@model.EmojiMarker])\n  CreateApplicationEmoji(application_id~ : @model.Id[@model.ApplicationMarker])\n  ModifyApplicationEmoji(application_id~ : @model.Id[@model.ApplicationMarker], emoji_id~ : @model.Id[@model.EmojiMarker])\n  DeleteApplicationEmoji(application_id~ : @model.Id[@model.ApplicationMarker], emoji_id~ : @model.Id[@model.EmojiMarker])\n  ListEntitlements(application_id~ : @model.Id[@model.ApplicationMarker], query~ : String)\n  GetEntitlement(application_id~ : @model.Id[@model.ApplicationMarker], entitlement_id~ : @model.Id[@model.EntitlementMarker])\n  CreateTestEntitlement(application_id~ : @model.Id[@model.ApplicationMarker])\n  ConsumeEntitlement(application_id~ : @model.Id[@model.ApplicationMarker], entitlement_id~ : @model.Id[@model.EntitlementMarker])\n  DeleteTestEntitlement(application_id~ : @model.Id[@model.ApplicationMarker], entitlement_id~ : @model.Id[@model.EntitlementMarker])\n  ListSkus(application_id~ : @model.Id[@model.ApplicationMarker])\n  ListSkuSubscriptions(sku_id~ : @model.Id[@model.SkuMarker], query~ : String)\n  GetSkuSubscription(sku_id~ : @model.Id[@model.SkuMarker], subscription_id~ : @model.Id[@model.SubscriptionMarker])\n  GetCurrentUser\n  GetCurrentUserGuilds(query~ : String)\n  GetCurrentUserConnections\n  GetCurrentUserGuildMember(guild_id~ : @model.Id[@model.GuildMarker])\n  GetCurrentUserApplicationRoleConnection(application_id~ : @model.Id[@model.ApplicationMarker])\n  UpdateCurrentUserApplicationRoleConnection(application_id~ : @model.Id[@model.ApplicationMarker])\n  DeleteCurrentUserApplicationRoleConnection(application_id~ : @model.Id[@model.ApplicationMarker])\n  LeaveGuild(guild_id~ : @model.Id[@model.GuildMarker])\n  GetUser(user_id~ : @model.Id[@model.UserMarker])\n  ModifyCurrentUser\n  CreateDm\n  GetCurrentAuthorizationInformation\n  GetCurrentBotApplicationInformation\n  GetChannel(channel_id~ : @model.Id[@model.ChannelMarker])\n  ModifyChannel(channel_id~ : @model.Id[@model.ChannelMarker])\n  DeleteChannel(channel_id~ : @model.Id[@model.ChannelMarker])\n  GetChannelMessages(channel_id~ : @model.Id[@model.ChannelMarker], query~ : String)\n  GetChannelMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  CreateMessage(channel_id~ : @model.Id[@model.ChannelMarker])\n  EditMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  DeleteMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  BulkDeleteMessages(channel_id~ : @model.Id[@model.ChannelMarker])\n  CreateReaction(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker], emoji~ : String)\n  DeleteOwnReaction(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker], emoji~ : String)\n  DeleteUserReaction(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker], emoji~ : String, user_id~ : @model.Id[@model.UserMarker])\n  DeleteAllReactions(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  DeleteAllReactionsForEmoji(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker], emoji~ : String)\n  CrosspostMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  GetReactions(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker], emoji~ : String, query~ : String)\n  GetPollAnswerVoters(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker], answer_id~ : Int32, query~ : String)\n  ExpirePoll(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  SendSoundboardSound(channel_id~ : @model.Id[@model.ChannelMarker])\n  TriggerTypingIndicator(channel_id~ : @model.Id[@model.ChannelMarker])\n  PinMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  UnpinMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  GetChannelPins(channel_id~ : @model.Id[@model.ChannelMarker], query~ : String)\n  GetPinnedMessages(channel_id~ : @model.Id[@model.ChannelMarker])\n  EditChannelPermissions(channel_id~ : @model.Id[@model.ChannelMarker], overwrite_id~ : @model.Id[@model.GenericMarker])\n  DeleteChannelPermission(channel_id~ : @model.Id[@model.ChannelMarker], overwrite_id~ : @model.Id[@model.GenericMarker])\n  GetChannelMemberPermissions(channel_id~ : @model.Id[@model.ChannelMarker], user_id~ : @model.Id[@model.UserMarker], query~ : String)\n  GetChannelRolePermissions(channel_id~ : @model.Id[@model.ChannelMarker], role_id~ : @model.Id[@model.RoleMarker], query~ : String)\n  GetChannelInvites(channel_id~ : @model.Id[@model.ChannelMarker])\n  CreateChannelInvite(channel_id~ : @model.Id[@model.ChannelMarker])\n  FollowAnnouncementChannel(channel_id~ : @model.Id[@model.ChannelMarker])\n  SetVoiceChannelStatus(channel_id~ : @model.Id[@model.ChannelMarker])\n  GroupDmAddRecipient(channel_id~ : @model.Id[@model.ChannelMarker], user_id~ : @model.Id[@model.UserMarker])\n  GroupDmRemoveRecipient(channel_id~ : @model.Id[@model.ChannelMarker], user_id~ : @model.Id[@model.UserMarker])\n  CreateWebhook(channel_id~ : @model.Id[@model.ChannelMarker])\n  GetChannelWebhooks(channel_id~ : @model.Id[@model.ChannelMarker])\n  StartThreadFromMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  StartThreadWithoutMessage(channel_id~ : @model.Id[@model.ChannelMarker])\n  JoinThread(channel_id~ : @model.Id[@model.ChannelMarker])\n  LeaveThread(channel_id~ : @model.Id[@model.ChannelMarker])\n  ListThreadMembers(channel_id~ : @model.Id[@model.ChannelMarker], query~ : String)\n  GetThreadMember(channel_id~ : @model.Id[@model.ChannelMarker], user_id~ : @model.Id[@model.UserMarker], query~ : String)\n  AddThreadMember(channel_id~ : @model.Id[@model.ChannelMarker], user_id~ : @model.Id[@model.UserMarker])\n  RemoveThreadMember(channel_id~ : @model.Id[@model.ChannelMarker], user_id~ : @model.Id[@model.UserMarker])\n  ListPublicArchivedThreads(channel_id~ : @model.Id[@model.ChannelMarker], query~ : String)\n  ListPrivateArchivedThreads(channel_id~ : @model.Id[@model.ChannelMarker], query~ : String)\n  ListJoinedPrivateArchivedThreads(channel_id~ : @model.Id[@model.ChannelMarker], query~ : String)\n  ListActiveGuildThreads(guild_id~ : @model.Id[@model.GuildMarker])\n  SearchGuildMessages(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  GetGuild(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildWithCounts(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  ModifyGuild(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildPreview(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildChannels(guild_id~ : @model.Id[@model.GuildMarker])\n  CreateGuildChannel(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildChannelPositions(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildMember(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  GetGuildMemberPermissions(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  ListGuildMembers(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  SearchGuildMembers(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  ModifyGuildMember(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  ModifyCurrentMember(guild_id~ : @model.Id[@model.GuildMarker])\n  AddGuildMember(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  GetGuildRoles(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildRole(guild_id~ : @model.Id[@model.GuildMarker], role_id~ : @model.Id[@model.RoleMarker])\n  GetGuildRolePermissions(guild_id~ : @model.Id[@model.GuildMarker], role_id~ : @model.Id[@model.RoleMarker])\n  CreateGuildRole(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildRolePositions(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildRole(guild_id~ : @model.Id[@model.GuildMarker], role_id~ : @model.Id[@model.RoleMarker])\n  DeleteGuildRole(guild_id~ : @model.Id[@model.GuildMarker], role_id~ : @model.Id[@model.RoleMarker])\n  AddGuildMemberRole(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker], role_id~ : @model.Id[@model.RoleMarker])\n  RemoveGuildMemberRole(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker], role_id~ : @model.Id[@model.RoleMarker])\n  RemoveGuildMember(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  CreateGuildBan(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  RemoveGuildBan(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  GetGuildBan(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  GetGuildBans(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  BulkGuildBan(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildPruneCount(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  BeginGuildPrune(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildVoiceRegions(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildInvites(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildIntegrations(guild_id~ : @model.Id[@model.GuildMarker])\n  DeleteGuildIntegration(guild_id~ : @model.Id[@model.GuildMarker], integration_id~ : @model.Id[@model.IntegrationMarker])\n  GetGuildVanityUrl(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildWidgetSettings(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildWidget(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildWidget(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildWelcomeScreen(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildWelcomeScreen(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildOnboarding(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildOnboarding(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildIncidentActions(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildAuditLog(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  ListAutoModerationRules(guild_id~ : @model.Id[@model.GuildMarker])\n  GetAutoModerationRule(guild_id~ : @model.Id[@model.GuildMarker], rule_id~ : @model.Id[@model.AutoModerationRuleMarker])\n  CreateAutoModerationRule(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyAutoModerationRule(guild_id~ : @model.Id[@model.GuildMarker], rule_id~ : @model.Id[@model.AutoModerationRuleMarker])\n  DeleteAutoModerationRule(guild_id~ : @model.Id[@model.GuildMarker], rule_id~ : @model.Id[@model.AutoModerationRuleMarker])\n  ListGuildStickers(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildSticker(guild_id~ : @model.Id[@model.GuildMarker], sticker_id~ : @model.Id[@model.StickerMarker])\n  CreateGuildSticker(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildSticker(guild_id~ : @model.Id[@model.GuildMarker], sticker_id~ : @model.Id[@model.StickerMarker])\n  DeleteGuildSticker(guild_id~ : @model.Id[@model.GuildMarker], sticker_id~ : @model.Id[@model.StickerMarker])\n  ListGuildScheduledEvents(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  CreateGuildScheduledEvent(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildScheduledEvent(guild_id~ : @model.Id[@model.GuildMarker], event_id~ : @model.Id[@model.ScheduledEventMarker], query~ : String)\n  ModifyGuildScheduledEvent(guild_id~ : @model.Id[@model.GuildMarker], event_id~ : @model.Id[@model.ScheduledEventMarker])\n  DeleteGuildScheduledEvent(guild_id~ : @model.Id[@model.GuildMarker], event_id~ : @model.Id[@model.ScheduledEventMarker])\n  ListGuildScheduledEventUsers(guild_id~ : @model.Id[@model.GuildMarker], event_id~ : @model.Id[@model.ScheduledEventMarker], query~ : String)\n  ListGuildSoundboardSounds(guild_id~ : @model.Id[@model.GuildMarker])\n  CreateGuildSoundboardSound(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildSoundboardSound(guild_id~ : @model.Id[@model.GuildMarker], sound_id~ : @model.Id[@model.SoundboardSoundMarker])\n  ModifyGuildSoundboardSound(guild_id~ : @model.Id[@model.GuildMarker], sound_id~ : @model.Id[@model.SoundboardSoundMarker])\n  DeleteGuildSoundboardSound(guild_id~ : @model.Id[@model.GuildMarker], sound_id~ : @model.Id[@model.SoundboardSoundMarker])\n  GetGuildWebhooks(guild_id~ : @model.Id[@model.GuildMarker])\n  ListGuildEmojis(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildEmoji(guild_id~ : @model.Id[@model.GuildMarker], emoji_id~ : @model.Id[@model.EmojiMarker])\n  CreateGuildEmoji(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildEmoji(guild_id~ : @model.Id[@model.GuildMarker], emoji_id~ : @model.Id[@model.EmojiMarker])\n  DeleteGuildEmoji(guild_id~ : @model.Id[@model.GuildMarker], emoji_id~ : @model.Id[@model.EmojiMarker])\n  GetSticker(sticker_id~ : @model.Id[@model.StickerMarker])\n  ListStickerPacks\n  GetStickerPack(pack_id~ : @model.Id[@model.StickerPackMarker])\n  ListDefaultSoundboardSounds\n  ListVoiceRegions\n  GetCurrentUserVoiceState(guild_id~ : @model.Id[@model.GuildMarker])\n  GetUserVoiceState(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  ModifyCurrentUserVoiceState(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyUserVoiceState(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  GetGuildTemplate(template_code~ : String)\n  CreateGuildFromTemplate(template_code~ : String)\n  GetGuildTemplates(guild_id~ : @model.Id[@model.GuildMarker])\n  CreateGuildTemplate(guild_id~ : @model.Id[@model.GuildMarker])\n  SyncGuildTemplate(guild_id~ : @model.Id[@model.GuildMarker], template_code~ : String)\n  ModifyGuildTemplate(guild_id~ : @model.Id[@model.GuildMarker], template_code~ : String)\n  DeleteGuildTemplate(guild_id~ : @model.Id[@model.GuildMarker], template_code~ : String)\n  CreateStageInstance\n  GetStageInstance(channel_id~ : @model.Id[@model.ChannelMarker])\n  ModifyStageInstance(channel_id~ : @model.Id[@model.ChannelMarker])\n  DeleteStageInstance(channel_id~ : @model.Id[@model.ChannelMarker])\n  GetInvite(code~ : String, query~ : String)\n  DeleteInvite(code~ : String)\n  UpdateInviteTargetUsers(code~ : String)\n  GetInviteTargetUsersJobStatus(code~ : String)\n  AddInviteTargetUser(code~ : String, user_id~ : @model.Id[@model.UserMarker])\n  RemoveInviteTargetUser(code~ : String, user_id~ : @model.Id[@model.UserMarker])\n  BulkAddInviteTargetUsers(code~ : String)\n  BulkDeleteInviteTargetUsers(code~ : String)\n  GetWebhook(webhook_id~ : @model.Id[@model.WebhookMarker])\n  ModifyWebhook(webhook_id~ : @model.Id[@model.WebhookMarker])\n  DeleteWebhook(webhook_id~ : @model.Id[@model.WebhookMarker])\n  GetWebhookWithToken(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String)\n  ModifyWebhookWithToken(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String)\n  DeleteWebhookWithToken(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String)\n  ExecuteWebhook(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String, query~ : String)\n  ExecuteSlackCompatibleWebhook(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String, query~ : String)\n  ExecuteGithubCompatibleWebhook(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String, query~ : String)\n  GetWebhookMessage(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String, message_id~ : @model.Id[@model.MessageMarker], query~ : String)\n  EditWebhookMessage(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String, message_id~ : @model.Id[@model.MessageMarker], query~ : String)\n  DeleteWebhookMessage(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String, message_id~ : @model.Id[@model.MessageMarker], query~ : String)\n  CreateInteractionResponse(interaction_id~ : @model.Id[@model.InteractionMarker], token~ : String, query~ : String)\n  GetOriginalInteractionResponse(application_id~ : @model.Id[@model.ApplicationMarker], token~ : String)\n  EditOriginalInteractionResponse(application_id~ : @model.Id[@model.ApplicationMarker], token~ : String)\n  DeleteOriginalInteractionResponse(application_id~ : @model.Id[@model.ApplicationMarker], token~ : String)\n  CreateFollowupMessage(application_id~ : @model.Id[@model.ApplicationMarker], token~ : String)\n  GetFollowupMessage(application_id~ : @model.Id[@model.ApplicationMarker], token~ : String, message_id~ : @model.Id[@model.MessageMarker])\n  EditFollowupMessage(application_id~ : @model.Id[@model.ApplicationMarker], token~ : String, message_id~ : @model.Id[@model.MessageMarker])\n  DeleteFollowupMessage(application_id~ : @model.Id[@model.ApplicationMarker], token~ : String, message_id~ : @model.Id[@model.MessageMarker])\n  GetGlobalCommands(application_id~ : @model.Id[@model.ApplicationMarker], query~ : String)\n  CreateGlobalCommand(application_id~ : @model.Id[@model.ApplicationMarker])\n  GetGlobalCommand(application_id~ : @model.Id[@model.ApplicationMarker], command_id~ : @model.Id[@model.CommandMarker])\n  EditGlobalCommand(application_id~ : @model.Id[@model.ApplicationMarker], command_id~ : @model.Id[@model.CommandMarker])\n  DeleteGlobalCommand(application_id~ : @model.Id[@model.ApplicationMarker], command_id~ : @model.Id[@model.CommandMarker])\n  BulkOverwriteGlobalCommands(application_id~ : @model.Id[@model.ApplicationMarker])\n  GetGuildCommands(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  CreateGuildCommand(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildCommand(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker], command_id~ : @model.Id[@model.CommandMarker])\n  EditGuildCommand(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker], command_id~ : @model.Id[@model.CommandMarker])\n  DeleteGuildCommand(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker], command_id~ : @model.Id[@model.CommandMarker])\n  BulkOverwriteGuildCommands(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildApplicationCommandPermissions(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker])\n  GetApplicationCommandPermissions(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker], command_id~ : @model.Id[@model.CommandMarker])\n  EditApplicationCommandPermissions(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker], command_id~ : @model.Id[@model.CommandMarker])\n}",
     doc: "One variant per Discord REST endpoint. A route knows its HTTP method, its\nconcrete path (including query string), and its rate-limit bucket key\n(path template with major parameters kept and minor ones squashed).\nFree-form string segments (emoji, invite/template codes, external\nidentity ids) are held raw and percent-encoded by `Route::path`.",
     file: "discord/src/http/route.mbt",
     line: 19,
@@ -10142,7 +10160,7 @@ let entries_5 : Array[ApiEntry] = [
     pkg: "gaato/discord/http",
     name: "Route::custom",
     kind: "fn",
-    signature: "pub fn Route::custom(request_method~ : @moonbitlang/async/http.RequestMethod, path~ : String, bucket? : String, is_interaction? : Bool, supports_reason? : Bool) -> Self raise CustomRouteError",
+    signature: "pub fn Route::custom(request_method~ : @gaato/http.Method, path~ : String, bucket? : String, is_interaction? : Bool, supports_reason? : Bool) -> Self raise CustomRouteError",
     doc: "Construct a route for a Discord REST endpoint without a typed wrapper.\n\n`path` is relative to the configured API base and must start with `/`; it\nmay include a query string. When `bucket` is omitted, the rate limiter uses\na custom-route namespace plus the HTTP method and query-free concrete path.\nSupply a bucket explicitly to group minor resource IDs, for example\n`PATCH:/guilds/123/auto-moderation/rules/{}`.\n\nSet `is_interaction=true` only for interaction or webhook-token endpoints:\nthese skip the global rate limit and omit bot-token authentication.\n\n```mbt\ntest \"derive stable metadata for a custom route\" {\n  let route = @http.Route::custom(\n    request_method=Get,\n    path=\"/guilds/100/stickers?limit=25\",\n  )\n  inspect(route.path(), content=\"/guilds/100/stickers?limit=25\")\n  inspect(route.bucket(), content=\"CUSTOM:GET:/guilds/100/stickers\")\n  assert_true(route.needs_auth())\n}\n```",
     file: "discord/src/http/route.mbt",
     line: 533,
@@ -10160,7 +10178,7 @@ let entries_5 : Array[ApiEntry] = [
     pkg: "gaato/discord/http",
     name: "Route::method_",
     kind: "fn",
-    signature: "pub fn Route::method_(Self) -> @moonbitlang/async/http.RequestMethod",
+    signature: "pub fn Route::method_(Self) -> @gaato/http.Method",
     doc: "The HTTP method this route is requested with.",
     file: "discord/src/http/route.mbt",
     line: 561,
@@ -10232,7 +10250,7 @@ let entries_5 : Array[ApiEntry] = [
     pkg: "gaato/discord/http",
     name: "ScheduledEventRef::users",
     kind: "fn",
-    signature: "pub fn ScheduledEventRef::users(Self, with_member? : Bool, before? : @model.Id[@model.UserMarker], after? : @model.Id[@model.UserMarker], page_size? : Int32) -> @sdk-runtime.Paginator[@model.GuildScheduledEventUser, DiscordHttpError] raise DiscordHttpError",
+    signature: "pub fn ScheduledEventRef::users(Self, with_member? : Bool, before? : @model.Id[@model.UserMarker], after? : @model.Id[@model.UserMarker], page_size? : Int32) -> Paginator[@model.GuildScheduledEventUser] raise DiscordHttpError",
     doc: "Paginate users interested in this scheduled event.",
     file: "discord/src/http/handles_guild_assets.mbt",
     line: 546,
@@ -10439,10 +10457,10 @@ let entries_5 : Array[ApiEntry] = [
     pkg: "gaato/discord/http",
     name: "VERSION",
     kind: "const",
-    signature: "pub const VERSION : String = \"0.14.0\"",
+    signature: "pub const VERSION : String = \"0.15.0\"",
     doc: "Library version, sent in the User-Agent header.",
     file: "discord/src/http/client.mbt",
-    line: 33,
+    line: 34,
   },
   {
     pkg: "gaato/discord/http",
@@ -10613,7 +10631,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub fn encode_multipart_body(String, Array[FileUpload]) -> (String, Array[Bytes]) raise DiscordHttpError",
     doc: "Encode an interaction-callback `multipart/form-data` body: the\n`payload_json` part followed by one `files[n]` part per file, in the same\nwire format as the REST upload path. Returns the `Content-Type` value\n(including the boundary) and the ordered wire chunks; each file's bytes\nare a chunk of their own, not copied, so a host can stream the reply by\nwriting the chunks in order.\nFilenames are validated like the REST upload path.\n\n```mbt\ntest \"keep uploaded bytes as a multipart blob chunk\" {\n  let content = b\"hello\"\n  let (content_type, chunks) = @http.encode_multipart_body(\"{\\\"type\\\":4}\", [\n    FileUpload(\"hello.txt\", content, content_type=\"text/plain\"),\n  ])\n  assert_true(content_type.has_prefix(\"multipart/form-data; boundary=\"))\n  match chunks {\n    [payload_header, payload, file_header, bytes, trailer] => {\n      assert_true(@utf8.decode_lossy(payload_header).contains(\"payload_json\"))\n      assert_eq(payload, b\"{\\\"type\\\":4}\")\n      assert_true(@utf8.decode_lossy(file_header).contains(\"files[0]\"))\n      assert_true(physical_equal(bytes, content))\n      assert_true(@utf8.decode_lossy(trailer).has_suffix(\"--\\r\\n\"))\n    }\n    _ => fail(\"unexpected multipart chunk layout\")\n  }\n}\n```",
     file: "discord/src/http/multipart.mbt",
-    line: 281,
+    line: 283,
   },
   {
     pkg: "gaato/discord/interaction",
@@ -10804,6 +10822,10 @@ let entries_5 : Array[ApiEntry] = [
     file: "discord/src/interaction/args.mbt",
     line: 503,
   },
+]
+
+///|
+let entries_6 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/interaction",
     name: "ArgsDecodeError",
@@ -10822,10 +10844,6 @@ let entries_5 : Array[ApiEntry] = [
     file: "discord/src/interaction/args.mbt",
     line: 18,
   },
-]
-
-///|
-let entries_6 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/interaction",
     name: "CommandModel",
@@ -12608,6 +12626,10 @@ let entries_6 : Array[ApiEntry] = [
     file: "discord/src/model/application_identity.mbt",
     line: 121,
   },
+]
+
+///|
+let entries_7 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "ApplicationIdentityProfileData::to_json",
@@ -12626,10 +12648,6 @@ let entries_6 : Array[ApiEntry] = [
     file: "discord/src/model/application_identity.mbt",
     line: 4,
   },
-]
-
-///|
-let entries_7 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "ApplicationIdentityProfileMedia::to_json",
@@ -14412,6 +14430,10 @@ let entries_7 : Array[ApiEntry] = [
     file: "discord/src/model/activity_instance.mbt",
     line: 1,
   },
+]
+
+///|
+let entries_8 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "EmbedField",
@@ -14430,10 +14452,6 @@ let entries_7 : Array[ApiEntry] = [
     file: "discord/src/model/embed.mbt",
     line: 356,
   },
-]
-
-///|
-let entries_8 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "EmbedField::to_json",
@@ -16216,6 +16234,10 @@ let entries_8 : Array[ApiEntry] = [
     file: "discord/src/model/activity_instance.mbt",
     line: 1,
   },
+]
+
+///|
+let entries_9 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "GuildTemplateRole",
@@ -16234,10 +16256,6 @@ let entries_8 : Array[ApiEntry] = [
     file: "discord/src/model/activity_instance.mbt",
     line: 1,
   },
-]
-
-///|
-let entries_9 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "GuildTemplateSource",
@@ -18020,6 +18038,10 @@ let entries_9 : Array[ApiEntry] = [
     file: "discord/src/model/message_event.mbt",
     line: 34,
   },
+]
+
+///|
+let entries_10 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "MfaLevel",
@@ -18038,10 +18060,6 @@ let entries_9 : Array[ApiEntry] = [
     file: "discord/src/model/guild.mbt",
     line: 260,
   },
-]
-
-///|
-let entries_10 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "MfaLevel::to_int",
@@ -19824,6 +19842,10 @@ let entries_10 : Array[ApiEntry] = [
     file: "discord/src/model/monetization.mbt",
     line: 275,
   },
+]
+
+///|
+let entries_11 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "SkuFlags::none",
@@ -19842,10 +19864,6 @@ let entries_10 : Array[ApiEntry] = [
     file: "discord/src/model/activity_instance.mbt",
     line: 1,
   },
-]
-
-///|
-let entries_11 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "SkuFlags::user_subscription",
@@ -21628,6 +21646,10 @@ let entries_11 : Array[ApiEntry] = [
     file: "discord/src/model/activity_instance.mbt",
     line: 1,
   },
+]
+
+///|
+let entries_12 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "WebhookType",
@@ -21646,10 +21668,6 @@ let entries_11 : Array[ApiEntry] = [
     file: "discord/src/model/webhook.mbt",
     line: 43,
   },
-]
-
-///|
-let entries_12 : Array[ApiEntry] = [
   {
     pkg: "gaato/discord/model",
     name: "WebhookType::to_int",
@@ -21825,7 +21843,7 @@ let entries_12 : Array[ApiEntry] = [
     pkg: "gaato/discord/queue",
     name: "InMemoryQueue::InMemoryQueue",
     kind: "fn",
-    signature: "pub fn InMemoryQueue::InMemoryQueue(max_concurrency? : Int32, spacing_ms? : Int32, clock? : &@clock.Clock) -> Self",
+    signature: "pub fn InMemoryQueue::InMemoryQueue(max_concurrency? : Int32, spacing_ms? : Int32, clock? : &@rt.Clock) -> Self",
     doc: "Create a queue with `max_concurrency` identify buckets (the value Discord\nreports in `GET /gateway/bot`), spacing identifies within each bucket by\n`spacing_ms`.",
     file: "discord/src/queue/queue.mbt",
     line: 31,
@@ -21852,8 +21870,8 @@ let entries_12 : Array[ApiEntry] = [
     pkg: "gaato/discord/ratelimit",
     name: "rate_limiter",
     kind: "fn",
-    signature: "pub fn rate_limiter(global_limit? : Int32, clock? : &@clock.Clock) -> @sdk-runtime.WindowLimiter",
-    doc: "REST rate limiting through sdk-runtime's requester-driven `RateLimiter`\ncontract. Each completed acquire is paired with a release carrying response\nheaders, or status 0 when no response arrived. `rate_limiter()` configures\n`WindowLimiter` for Discord; `coordinator` offers the cross-process\n`RemoteRateLimiter` through the same contract.\n\nDiscord's REST rate limiter:\n\n- per-bucket accounting from `x-ratelimit-remaining` /\n  `x-ratelimit-reset-after`, with one request in flight per route bucket;\n- routes that Discord counts in one bucket share that accounting: a\n  response's `x-ratelimit-bucket` hash, together with the route's major\n  parameter (its channel, guild, or webhook), names the state that every\n  route answered with it reads and updates (`server_key`);\n- a global window of `global_limit` requests per second, skipped for\n  interaction and webhook routes;\n- a 429 empties its bucket until its `Retry-After`; one with\n  `x-ratelimit-scope: global` or `x-ratelimit-global` blocks every\n  non-exempt bucket instead, and one with `x-ratelimit-scope: shared`\n  (a resource's limit, which Discord does not hold against the bot) only\n  records the bucket's headers;\n- a 429 that is not Discord's rate limit (`is_discord_rate_limit`) says\n  nothing about which bucket to hold, while every further invalid request\n  counts towards the address's limit: it blocks every non-exempt bucket\n  too;\n- one second for a 429 without `Retry-After`.",
+    signature: "pub fn rate_limiter(global_limit? : Int32, clock? : &@rt.Clock) -> @gaato/mttp/client/ratelimit.WindowLimiter",
+    doc: "REST rate limiting through mttp's requester-driven `RateLimiter`\ncontract. Each completed acquire returns an Admission paired with a release\ncarrying response headers, or status 0 when no response heads arrived. `rate_limiter()` configures\n`WindowLimiter` for Discord; `coordinator` offers the cross-process\n`RemoteRateLimiter` through the same contract.\n\nDiscord's REST rate limiter:\n\n- per-bucket accounting from `x-ratelimit-remaining` /\n  `x-ratelimit-reset-after`, with one request in flight per route bucket;\n- routes that Discord counts in one bucket share that accounting: a\n  response's `x-ratelimit-bucket` hash, together with the route's major\n  parameter (its channel, guild, or webhook), names the state that every\n  route answered with it reads and updates (`server_key`);\n- a global window of `global_limit` requests per second, skipped for\n  interaction and webhook routes;\n- a 429 empties its bucket until its `Retry-After`; one with\n  `x-ratelimit-scope: global` or `x-ratelimit-global` blocks every\n  non-exempt bucket instead, and one with `x-ratelimit-scope: shared`\n  (a resource's limit, which Discord does not hold against the bot) only\n  records the bucket's headers;\n- a 429 that is not Discord's rate limit (`is_discord_rate_limit`) says\n  nothing about which bucket to hold, while every further invalid request\n  counts towards the address's limit: it blocks every non-exempt bucket\n  too;\n- one second for a 429 without `Retry-After`.",
     file: "discord/src/ratelimit/ratelimit.mbt",
     line: 28,
   },

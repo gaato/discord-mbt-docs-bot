@@ -13,7 +13,7 @@ async fn main {
   let docs_out = argv.get(2).unwrap_or("src/docs/index_generated.mbt")
   let api_out = argv.get(3).unwrap_or("src/api/index_generated.mbt")
   let version = parse_module_version(
-    @fs.read_file("\{lib_root}/\{MODULE_DIR}/moon.mod").text(),
+    @fs.read_text("\{lib_root}/\{MODULE_DIR}/moon.mod"),
   )
   let files = @fs.readdir(guide_dir).filter(is_chapter_file)
   // String's Compare is shortlex (length first), so sort lexicographically
@@ -21,10 +21,10 @@ async fn main {
   files.sort_by(String::lexical_compare)
   let sections = []
   for file in files {
-    let content = @fs.read_file("\{guide_dir}/\{file}").text()
+    let content = @fs.read_text("\{guide_dir}/\{file}")
     sections.append(parse_chapter(file, content))
   }
-  @fs.write_file(
+  @fs.write_text(
     docs_out,
     render(sections, version),
     create_mode=CreateOrTruncate,
@@ -33,7 +33,7 @@ async fn main {
     "wrote \{sections.length()} guide sections of discord \{version} to \{docs_out}",
   )
   let api_index = load_api_index(lib_root)
-  @fs.write_file(
+  @fs.write_text(
     api_out,
     render_api(api_index.entries),
     create_mode=CreateOrTruncate,
@@ -246,7 +246,7 @@ async fn load_api_index(lib_root : String) -> ApiIndex {
   let mut package_count = 0
   let mut mismatches = 0
   for mbti_file in mbti_files {
-    let content = @fs.read_file("\{lib_root}/\{mbti_file}").text()
+    let content = @fs.read_text("\{lib_root}/\{mbti_file}")
     let pkg = parse_package_name(content)
     let short_name = package_alias(pkg)
     match aliases.get(short_name) {
@@ -534,7 +534,7 @@ async fn load_source_docs(
   let docs : Map[String, SourceDoc] = Map([])
   for file in source_files {
     let relative = "\{source_dir}/\{file}"
-    let content = @fs.read_file("\{lib_root}/\{relative}").text()
+    let content = @fs.read_text("\{lib_root}/\{relative}")
     let lines = content.split("\n").map(line => line.to_owned()).to_array()
     let pending : Array[String] = []
     let mut active = false
