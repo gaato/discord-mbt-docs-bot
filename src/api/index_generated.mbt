@@ -3948,18 +3948,18 @@ let entries_2 : Array[ApiEntry] = [
     name: "InMemoryCache::channel",
     kind: "fn",
     signature: "pub fn InMemoryCache::channel(Self, @model.Id[@model.ChannelMarker]) -> @model.Channel?",
-    doc: "The cached channel or thread, if retained.",
+    doc: "The cached channel or thread, if retained.\n\nA guild channel the bot cannot view is cached as Discord sent it:\nobfuscated (`Channel::is_obfuscated`), with only `id`, `typ`, `position`\nand `parent_id` reliable. The `CHANNEL_UPDATE` Discord sends when the bot\ngains access replaces it with the full channel.",
     file: "discord/src/cache/cache.mbt",
-    line: 1360,
+    line: 1365,
   },
   {
     pkg: "gaato/discord/cache",
     name: "InMemoryCache::channels",
     kind: "fn",
     signature: "pub fn InMemoryCache::channels(Self) -> Array[@model.Channel]",
-    doc: "All cached channels and threads.",
+    doc: "All cached channels and threads, including obfuscated ones (see\n`InMemoryCache::channel`).",
     file: "discord/src/cache/cache.mbt",
-    line: 1370,
+    line: 1376,
   },
   {
     pkg: "gaato/discord/cache",
@@ -3977,7 +3977,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn InMemoryCache::guild_member(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker]) -> @model.GuildMember?",
     doc: "The cached guild member, if retained.",
     file: "discord/src/cache/cache.mbt",
-    line: 1400,
+    line: 1406,
   },
   {
     pkg: "gaato/discord/cache",
@@ -4004,7 +4004,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn InMemoryCache::members(Self, @model.Id[@model.GuildMarker]) -> Array[@model.GuildMember]",
     doc: "All cached members of a guild (only members seen in events unless\nthe privileged `GUILD_MEMBERS` intent fills the cache).",
     file: "discord/src/cache/cache.mbt",
-    line: 1412,
+    line: 1418,
   },
   {
     pkg: "gaato/discord/cache",
@@ -4013,7 +4013,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn InMemoryCache::message(Self, @model.Id[@model.ChannelMarker], @model.Id[@model.MessageMarker]) -> @model.Message?",
     doc: "The cached message, if still retained.",
     file: "discord/src/cache/cache.mbt",
-    line: 1481,
+    line: 1487,
   },
   {
     pkg: "gaato/discord/cache",
@@ -4022,7 +4022,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn InMemoryCache::messages(Self, @model.Id[@model.ChannelMarker]) -> Array[@model.Message]",
     doc: "Cached messages of a channel, oldest first, capped by the messages limit.",
     file: "discord/src/cache/cache.mbt",
-    line: 1492,
+    line: 1498,
   },
   {
     pkg: "gaato/discord/cache",
@@ -4031,16 +4031,16 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn InMemoryCache::permissions(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker]) -> @model.Permissions?",
     doc: "Computes guild-level permissions from the cached guild, member, and roles.",
     file: "discord/src/cache/cache.mbt",
-    line: 1502,
+    line: 1508,
   },
   {
     pkg: "gaato/discord/cache",
     name: "InMemoryCache::permissions_in",
     kind: "fn",
     signature: "pub fn InMemoryCache::permissions_in(Self, @model.Id[@model.GuildMarker], @model.Id[@model.ChannelMarker], @model.Id[@model.UserMarker]) -> @model.Permissions?",
-    doc: "Computes channel permissions using the cached base resources and channel\noverwrites. Returns `None` when any required cache resource is disabled or\nabsent.",
+    doc: "Computes channel permissions using the cached base resources and channel\noverwrites. Returns `None` when any required cache resource is disabled or\nabsent, and for an obfuscated channel (`Channel::is_obfuscated`, one the\nbot cannot view): Discord replaces its overwrites with a single placeholder\nthat denies `VIEW_CHANNEL` to `@everyone`, so a result computed from them\nwould be wrong for every user. `Client::get_channel_member_permissions` has\nDiscord compute a member's permissions instead, but it requires the bot to\nview the channel, so it serves channels the bot can see.",
     file: "discord/src/cache/cache.mbt",
-    line: 1540,
+    line: 1551,
   },
   {
     pkg: "gaato/discord/cache",
@@ -4049,7 +4049,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn InMemoryCache::presence(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker]) -> @model.PresenceUpdateEvent?",
     doc: "The cached presence of a user in a guild, if presences are retained.",
     file: "discord/src/cache/cache.mbt",
-    line: 1460,
+    line: 1466,
   },
   {
     pkg: "gaato/discord/cache",
@@ -4058,7 +4058,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn InMemoryCache::presences(Self, @model.Id[@model.GuildMarker]) -> Array[@model.PresenceUpdateEvent]",
     doc: "All cached presences of a guild.",
     file: "discord/src/cache/cache.mbt",
-    line: 1471,
+    line: 1477,
   },
   {
     pkg: "gaato/discord/cache",
@@ -4067,7 +4067,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn InMemoryCache::role(Self, @model.Id[@model.GuildMarker], @model.Id[@model.RoleMarker]) -> @model.Role?",
     doc: "The cached role, if retained.",
     file: "discord/src/cache/cache.mbt",
-    line: 1379,
+    line: 1385,
   },
   {
     pkg: "gaato/discord/cache",
@@ -4076,7 +4076,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn InMemoryCache::roles(Self, @model.Id[@model.GuildMarker]) -> Array[@model.Role]",
     doc: "All cached roles of a guild.",
     file: "discord/src/cache/cache.mbt",
-    line: 1390,
+    line: 1396,
   },
   {
     pkg: "gaato/discord/cache",
@@ -4103,7 +4103,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn InMemoryCache::user(Self, @model.Id[@model.UserMarker]) -> @model.User?",
     doc: "The cached user, if held by a cached entry or recently seen.",
     file: "discord/src/cache/cache.mbt",
-    line: 1422,
+    line: 1428,
   },
   {
     pkg: "gaato/discord/cache",
@@ -4112,7 +4112,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn InMemoryCache::users(Self) -> Array[@model.User]",
     doc: "All cached users: those held by cached entries, then the recently seen.",
     file: "discord/src/cache/cache.mbt",
-    line: 1432,
+    line: 1438,
   },
   {
     pkg: "gaato/discord/cache",
@@ -4121,7 +4121,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn InMemoryCache::voice_state(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker]) -> @model.VoiceState?",
     doc: "The cached voice state of a user in a guild, if any.",
     file: "discord/src/cache/cache.mbt",
-    line: 1439,
+    line: 1445,
   },
   {
     pkg: "gaato/discord/cache",
@@ -4130,7 +4130,7 @@ let entries_2 : Array[ApiEntry] = [
     signature: "pub fn InMemoryCache::voice_states(Self, @model.Id[@model.GuildMarker]) -> Array[@model.VoiceState]",
     doc: "All cached voice states of a guild.",
     file: "discord/src/cache/cache.mbt",
-    line: 1450,
+    line: 1456,
   },
   {
     pkg: "gaato/discord/cooldown",
@@ -4361,7 +4361,7 @@ let entries_2 : Array[ApiEntry] = [
     pkg: "gaato/discord/coordinator",
     name: "RemoteRateLimiter::release",
     kind: "fn",
-    signature: "pub async fn RemoteRateLimiter::release(Self, @client.Admission, status~ : Int32, headers~ : @http.Headers) -> Unit",
+    signature: "pub async fn RemoteRateLimiter::release(Self, @client.Admission, status~ : Int32, headers~ : @mttp.Headers) -> Unit",
     doc: "",
     file: "discord/src/coordinator/line.mbt",
     line: 1,
@@ -6498,8 +6498,8 @@ let entries_3 : Array[ApiEntry] = [
     pkg: "gaato/discord/http",
     name: "Client::Client",
     kind: "fn",
-    signature: "pub fn Client::Client(String, base_url? : String, api_version? : Int32, limiter? : &@client.RateLimiter, backend? : &@gaato/http.Backend, max_connections? : Int32, request_timeout_ms? : Int32, max_retries? : Int32, default_allowed_mentions? : @model.AllowedMentions, clock? : &@rt.Clock) -> Self",
-    doc: "Create a client. `token` is the raw bot token (without the `Bot ` prefix).\n\n`request_timeout_ms` (default 30000) bounds each network attempt, including\nreading its response body. Rate-limit waits, retry back-off, and user HTTP\nmiddleware are outside it. For a whole-operation deadline, compose\n`@async.with_timeout` around the call.\n\n`max_retries` (default 4) bounds how often one call is sent again. Every\nresend goes through the rate limiter again, and a call is resent only\nwhere Discord's documentation allows it or it cannot cause a second\neffect:\n\n- a 429, for any method, once the delay Discord asks for (the body's\n  `retry_after`, then `Retry-After`) has passed, however long; except a\n  429 that is not Discord's rate limit (no JSON content type and no\n  Discord rate-limit header, as from Cloudflare in front of Discord), which\n  names no wait and raises at once;\n- a 502, for any method, with backoff: Discord asks to \"wait a bit and\n  retry\";\n- a transport failure or timeout that proves no byte was sent\n  (`DiscordHttpError::is_unsent`), for any method, with backoff;\n- another 5xx, and a failure or timeout after sending, with backoff, only\n  for an idempotent call: `GET`, `HEAD`, `PUT`, `DELETE`, `OPTIONS`, or a\n  message create with a `nonce` and `enforce_nonce: true`, which Discord\n  does not create twice. A `POST` or `PATCH` that may have reached\n  Discord is raised at once.\n\nThe backoff is 500 ms, doubling up to 30 s, within ±20 %. Anything else,\n401 and 403 included, is Discord's answer and is never resent.\n\n`backend` is the `gaato/http` `Backend` that performs the wire\nexchange, below request validation, middleware, rate limiting, retries,\nstatus mapping, and decoding. By default the client creates a\n`gaato/http-async/backend` `AsyncBackend` with up to `max_connections`\nidle connections per origin and a 64 MiB wire-body bound, and closes it\nin `close`. A supplied backend is shared: the client never closes it,\nand `max_connections` does not configure it. In both cases the mttp\nclient bounds decoded response bodies to 64 MiB and each attempt to\n`request_timeout_ms`, using `clock`. This outer deadline reports\n`Timeout(phase=Unknown)`; an earlier backend failure retains its phase.\nA non-positive attempt timeout fails immediately with `Unknown`.\n\n`limiter` is a `gaato/mttp/client` `RateLimiter`; the default is an\n`@ratelimit.rate_limiter()` with Discord's per-bucket and global accounting.\n\n`clock` (default: the wall clock) drives the client's time: 429 and\nresend back-off, the default rate limiter's windows, the attempt timeout\naround either backend, telemetry durations, the window of\n`invalid_requests`, and the typing keepalive of `ChannelRef::with_typing`.\nThe owned AsyncBackend's connection-pool expiry and phase deadlines use\nthe same clock. A supplied backend keeps its own clocks.",
+    signature: "pub fn Client::Client(String, base_url? : String, api_version? : Int32, limiter? : &@client.RateLimiter, backend? : &@mttp.Backend, max_connections? : Int32, request_timeout_ms? : Int32, max_retries? : Int32, default_allowed_mentions? : @model.AllowedMentions, clock? : &@rt.Clock) -> Self",
+    doc: "Create a client. `token` is the raw bot token (without the `Bot ` prefix).\n\n`request_timeout_ms` (default 30000) bounds each network attempt, including\nreading its response body. Rate-limit waits, retry back-off, and user HTTP\nmiddleware are outside it. For a whole-operation deadline, compose\n`@async.with_timeout` around the call.\n\n`max_retries` (default 4) bounds how often one call is sent again. Every\nresend goes through the rate limiter again, and a call is resent only\nwhere Discord's documentation allows it or it cannot cause a second\neffect:\n\n- a 429, for any method, once the delay Discord asks for (the body's\n  `retry_after`, then `Retry-After`) has passed, however long; except a\n  429 that is not Discord's rate limit (no JSON content type and no\n  Discord rate-limit header, as from Cloudflare in front of Discord), which\n  names no wait and raises at once;\n- a 502, for any method, with backoff: Discord asks to \"wait a bit and\n  retry\";\n- a transport failure or timeout that proves no byte was sent\n  (`DiscordHttpError::is_unsent`), for any method, with backoff;\n- another 5xx, and a failure or timeout after sending, with backoff, only\n  for an idempotent call: `GET`, `HEAD`, `PUT`, `DELETE`, `OPTIONS`, or a\n  message create with a `nonce` and `enforce_nonce: true`, which Discord\n  does not create twice. A `POST` or `PATCH` that may have reached\n  Discord is raised at once.\n\nThe backoff is 500 ms, doubling up to 30 s, within ±20 %. Anything else,\n401 and 403 included, is Discord's answer and is never resent.\n\n`backend` is the `gaato/mttp` `Backend` that performs the wire\nexchange, below request validation, middleware, rate limiting, retries,\nstatus mapping, and decoding. By default the client creates a\n`gaato/mttp_async/backend` `AsyncBackend` with up to `max_connections`\nidle connections per origin and a 64 MiB wire-body bound, and closes it\nin `close`. A supplied backend is shared: the client never closes it,\nand `max_connections` does not configure it. In both cases the mttp\nclient bounds decoded response bodies to 64 MiB and each attempt to\n`request_timeout_ms`, using `clock`. This outer deadline reports\n`Timeout(phase=Unknown)`; an earlier backend failure retains its phase.\nA non-positive attempt timeout fails immediately with `Unknown`.\n\n`limiter` is a `gaato/mttp/client` `RateLimiter`; the default is an\n`@ratelimit.rate_limiter()` with Discord's per-bucket and global accounting.\n\n`clock` (default: the wall clock) drives the client's time: 429 and\nresend back-off, the default rate limiter's windows, the attempt timeout\naround either backend, telemetry durations, the window of\n`invalid_requests`, and the typing keepalive of `ChannelRef::with_typing`.\nThe owned AsyncBackend's connection-pool expiry and phase deadlines use\nthe same clock. A supplied backend keeps its own clocks.",
     file: "discord/src/http/client.mbt",
     line: 94,
   },
@@ -6510,7 +6510,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn Client::add_guild_member(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], String, nick? : String, roles? : Array[@model.Id[@model.RoleMarker]], mute? : Bool, deaf? : Bool) -> @model.GuildMember? raise DiscordHttpError",
     doc: "Add a user to a guild with an OAuth2 access token carrying the\n`guilds.join` scope. A null response means the user was already a member.",
     file: "discord/src/http/api_guild.mbt",
-    line: 1023,
+    line: 1028,
   },
   {
     pkg: "gaato/discord/http",
@@ -6528,7 +6528,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn Client::add_member_role(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], @model.Id[@model.RoleMarker], audit_reason? : String) -> Unit raise DiscordHttpError",
     doc: "Add a role to a guild member.",
     file: "discord/src/http/api_guild.mbt",
-    line: 424,
+    line: 429,
   },
   {
     pkg: "gaato/discord/http",
@@ -6582,7 +6582,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn Client::begin_guild_prune(Self, @model.Id[@model.GuildMarker], days? : Int32, compute_prune_count? : Bool, include_roles? : Array[@model.Id[@model.RoleMarker]], audit_reason? : String) -> @model.GuildPruneResult raise DiscordHttpError",
     doc: "Begin pruning inactive members from a guild.",
     file: "discord/src/http/api_guild.mbt",
-    line: 688,
+    line: 693,
   },
   {
     pkg: "gaato/discord/http",
@@ -6618,7 +6618,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn Client::bulk_guild_ban(Self, @model.Id[@model.GuildMarker], Array[@model.Id[@model.UserMarker]], delete_message_seconds? : Int32, audit_reason? : String) -> @model.BulkBanResponse raise DiscordHttpError",
     doc: "Ban up to 200 users from a guild in one request.",
     file: "discord/src/http/api_guild.mbt",
-    line: 627,
+    line: 632,
   },
   {
     pkg: "gaato/discord/http",
@@ -6654,7 +6654,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub fn Client::close(Self) -> Unit",
     doc: "Close the client's own backend (including idle keep-alive connections) and\nreject future requests, including those of an offline client. A supplied\nbackend is left open. A request already inside an offline handler is not\ncancelled by this method.",
     file: "discord/src/http/client.mbt",
-    line: 346,
+    line: 350,
   },
   {
     pkg: "gaato/discord/http",
@@ -6726,7 +6726,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn Client::create_guild_ban(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], delete_message_seconds? : Int32, audit_reason? : String) -> Unit raise DiscordHttpError",
     doc: "Ban a user from a guild.",
     file: "discord/src/http/api_guild.mbt",
-    line: 464,
+    line: 469,
   },
   {
     pkg: "gaato/discord/http",
@@ -6735,7 +6735,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn Client::create_guild_channel(Self, @model.Id[@model.GuildMarker], String, typ? : @model.ChannelType, topic? : String, parent_id? : @model.Id[@model.ChannelMarker], position? : Int32, permission_overwrites? : Array[@model.Overwrite], nsfw? : Bool, bitrate? : Int32, user_limit? : Int32, rate_limit_per_user? : Int32, rtc_region? : String, video_quality_mode? : @model.VideoQualityMode, default_auto_archive_duration? : @model.ThreadAutoArchiveDuration, available_tags? : Array[@model.ForumTagRequest], default_reaction_emoji? : @model.DefaultReaction, default_thread_rate_limit_per_user? : Int32, default_sort_order? : @model.SortOrderType, default_forum_layout? : @model.ForumLayoutType, flags? : @model.ChannelFlags, audit_reason? : String) -> @model.Channel raise DiscordHttpError",
     doc: "Create a channel in a guild. `rtc_region` and `video_quality_mode` apply\nto voice and stage channels; the `available_tags`/`default_*` family\napplies to forum and media channels.",
     file: "discord/src/http/api_guild.mbt",
-    line: 183,
+    line: 188,
   },
   {
     pkg: "gaato/discord/http",
@@ -6771,7 +6771,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn Client::create_guild_role(Self, @model.Id[@model.GuildMarker], name? : String, permissions? : @model.Permissions, color? : Int32, colors? : @model.RoleColors, hoist? : Bool, icon? : String, unicode_emoji? : String, mentionable? : Bool, audit_reason? : String) -> @model.Role raise DiscordHttpError",
     doc: "Create a guild role. `colors` supersedes the legacy `color` field and can\nexpress gradient and holographic styles; `icon` (base64 image data) and\n`unicode_emoji` need the `ROLE_ICONS` guild feature.",
     file: "discord/src/http/api_guild.mbt",
-    line: 508,
+    line: 513,
   },
   {
     pkg: "gaato/discord/http",
@@ -6996,7 +6996,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn Client::delete_guild_integration(Self, @model.Id[@model.GuildMarker], @model.Id[@model.IntegrationMarker], audit_reason? : String) -> Unit raise DiscordHttpError",
     doc: "Delete an integration from a guild.",
     file: "discord/src/http/api_guild.mbt",
-    line: 729,
+    line: 734,
   },
   {
     pkg: "gaato/discord/http",
@@ -7005,7 +7005,7 @@ let entries_3 : Array[ApiEntry] = [
     signature: "pub async fn Client::delete_guild_role(Self, @model.Id[@model.GuildMarker], @model.Id[@model.RoleMarker], audit_reason? : String) -> Unit raise DiscordHttpError",
     doc: "Delete a guild role.",
     file: "discord/src/http/api_guild.mbt",
-    line: 576,
+    line: 581,
   },
   {
     pkg: "gaato/discord/http",
@@ -7594,7 +7594,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::get_guild_ban(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker]) -> @model.GuildBan raise DiscordHttpError",
     doc: "Fetch one guild ban. Requires the `BAN_MEMBERS` or `VIEW_AUDIT_LOG`\npermission.",
     file: "discord/src/http/api_guild.mbt",
-    line: 597,
+    line: 602,
   },
   {
     pkg: "gaato/discord/http",
@@ -7610,9 +7610,9 @@ let entries_4 : Array[ApiEntry] = [
     name: "Client::get_guild_channels",
     kind: "fn",
     signature: "pub async fn Client::get_guild_channels(Self, @model.Id[@model.GuildMarker]) -> Array[@model.Channel] raise DiscordHttpError",
-    doc: "List the channels in a guild.",
+    doc: "List the channels in a guild, without threads.\n\nFrom 2026-11-16 Discord omits the channels the bot cannot view (no\n`VIEW_CHANNEL`, and not connected to it if it is a voice channel; a\ncategory counts as viewable while any of its channels is). The gateway\nstill sends those channels, obfuscated (`Channel::is_obfuscated`).",
     file: "discord/src/http/api_guild.mbt",
-    line: 172,
+    line: 177,
   },
   {
     pkg: "gaato/discord/http",
@@ -7657,7 +7657,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::get_guild_integrations(Self, @model.Id[@model.GuildMarker]) -> Array[@model.Integration] raise DiscordHttpError",
     doc: "List the integrations configured for a guild.",
     file: "discord/src/http/api_guild.mbt",
-    line: 720,
+    line: 725,
   },
   {
     pkg: "gaato/discord/http",
@@ -7666,7 +7666,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::get_guild_invites(Self, @model.Id[@model.GuildMarker]) -> Array[@model.Invite] raise DiscordHttpError",
     doc: "List the invites for a guild.",
     file: "discord/src/http/api_guild.mbt",
-    line: 711,
+    line: 716,
   },
   {
     pkg: "gaato/discord/http",
@@ -7675,7 +7675,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::get_guild_member(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker]) -> @model.GuildMember raise DiscordHttpError",
     doc: "Fetch one guild member.",
     file: "discord/src/http/api_guild.mbt",
-    line: 296,
+    line: 301,
   },
   {
     pkg: "gaato/discord/http",
@@ -7684,7 +7684,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::get_guild_member_permissions(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker]) -> @model.Permissions raise DiscordHttpError",
     doc: "Fetch a member's computed guild permissions: their roles combined with\n`@everyone`.",
     file: "discord/src/http/api_guild.mbt",
-    line: 307,
+    line: 312,
   },
   {
     pkg: "gaato/discord/http",
@@ -7693,7 +7693,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::get_guild_onboarding(Self, @model.Id[@model.GuildMarker]) -> @model.GuildOnboarding raise DiscordHttpError",
     doc: "Fetch a guild's onboarding configuration.",
     file: "discord/src/http/api_guild.mbt",
-    line: 870,
+    line: 875,
   },
   {
     pkg: "gaato/discord/http",
@@ -7702,7 +7702,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::get_guild_preview(Self, @model.Id[@model.GuildMarker]) -> @model.GuildPreview raise DiscordHttpError",
     doc: "Fetch the public preview for a discoverable guild.",
     file: "discord/src/http/api_guild.mbt",
-    line: 587,
+    line: 592,
   },
   {
     pkg: "gaato/discord/http",
@@ -7711,7 +7711,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::get_guild_prune_count(Self, @model.Id[@model.GuildMarker], days? : Int32, include_roles? : Array[@model.Id[@model.RoleMarker]]) -> @model.GuildPruneResult raise DiscordHttpError",
     doc: "Return the number of members that would be removed by a guild prune.",
     file: "discord/src/http/api_guild.mbt",
-    line: 662,
+    line: 667,
   },
   {
     pkg: "gaato/discord/http",
@@ -7720,7 +7720,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::get_guild_role(Self, @model.Id[@model.GuildMarker], @model.Id[@model.RoleMarker]) -> @model.Role raise DiscordHttpError",
     doc: "Fetch one role from a guild.",
     file: "discord/src/http/api_guild.mbt",
-    line: 951,
+    line: 956,
   },
   {
     pkg: "gaato/discord/http",
@@ -7729,7 +7729,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::get_guild_role_permissions(Self, @model.Id[@model.GuildMarker], @model.Id[@model.RoleMarker]) -> @model.Permissions raise DiscordHttpError",
     doc: "Fetch the guild permissions of a role combined with `@everyone`. Other\nroles and member-specific restrictions are not included.",
     file: "discord/src/http/api_guild.mbt",
-    line: 962,
+    line: 967,
   },
   {
     pkg: "gaato/discord/http",
@@ -7738,7 +7738,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::get_guild_roles(Self, @model.Id[@model.GuildMarker]) -> Array[@model.Role] raise DiscordHttpError",
     doc: "List the roles in a guild.",
     file: "discord/src/http/api_guild.mbt",
-    line: 497,
+    line: 502,
   },
   {
     pkg: "gaato/discord/http",
@@ -7792,7 +7792,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::get_guild_vanity_url(Self, @model.Id[@model.GuildMarker]) -> @model.GuildVanityUrl raise DiscordHttpError",
     doc: "Fetch a guild's vanity invite code and use count.",
     file: "discord/src/http/api_guild.mbt",
-    line: 744,
+    line: 749,
   },
   {
     pkg: "gaato/discord/http",
@@ -7801,7 +7801,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::get_guild_voice_regions(Self, @model.Id[@model.GuildMarker]) -> Array[@model.VoiceRegion] raise DiscordHttpError",
     doc: "List the voice regions available to a guild.",
     file: "discord/src/http/api_guild.mbt",
-    line: 702,
+    line: 707,
   },
   {
     pkg: "gaato/discord/http",
@@ -7819,7 +7819,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::get_guild_welcome_screen(Self, @model.Id[@model.GuildMarker]) -> @model.WelcomeScreen raise DiscordHttpError",
     doc: "Fetch a guild's welcome screen.",
     file: "discord/src/http/api_guild.mbt",
-    line: 816,
+    line: 821,
   },
   {
     pkg: "gaato/discord/http",
@@ -7828,7 +7828,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::get_guild_widget(Self, @model.Id[@model.GuildMarker]) -> @model.GuildWidget raise DiscordHttpError",
     doc: "Fetch the public JSON representation of a guild widget.",
     file: "discord/src/http/api_guild.mbt",
-    line: 791,
+    line: 796,
   },
   {
     pkg: "gaato/discord/http",
@@ -7837,7 +7837,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::get_guild_widget_settings(Self, @model.Id[@model.GuildMarker]) -> @model.GuildWidgetSettings raise DiscordHttpError",
     doc: "Fetch a guild's widget settings.",
     file: "discord/src/http/api_guild.mbt",
-    line: 753,
+    line: 758,
   },
   {
     pkg: "gaato/discord/http",
@@ -8053,7 +8053,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub fn Client::guild_widget_image_url(Self, @model.Id[@model.GuildMarker], style? : String) -> String",
     doc: "Build the guild widget PNG URL using this client's configured API base.\nDiscord documents the styles `shield`, `banner1`, `banner2`, `banner3`,\nand `banner4`; the style is passed through without validation.",
     file: "discord/src/http/api_guild.mbt",
-    line: 802,
+    line: 807,
   },
   {
     pkg: "gaato/discord/http",
@@ -8062,7 +8062,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub fn Client::invalid_requests(Self) -> Int32",
     doc: "How many of this client's requests in the past ten minutes Discord counts\nas invalid: those answered with 401, 403 or 429, except a 429 with\n`X-RateLimit-Scope: shared`. Every attempt counts, resends included.\n\nDiscord allows 10,000 invalid requests per ten minutes from one address;\npast that, Discord restricts the address for a while (its documentation\ncalls this a Cloudflare ban), for every client on it. The count moves in ten-second steps, so a request leaves it between\n590 and 600 seconds after it was answered, and covers only this client:\nadd up the clients that share an address. An offline client sends nothing\nand always reports 0.",
     file: "discord/src/http/client.mbt",
-    line: 235,
+    line: 239,
   },
   {
     pkg: "gaato/discord/http",
@@ -8161,7 +8161,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::list_guild_members(Self, @model.Id[@model.GuildMarker], limit? : Int32, after? : @model.Id[@model.UserMarker]) -> Array[@model.GuildMember] raise DiscordHttpError",
     doc: "List guild members after an optional user snowflake.",
     file: "discord/src/http/api_guild.mbt",
-    line: 320,
+    line: 325,
   },
   {
     pkg: "gaato/discord/http",
@@ -8296,7 +8296,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub fn Client::middleware(Self, async (HttpRequest, async (HttpRequest) -> HttpResponse) -> HttpResponse) -> Unit",
     doc: "Install middleware around each logical REST call. The first installed\nmiddleware is outermost. `next` performs rate limiting, the wire\nexchange, and bounded retries.",
     file: "discord/src/http/client.mbt",
-    line: 243,
+    line: 247,
   },
   {
     pkg: "gaato/discord/http",
@@ -8332,7 +8332,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::modify_current_member(Self, @model.Id[@model.GuildMarker], nick? : String, clear_nick? : Bool, avatar? : String, clear_avatar? : Bool, banner? : String, clear_banner? : Bool, bio? : String, clear_bio? : Bool, audit_reason? : String) -> @model.GuildMember raise DiscordHttpError",
     doc: "Modify the bot's own member in a guild.",
     file: "discord/src/http/api_guild.mbt",
-    line: 400,
+    line: 405,
   },
   {
     pkg: "gaato/discord/http",
@@ -8368,7 +8368,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::modify_guild_channel_positions(Self, @model.Id[@model.GuildMarker], Array[GuildChannelPosition], audit_reason? : String) -> Unit raise DiscordHttpError",
     doc: "Bulk-modify channel sorting positions using Discord's raw JSON array body.\nInclude only the channels to move.",
     file: "discord/src/http/api_guild.mbt",
-    line: 283,
+    line: 288,
   },
   {
     pkg: "gaato/discord/http",
@@ -8386,7 +8386,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::modify_guild_incident_actions(Self, @model.Id[@model.GuildMarker], invites_disabled_until? : @model.Timestamp, clear_invites_disabled_until? : Bool, dms_disabled_until? : @model.Timestamp, clear_dms_disabled_until? : Bool) -> @model.IncidentsData raise DiscordHttpError",
     doc: "Modify temporary guild incident restrictions. Discord permits each\ntimestamp to be at most 24 hours in the future.",
     file: "discord/src/http/api_guild.mbt",
-    line: 935,
+    line: 940,
   },
   {
     pkg: "gaato/discord/http",
@@ -8395,7 +8395,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::modify_guild_member(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], nick? : String, clear_nick? : Bool, roles? : Array[@model.Id[@model.RoleMarker]], mute? : Bool, deaf? : Bool, channel_id? : @model.Id[@model.ChannelMarker], clear_channel_id? : Bool, communication_disabled_until? : @model.Timestamp, clear_communication_disabled_until? : Bool, flags? : @model.GuildMemberFlags, audit_reason? : String) -> @model.GuildMember raise DiscordHttpError",
     doc: "Modify a guild member.",
     file: "discord/src/http/api_guild.mbt",
-    line: 360,
+    line: 365,
   },
   {
     pkg: "gaato/discord/http",
@@ -8404,7 +8404,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::modify_guild_onboarding(Self, @model.Id[@model.GuildMarker], Array[@model.OnboardingPrompt], Array[@model.Id[@model.ChannelMarker]], Bool, @model.OnboardingMode, audit_reason? : String) -> @model.GuildOnboarding raise DiscordHttpError",
     doc: "Replace a guild's onboarding configuration.",
     file: "discord/src/http/api_guild.mbt",
-    line: 894,
+    line: 899,
   },
   {
     pkg: "gaato/discord/http",
@@ -8413,7 +8413,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::modify_guild_role(Self, @model.Id[@model.GuildMarker], @model.Id[@model.RoleMarker], name? : String, permissions? : @model.Permissions, color? : Int32, colors? : @model.RoleColors, hoist? : Bool, icon? : String, clear_icon? : Bool, unicode_emoji? : String, clear_unicode_emoji? : Bool, mentionable? : Bool, audit_reason? : String) -> @model.Role raise DiscordHttpError",
     doc: "Modify a guild role. `colors` supersedes the legacy `color` field; `icon`\n(base64 image data) and `unicode_emoji` need the `ROLE_ICONS` guild\nfeature, and the `clear_*` companions remove them.",
     file: "discord/src/http/api_guild.mbt",
-    line: 539,
+    line: 544,
   },
   {
     pkg: "gaato/discord/http",
@@ -8422,7 +8422,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::modify_guild_role_positions(Self, @model.Id[@model.GuildMarker], Array[(@model.Id[@model.RoleMarker], Int32?)], audit_reason? : String) -> Array[@model.Role] raise DiscordHttpError",
     doc: "Modify guild role positions using Discord's raw JSON array body.",
     file: "discord/src/http/api_guild.mbt",
-    line: 991,
+    line: 996,
   },
   {
     pkg: "gaato/discord/http",
@@ -8467,7 +8467,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::modify_guild_welcome_screen(Self, @model.Id[@model.GuildMarker], enabled? : Bool, clear_enabled? : Bool, welcome_channels? : Array[@model.WelcomeScreenChannel], clear_welcome_channels? : Bool, description? : String, clear_description? : Bool, audit_reason? : String) -> @model.WelcomeScreen raise DiscordHttpError",
     doc: "Modify a guild's welcome screen. Each nullable field has a matching clear\nflag so omission remains distinct from JSON null.",
     file: "discord/src/http/api_guild.mbt",
-    line: 848,
+    line: 853,
   },
   {
     pkg: "gaato/discord/http",
@@ -8476,7 +8476,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::modify_guild_widget(Self, @model.Id[@model.GuildMarker], enabled? : Bool, channel_id? : @model.Id[@model.ChannelMarker], clear_channel_id? : Bool, audit_reason? : String) -> @model.GuildWidgetSettings raise DiscordHttpError",
     doc: "Modify a guild's widget settings.",
     file: "discord/src/http/api_guild.mbt",
-    line: 777,
+    line: 782,
   },
   {
     pkg: "gaato/discord/http",
@@ -8521,7 +8521,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub fn Client::offline(async (HttpRequest) -> HttpResponse, default_allowed_mentions? : @model.AllowedMentions, clock? : &@rt.Clock) -> Self",
     doc: "Create a client with no network. `handler` answers every logical REST\ncall in place of the rate limiter, the wire exchange, and retries; it\nhas the same shape as the `next` continuation of `HttpMiddleware`, so an\noffline client is the innermost step of the same chain. Request validation,\ninstalled middleware, status-code-to-error mapping, and typed decoding run\nexactly as they do online, and nothing falls back to Discord.\n\nThere is no token, base URL, timeout, or retry: a 429 from `handler`\nsurfaces as `DiscordHttpError::RateLimited` at once. An error raised by\n`handler` propagates as itself when it is a `DiscordHttpError` and as\n`DiscordHttpError::Transport(phase=Unknown, ..)` otherwise. Each call\nemits the same `HttpRequest` and `HttpRateLimited` telemetry as a single\nnetwork attempt, its duration read from `clock` (default: the wall\nclock), which also drives `ChannelRef::with_typing`.\n\n# Example\n```mbt\nasync test {\n  let calls : Array[@http.Route] = []\n  let client = @http.Client::offline(request => {\n    calls.push(request.route)\n    match request.route {\n      GetGateway => { status: 200, headers: {}, body: { \"url\": \"wss://x\" }, }\n      _ => { status: 404, headers: {}, body: { \"code\": 0, \"message\": \"no\" }, }\n    }\n  })\n  inspect(client.get_gateway(), content=\"wss://x\")\n  assert_true(calls is [GetGateway])\n}\n```",
     file: "discord/src/http/client.mbt",
-    line: 200,
+    line: 204,
   },
   {
     pkg: "gaato/discord/http",
@@ -8530,7 +8530,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub fn Client::on_telemetry(Self, (@telemetry.TelemetryEvent) -> Unit raise) -> Unit",
     doc: "Observe structured HTTP telemetry. Hooks run synchronously and should\nreturn promptly. A hook failure is reported through `on_warn`.",
     file: "discord/src/http/client.mbt",
-    line: 250,
+    line: 254,
   },
   {
     pkg: "gaato/discord/http",
@@ -8539,7 +8539,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub fn Client::on_warn(Self, (String) -> Unit) -> Unit",
     doc: "Set the warning sink used for telemetry-hook failures.",
     file: "discord/src/http/client.mbt",
-    line: 279,
+    line: 283,
   },
   {
     pkg: "gaato/discord/http",
@@ -8629,7 +8629,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::remove_guild_ban(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], audit_reason? : String) -> Unit raise DiscordHttpError",
     doc: "Remove a guild ban.",
     file: "discord/src/http/api_guild.mbt",
-    line: 486,
+    line: 491,
   },
   {
     pkg: "gaato/discord/http",
@@ -8638,7 +8638,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::remove_guild_member(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], audit_reason? : String) -> Unit raise DiscordHttpError",
     doc: "Remove a member from a guild.",
     file: "discord/src/http/api_guild.mbt",
-    line: 453,
+    line: 458,
   },
   {
     pkg: "gaato/discord/http",
@@ -8656,7 +8656,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::remove_member_role(Self, @model.Id[@model.GuildMarker], @model.Id[@model.UserMarker], @model.Id[@model.RoleMarker], audit_reason? : String) -> Unit raise DiscordHttpError",
     doc: "Remove a role from a guild member.",
     file: "discord/src/http/api_guild.mbt",
-    line: 437,
+    line: 442,
   },
   {
     pkg: "gaato/discord/http",
@@ -8701,7 +8701,7 @@ let entries_4 : Array[ApiEntry] = [
     signature: "pub async fn Client::search_guild_members(Self, @model.Id[@model.GuildMarker], String, limit? : Int32) -> Array[@model.GuildMember] raise DiscordHttpError",
     doc: "Search guild members. The query string must already be URL-encoded.",
     file: "discord/src/http/api_guild.mbt",
-    line: 340,
+    line: 345,
   },
   {
     pkg: "gaato/discord/http",
@@ -8896,7 +8896,7 @@ let entries_4 : Array[ApiEntry] = [
     pkg: "gaato/discord/http",
     name: "DiscordHttpError",
     kind: "suberror",
-    signature: "pub(all) suberror DiscordHttpError {\n  Api(status~ : Int32, error~ : ApiError)\n  RateLimited(retry_after_ms~ : Int64, global~ : Bool)\n  Deserialize(message~ : String)\n  Transport(phase~ : @gaato/http.Phase, message~ : String)\n  Timeout(phase~ : @gaato/http.Phase, timeout_ms~ : Int32)\n  Validation(message~ : String)\n}",
+    signature: "pub(all) suberror DiscordHttpError {\n  Api(status~ : Int32, error~ : ApiError)\n  RateLimited(retry_after_ms~ : Int64, global~ : Bool)\n  Deserialize(message~ : String)\n  Transport(phase~ : @mttp.Phase, message~ : String)\n  Timeout(phase~ : @mttp.Phase, timeout_ms~ : Int32)\n  Validation(message~ : String)\n}",
     doc: "Everything a REST call can raise, from client-side validation to decoded\nDiscord API errors.\n\n`Transport` and `Timeout` carry the `phase` of the exchange that failed.\n`Pool` and `Dial` mean no byte of the request was sent, so Discord cannot\nhave acted on it (`is_unsent`); any other phase means it may have.",
     file: "discord/src/http/error.mbt",
     line: 18,
@@ -9074,7 +9074,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub struct GuildChannelPosition {\n  // private fields\n}",
     doc: "One entry of a Modify Guild Channel Positions request. Fields left unset\nare omitted so Discord keeps their current value; `clear_parent_id=true`\nsends a JSON null that moves the channel out of its category.",
     file: "discord/src/http/api_guild.mbt",
-    line: 240,
+    line: 245,
   },
   {
     pkg: "gaato/discord/http",
@@ -9083,7 +9083,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub fn GuildChannelPosition::GuildChannelPosition(@model.Id[@model.ChannelMarker], position? : Int32, lock_permissions? : Bool, parent_id? : @model.Id[@model.ChannelMarker], clear_parent_id? : Bool) -> Self raise DiscordHttpError",
     doc: "Construct one channel-position entry.",
     file: "discord/src/http/api_guild.mbt",
-    line: 249,
+    line: 254,
   },
   {
     pkg: "gaato/discord/http",
@@ -9155,7 +9155,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub async fn GuildRef::active_threads(Self) -> @model.ActiveGuildThreads raise DiscordHttpError",
     doc: "List active threads in this guild.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 575,
+    line: 576,
   },
   {
     pkg: "gaato/discord/http",
@@ -9164,7 +9164,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub async fn GuildRef::add_member(Self, @model.Id[@model.UserMarker], String, nick? : String, roles? : Array[@model.Id[@model.RoleMarker]], mute? : Bool, deaf? : Bool) -> @model.GuildMember? raise DiscordHttpError",
     doc: "Add a user to this guild.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 269,
+    line: 270,
   },
   {
     pkg: "gaato/discord/http",
@@ -9209,7 +9209,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub async fn GuildRef::begin_prune(Self, days? : Int32, compute_prune_count? : Bool, include_roles? : Array[@model.Id[@model.RoleMarker]], reason? : String) -> @model.GuildPruneResult raise DiscordHttpError",
     doc: "Begin pruning inactive members from this guild.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 379,
+    line: 380,
   },
   {
     pkg: "gaato/discord/http",
@@ -9225,9 +9225,9 @@ let entries_5 : Array[ApiEntry] = [
     name: "GuildRef::channels",
     kind: "fn",
     signature: "pub async fn GuildRef::channels(Self) -> Array[@model.Channel] raise DiscordHttpError",
-    doc: "List channels in this guild.",
+    doc: "List channels in this guild, without threads. From 2026-11-16 Discord\nomits the channels the bot cannot view (see `Client::get_guild_channels`).",
     file: "discord/src/http/handles_guild.mbt",
-    line: 179,
+    line: 180,
   },
   {
     pkg: "gaato/discord/http",
@@ -9245,7 +9245,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub async fn GuildRef::create_channel(Self, String, typ? : @model.ChannelType, topic? : String, parent_id? : @model.Id[@model.ChannelMarker], position? : Int32, permission_overwrites? : Array[@model.Overwrite], nsfw? : Bool, bitrate? : Int32, user_limit? : Int32, rate_limit_per_user? : Int32, rtc_region? : String, video_quality_mode? : @model.VideoQualityMode, default_auto_archive_duration? : @model.ThreadAutoArchiveDuration, available_tags? : Array[@model.ForumTagRequest], default_reaction_emoji? : @model.DefaultReaction, default_thread_rate_limit_per_user? : Int32, default_sort_order? : @model.SortOrderType, default_forum_layout? : @model.ForumLayoutType, reason? : String) -> @model.Channel raise DiscordHttpError",
     doc: "Create a channel in this guild.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 187,
+    line: 188,
   },
   {
     pkg: "gaato/discord/http",
@@ -9263,7 +9263,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub async fn GuildRef::create_role(Self, name? : String, permissions? : @model.Permissions, color? : Int32, colors? : @model.RoleColors, hoist? : Bool, icon? : String, unicode_emoji? : String, mentionable? : Bool, reason? : String) -> @model.Role raise DiscordHttpError",
     doc: "Create a role in this guild.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 327,
+    line: 328,
   },
   {
     pkg: "gaato/discord/http",
@@ -9308,7 +9308,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub async fn GuildRef::delete_integration(Self, @model.Id[@model.IntegrationMarker], reason? : String) -> Unit raise DiscordHttpError",
     doc: "Delete an integration from this guild.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 429,
+    line: 430,
   },
   {
     pkg: "gaato/discord/http",
@@ -9326,7 +9326,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub async fn GuildRef::edit_channel_positions(Self, Array[GuildChannelPosition], reason? : String) -> Unit raise DiscordHttpError",
     doc: "Edit channel positions in this guild.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 235,
+    line: 236,
   },
   {
     pkg: "gaato/discord/http",
@@ -9335,7 +9335,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub async fn GuildRef::edit_current_member(Self, nick? : String, clear_nick? : Bool, avatar? : String, clear_avatar? : Bool, banner? : String, clear_banner? : Bool, bio? : String, clear_bio? : Bool, reason? : String) -> @model.GuildMember raise DiscordHttpError",
     doc: "Edit the current user's member record in this guild.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 291,
+    line: 292,
   },
   {
     pkg: "gaato/discord/http",
@@ -9344,7 +9344,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub async fn GuildRef::edit_incident_actions(Self, invites_disabled_until? : @model.Timestamp, clear_invites_disabled_until? : Bool, dms_disabled_until? : @model.Timestamp, clear_dms_disabled_until? : Bool) -> @model.IncidentsData raise DiscordHttpError",
     doc: "Edit incident actions for this guild.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 551,
+    line: 552,
   },
   {
     pkg: "gaato/discord/http",
@@ -9353,7 +9353,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub async fn GuildRef::edit_my_voice_state(Self, channel_id? : @model.Id[@model.ChannelMarker], suppress? : Bool, request_to_speak_timestamp? : @model.Timestamp, clear_request_to_speak_timestamp? : Bool) -> Unit raise DiscordHttpError",
     doc: "Edit the current user's voice state in this guild.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 649,
+    line: 650,
   },
   {
     pkg: "gaato/discord/http",
@@ -9362,7 +9362,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub async fn GuildRef::edit_onboarding(Self, Array[@model.OnboardingPrompt], Array[@model.Id[@model.ChannelMarker]], Bool, @model.OnboardingMode, reason? : String) -> @model.GuildOnboarding raise DiscordHttpError",
     doc: "Replace this guild's onboarding configuration.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 531,
+    line: 532,
   },
   {
     pkg: "gaato/discord/http",
@@ -9371,7 +9371,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub async fn GuildRef::edit_role_positions(Self, Array[(@model.Id[@model.RoleMarker], Int32?)], reason? : String) -> Array[@model.Role] raise DiscordHttpError",
     doc: "Edit role positions in this guild.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 355,
+    line: 356,
   },
   {
     pkg: "gaato/discord/http",
@@ -9380,7 +9380,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub async fn GuildRef::edit_welcome_screen(Self, enabled? : Bool, clear_enabled? : Bool, welcome_channels? : Array[@model.WelcomeScreenChannel], clear_welcome_channels? : Bool, description? : String, clear_description? : Bool, reason? : String) -> @model.WelcomeScreen raise DiscordHttpError",
     doc: "Edit this guild's welcome screen.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 499,
+    line: 500,
   },
   {
     pkg: "gaato/discord/http",
@@ -9389,7 +9389,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub async fn GuildRef::edit_widget(Self, enabled? : Bool, channel_id? : @model.Id[@model.ChannelMarker], clear_channel_id? : Bool, reason? : String) -> @model.GuildWidgetSettings raise DiscordHttpError",
     doc: "Edit this guild's widget settings.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 459,
+    line: 460,
   },
   {
     pkg: "gaato/discord/http",
@@ -9434,7 +9434,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub async fn GuildRef::integrations(Self) -> Array[@model.Integration] raise DiscordHttpError",
     doc: "List integrations configured for this guild.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 413,
+    line: 414,
   },
   {
     pkg: "gaato/discord/http",
@@ -9443,7 +9443,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub async fn GuildRef::invites(Self) -> Array[@model.Invite] raise DiscordHttpError",
     doc: "List invites for this guild.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 405,
+    line: 406,
   },
   {
     pkg: "gaato/discord/http",
@@ -9452,7 +9452,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub async fn GuildRef::leave(Self) -> Unit raise DiscordHttpError",
     doc: "Make the bot itself leave this guild.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 569,
+    line: 570,
   },
   {
     pkg: "gaato/discord/http",
@@ -9461,7 +9461,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub fn GuildRef::member_ref(Self, @model.Id[@model.UserMarker]) -> MemberRef",
     doc: "Bind a user id in this guild to the client.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 667,
+    line: 668,
   },
   {
     pkg: "gaato/discord/http",
@@ -9470,7 +9470,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub fn GuildRef::members(Self, after? : @model.Id[@model.UserMarker], page_size? : Int32) -> Paginator[@model.GuildMember] raise DiscordHttpError",
     doc: "Paginate members in this guild.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 249,
+    line: 250,
   },
   {
     pkg: "gaato/discord/http",
@@ -9479,7 +9479,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub async fn GuildRef::my_voice_state(Self) -> @model.VoiceState raise DiscordHttpError",
     doc: "Fetch the current user's voice state in this guild.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 641,
+    line: 642,
   },
   {
     pkg: "gaato/discord/http",
@@ -9488,7 +9488,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub async fn GuildRef::onboarding(Self) -> @model.GuildOnboarding raise DiscordHttpError",
     doc: "Fetch this guild's onboarding configuration.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 523,
+    line: 524,
   },
   {
     pkg: "gaato/discord/http",
@@ -9506,7 +9506,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub async fn GuildRef::prune_count(Self, days? : Int32, include_roles? : Array[@model.Id[@model.RoleMarker]]) -> @model.GuildPruneResult raise DiscordHttpError",
     doc: "Count members that a prune would remove from this guild.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 369,
+    line: 370,
   },
   {
     pkg: "gaato/discord/http",
@@ -9515,7 +9515,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub fn GuildRef::role_ref(Self, @model.Id[@model.RoleMarker]) -> RoleRef",
     doc: "Bind a role id in this guild to the client.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 676,
+    line: 677,
   },
   {
     pkg: "gaato/discord/http",
@@ -9524,7 +9524,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub async fn GuildRef::roles(Self) -> Array[@model.Role] raise DiscordHttpError",
     doc: "List roles in this guild.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 319,
+    line: 320,
   },
   {
     pkg: "gaato/discord/http",
@@ -9551,7 +9551,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub async fn GuildRef::search_members(Self, String, limit? : Int32) -> Array[@model.GuildMember] raise DiscordHttpError",
     doc: "Search members in this guild.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 259,
+    line: 260,
   },
   {
     pkg: "gaato/discord/http",
@@ -9560,7 +9560,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub async fn GuildRef::search_messages(Self, limit? : Int32, offset? : Int32, slop? : Int32, content? : String, mention_everyone? : Bool, pinned? : Bool, include_nsfw? : Bool, sort_by? : String, sort_order? : String, max_id? : @model.Id[@model.MessageMarker], min_id? : @model.Id[@model.MessageMarker], channel_id? : Array[@model.Id[@model.ChannelMarker]], author_type? : Array[String], author_id? : Array[@model.Id[@model.UserMarker]], mentions? : Array[@model.Id[@model.UserMarker]], mentions_role_id? : Array[@model.Id[@model.RoleMarker]], replied_to_user_id? : Array[@model.Id[@model.UserMarker]], replied_to_message_id? : Array[@model.Id[@model.MessageMarker]], has? : Array[String], embed_type? : Array[String], embed_provider? : Array[String], link_hostname? : Array[String], attachment_filename? : Array[String], attachment_extension? : Array[String]) -> @model.GuildMessageSearchResults raise DiscordHttpError",
     doc: "Search messages in this guild.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 583,
+    line: 584,
   },
   {
     pkg: "gaato/discord/http",
@@ -9623,7 +9623,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub async fn GuildRef::vanity_url(Self) -> @model.GuildVanityUrl raise DiscordHttpError",
     doc: "Fetch this guild's vanity invite information.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 443,
+    line: 444,
   },
   {
     pkg: "gaato/discord/http",
@@ -9632,7 +9632,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub async fn GuildRef::voice_regions(Self) -> Array[@model.VoiceRegion] raise DiscordHttpError",
     doc: "List voice regions available to this guild.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 397,
+    line: 398,
   },
   {
     pkg: "gaato/discord/http",
@@ -9641,7 +9641,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub async fn GuildRef::webhooks(Self) -> Array[@model.Webhook] raise DiscordHttpError",
     doc: "List webhooks belonging to this guild.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 421,
+    line: 422,
   },
   {
     pkg: "gaato/discord/http",
@@ -9650,7 +9650,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub async fn GuildRef::welcome_screen(Self) -> @model.WelcomeScreen raise DiscordHttpError",
     doc: "Fetch this guild's welcome screen.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 491,
+    line: 492,
   },
   {
     pkg: "gaato/discord/http",
@@ -9659,7 +9659,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub async fn GuildRef::widget(Self) -> @model.GuildWidget raise DiscordHttpError",
     doc: "Fetch this guild's public widget representation.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 477,
+    line: 478,
   },
   {
     pkg: "gaato/discord/http",
@@ -9668,7 +9668,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub fn GuildRef::widget_image_url(Self, style? : String) -> String",
     doc: "Build this guild's widget image URL.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 485,
+    line: 486,
   },
   {
     pkg: "gaato/discord/http",
@@ -9677,7 +9677,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub async fn GuildRef::widget_settings(Self) -> @model.GuildWidgetSettings raise DiscordHttpError",
     doc: "Fetch this guild's widget settings.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 451,
+    line: 452,
   },
   {
     pkg: "gaato/discord/http",
@@ -10109,7 +10109,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub async fn RoleRef::delete(Self, reason? : String) -> Unit raise DiscordHttpError",
     doc: "Delete this role.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 731,
+    line: 732,
   },
   {
     pkg: "gaato/discord/http",
@@ -10118,7 +10118,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub async fn RoleRef::edit(Self, name? : String, permissions? : @model.Permissions, color? : Int32, colors? : @model.RoleColors, hoist? : Bool, icon? : String, clear_icon? : Bool, unicode_emoji? : String, clear_unicode_emoji? : Bool, mentionable? : Bool, reason? : String) -> @model.Role raise DiscordHttpError",
     doc: "Edit this role.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 698,
+    line: 699,
   },
   {
     pkg: "gaato/discord/http",
@@ -10127,7 +10127,7 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub async fn RoleRef::fetch(Self) -> @model.Role raise DiscordHttpError",
     doc: "Fetch this role.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 682,
+    line: 683,
   },
   {
     pkg: "gaato/discord/http",
@@ -10136,13 +10136,13 @@ let entries_5 : Array[ApiEntry] = [
     signature: "pub async fn RoleRef::permissions(Self) -> @model.Permissions raise DiscordHttpError",
     doc: "Fetch the guild permissions of this role combined with `@everyone`.",
     file: "discord/src/http/handles_guild.mbt",
-    line: 690,
+    line: 691,
   },
   {
     pkg: "gaato/discord/http",
     name: "Route",
     kind: "enum",
-    signature: "pub(all) enum Route {\n  Custom(request_method~ : @gaato/http.Method, path~ : String, bucket_key~ : String, is_interaction~ : Bool, supports_reason~ : Bool)\n  GetGateway\n  GetGatewayBot\n  GetCurrentApplication\n  EditCurrentApplication\n  GetApplicationActivityInstance(application_id~ : @model.Id[@model.ApplicationMarker], instance_id~ : String)\n  UpdateApplicationIdentityProfile(application_id~ : @model.Id[@model.ApplicationMarker], user_id~ : @model.Id[@model.UserMarker], provider_issued_user_id~ : String)\n  GetApplicationIdentityProfile(application_id~ : @model.Id[@model.ApplicationMarker], user_id~ : @model.Id[@model.UserMarker], provider_issued_user_id~ : String)\n  GetApplicationIdentitiesByUserId(user_id~ : @model.Id[@model.UserMarker], application_id~ : @model.Id[@model.ApplicationMarker])\n  GetApplicationIdentitiesByExternalId(application_id~ : @model.Id[@model.ApplicationMarker], provider_type~ : String, provider_issued_user_id~ : String, query~ : String)\n  DeleteApplicationIdentity(user_id~ : @model.Id[@model.UserMarker], application_id~ : @model.Id[@model.ApplicationMarker], provider_type~ : String, provider_issued_user_id~ : String)\n  GetApplicationRoleConnectionMetadataRecords(application_id~ : @model.Id[@model.ApplicationMarker])\n  UpdateApplicationRoleConnectionMetadataRecords(application_id~ : @model.Id[@model.ApplicationMarker])\n  ListApplicationEmojis(application_id~ : @model.Id[@model.ApplicationMarker])\n  GetApplicationEmoji(application_id~ : @model.Id[@model.ApplicationMarker], emoji_id~ : @model.Id[@model.EmojiMarker])\n  CreateApplicationEmoji(application_id~ : @model.Id[@model.ApplicationMarker])\n  ModifyApplicationEmoji(application_id~ : @model.Id[@model.ApplicationMarker], emoji_id~ : @model.Id[@model.EmojiMarker])\n  DeleteApplicationEmoji(application_id~ : @model.Id[@model.ApplicationMarker], emoji_id~ : @model.Id[@model.EmojiMarker])\n  ListEntitlements(application_id~ : @model.Id[@model.ApplicationMarker], query~ : String)\n  GetEntitlement(application_id~ : @model.Id[@model.ApplicationMarker], entitlement_id~ : @model.Id[@model.EntitlementMarker])\n  CreateTestEntitlement(application_id~ : @model.Id[@model.ApplicationMarker])\n  ConsumeEntitlement(application_id~ : @model.Id[@model.ApplicationMarker], entitlement_id~ : @model.Id[@model.EntitlementMarker])\n  DeleteTestEntitlement(application_id~ : @model.Id[@model.ApplicationMarker], entitlement_id~ : @model.Id[@model.EntitlementMarker])\n  ListSkus(application_id~ : @model.Id[@model.ApplicationMarker])\n  ListSkuSubscriptions(sku_id~ : @model.Id[@model.SkuMarker], query~ : String)\n  GetSkuSubscription(sku_id~ : @model.Id[@model.SkuMarker], subscription_id~ : @model.Id[@model.SubscriptionMarker])\n  GetCurrentUser\n  GetCurrentUserGuilds(query~ : String)\n  GetCurrentUserConnections\n  GetCurrentUserGuildMember(guild_id~ : @model.Id[@model.GuildMarker])\n  GetCurrentUserApplicationRoleConnection(application_id~ : @model.Id[@model.ApplicationMarker])\n  UpdateCurrentUserApplicationRoleConnection(application_id~ : @model.Id[@model.ApplicationMarker])\n  DeleteCurrentUserApplicationRoleConnection(application_id~ : @model.Id[@model.ApplicationMarker])\n  LeaveGuild(guild_id~ : @model.Id[@model.GuildMarker])\n  GetUser(user_id~ : @model.Id[@model.UserMarker])\n  ModifyCurrentUser\n  CreateDm\n  GetCurrentAuthorizationInformation\n  GetCurrentBotApplicationInformation\n  GetChannel(channel_id~ : @model.Id[@model.ChannelMarker])\n  ModifyChannel(channel_id~ : @model.Id[@model.ChannelMarker])\n  DeleteChannel(channel_id~ : @model.Id[@model.ChannelMarker])\n  GetChannelMessages(channel_id~ : @model.Id[@model.ChannelMarker], query~ : String)\n  GetChannelMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  CreateMessage(channel_id~ : @model.Id[@model.ChannelMarker])\n  EditMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  DeleteMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  BulkDeleteMessages(channel_id~ : @model.Id[@model.ChannelMarker])\n  CreateReaction(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker], emoji~ : String)\n  DeleteOwnReaction(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker], emoji~ : String)\n  DeleteUserReaction(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker], emoji~ : String, user_id~ : @model.Id[@model.UserMarker])\n  DeleteAllReactions(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  DeleteAllReactionsForEmoji(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker], emoji~ : String)\n  CrosspostMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  GetReactions(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker], emoji~ : String, query~ : String)\n  GetPollAnswerVoters(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker], answer_id~ : Int32, query~ : String)\n  ExpirePoll(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  SendSoundboardSound(channel_id~ : @model.Id[@model.ChannelMarker])\n  TriggerTypingIndicator(channel_id~ : @model.Id[@model.ChannelMarker])\n  PinMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  UnpinMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  GetChannelPins(channel_id~ : @model.Id[@model.ChannelMarker], query~ : String)\n  GetPinnedMessages(channel_id~ : @model.Id[@model.ChannelMarker])\n  EditChannelPermissions(channel_id~ : @model.Id[@model.ChannelMarker], overwrite_id~ : @model.Id[@model.GenericMarker])\n  DeleteChannelPermission(channel_id~ : @model.Id[@model.ChannelMarker], overwrite_id~ : @model.Id[@model.GenericMarker])\n  GetChannelMemberPermissions(channel_id~ : @model.Id[@model.ChannelMarker], user_id~ : @model.Id[@model.UserMarker], query~ : String)\n  GetChannelRolePermissions(channel_id~ : @model.Id[@model.ChannelMarker], role_id~ : @model.Id[@model.RoleMarker], query~ : String)\n  GetChannelInvites(channel_id~ : @model.Id[@model.ChannelMarker])\n  CreateChannelInvite(channel_id~ : @model.Id[@model.ChannelMarker])\n  FollowAnnouncementChannel(channel_id~ : @model.Id[@model.ChannelMarker])\n  SetVoiceChannelStatus(channel_id~ : @model.Id[@model.ChannelMarker])\n  GroupDmAddRecipient(channel_id~ : @model.Id[@model.ChannelMarker], user_id~ : @model.Id[@model.UserMarker])\n  GroupDmRemoveRecipient(channel_id~ : @model.Id[@model.ChannelMarker], user_id~ : @model.Id[@model.UserMarker])\n  CreateWebhook(channel_id~ : @model.Id[@model.ChannelMarker])\n  GetChannelWebhooks(channel_id~ : @model.Id[@model.ChannelMarker])\n  StartThreadFromMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  StartThreadWithoutMessage(channel_id~ : @model.Id[@model.ChannelMarker])\n  JoinThread(channel_id~ : @model.Id[@model.ChannelMarker])\n  LeaveThread(channel_id~ : @model.Id[@model.ChannelMarker])\n  ListThreadMembers(channel_id~ : @model.Id[@model.ChannelMarker], query~ : String)\n  GetThreadMember(channel_id~ : @model.Id[@model.ChannelMarker], user_id~ : @model.Id[@model.UserMarker], query~ : String)\n  AddThreadMember(channel_id~ : @model.Id[@model.ChannelMarker], user_id~ : @model.Id[@model.UserMarker])\n  RemoveThreadMember(channel_id~ : @model.Id[@model.ChannelMarker], user_id~ : @model.Id[@model.UserMarker])\n  ListPublicArchivedThreads(channel_id~ : @model.Id[@model.ChannelMarker], query~ : String)\n  ListPrivateArchivedThreads(channel_id~ : @model.Id[@model.ChannelMarker], query~ : String)\n  ListJoinedPrivateArchivedThreads(channel_id~ : @model.Id[@model.ChannelMarker], query~ : String)\n  ListActiveGuildThreads(guild_id~ : @model.Id[@model.GuildMarker])\n  SearchGuildMessages(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  GetGuild(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildWithCounts(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  ModifyGuild(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildPreview(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildChannels(guild_id~ : @model.Id[@model.GuildMarker])\n  CreateGuildChannel(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildChannelPositions(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildMember(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  GetGuildMemberPermissions(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  ListGuildMembers(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  SearchGuildMembers(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  ModifyGuildMember(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  ModifyCurrentMember(guild_id~ : @model.Id[@model.GuildMarker])\n  AddGuildMember(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  GetGuildRoles(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildRole(guild_id~ : @model.Id[@model.GuildMarker], role_id~ : @model.Id[@model.RoleMarker])\n  GetGuildRolePermissions(guild_id~ : @model.Id[@model.GuildMarker], role_id~ : @model.Id[@model.RoleMarker])\n  CreateGuildRole(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildRolePositions(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildRole(guild_id~ : @model.Id[@model.GuildMarker], role_id~ : @model.Id[@model.RoleMarker])\n  DeleteGuildRole(guild_id~ : @model.Id[@model.GuildMarker], role_id~ : @model.Id[@model.RoleMarker])\n  AddGuildMemberRole(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker], role_id~ : @model.Id[@model.RoleMarker])\n  RemoveGuildMemberRole(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker], role_id~ : @model.Id[@model.RoleMarker])\n  RemoveGuildMember(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  CreateGuildBan(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  RemoveGuildBan(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  GetGuildBan(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  GetGuildBans(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  BulkGuildBan(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildPruneCount(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  BeginGuildPrune(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildVoiceRegions(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildInvites(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildIntegrations(guild_id~ : @model.Id[@model.GuildMarker])\n  DeleteGuildIntegration(guild_id~ : @model.Id[@model.GuildMarker], integration_id~ : @model.Id[@model.IntegrationMarker])\n  GetGuildVanityUrl(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildWidgetSettings(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildWidget(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildWidget(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildWelcomeScreen(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildWelcomeScreen(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildOnboarding(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildOnboarding(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildIncidentActions(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildAuditLog(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  ListAutoModerationRules(guild_id~ : @model.Id[@model.GuildMarker])\n  GetAutoModerationRule(guild_id~ : @model.Id[@model.GuildMarker], rule_id~ : @model.Id[@model.AutoModerationRuleMarker])\n  CreateAutoModerationRule(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyAutoModerationRule(guild_id~ : @model.Id[@model.GuildMarker], rule_id~ : @model.Id[@model.AutoModerationRuleMarker])\n  DeleteAutoModerationRule(guild_id~ : @model.Id[@model.GuildMarker], rule_id~ : @model.Id[@model.AutoModerationRuleMarker])\n  ListGuildStickers(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildSticker(guild_id~ : @model.Id[@model.GuildMarker], sticker_id~ : @model.Id[@model.StickerMarker])\n  CreateGuildSticker(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildSticker(guild_id~ : @model.Id[@model.GuildMarker], sticker_id~ : @model.Id[@model.StickerMarker])\n  DeleteGuildSticker(guild_id~ : @model.Id[@model.GuildMarker], sticker_id~ : @model.Id[@model.StickerMarker])\n  ListGuildScheduledEvents(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  CreateGuildScheduledEvent(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildScheduledEvent(guild_id~ : @model.Id[@model.GuildMarker], event_id~ : @model.Id[@model.ScheduledEventMarker], query~ : String)\n  ModifyGuildScheduledEvent(guild_id~ : @model.Id[@model.GuildMarker], event_id~ : @model.Id[@model.ScheduledEventMarker])\n  DeleteGuildScheduledEvent(guild_id~ : @model.Id[@model.GuildMarker], event_id~ : @model.Id[@model.ScheduledEventMarker])\n  ListGuildScheduledEventUsers(guild_id~ : @model.Id[@model.GuildMarker], event_id~ : @model.Id[@model.ScheduledEventMarker], query~ : String)\n  ListGuildSoundboardSounds(guild_id~ : @model.Id[@model.GuildMarker])\n  CreateGuildSoundboardSound(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildSoundboardSound(guild_id~ : @model.Id[@model.GuildMarker], sound_id~ : @model.Id[@model.SoundboardSoundMarker])\n  ModifyGuildSoundboardSound(guild_id~ : @model.Id[@model.GuildMarker], sound_id~ : @model.Id[@model.SoundboardSoundMarker])\n  DeleteGuildSoundboardSound(guild_id~ : @model.Id[@model.GuildMarker], sound_id~ : @model.Id[@model.SoundboardSoundMarker])\n  GetGuildWebhooks(guild_id~ : @model.Id[@model.GuildMarker])\n  ListGuildEmojis(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildEmoji(guild_id~ : @model.Id[@model.GuildMarker], emoji_id~ : @model.Id[@model.EmojiMarker])\n  CreateGuildEmoji(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildEmoji(guild_id~ : @model.Id[@model.GuildMarker], emoji_id~ : @model.Id[@model.EmojiMarker])\n  DeleteGuildEmoji(guild_id~ : @model.Id[@model.GuildMarker], emoji_id~ : @model.Id[@model.EmojiMarker])\n  GetSticker(sticker_id~ : @model.Id[@model.StickerMarker])\n  ListStickerPacks\n  GetStickerPack(pack_id~ : @model.Id[@model.StickerPackMarker])\n  ListDefaultSoundboardSounds\n  ListVoiceRegions\n  GetCurrentUserVoiceState(guild_id~ : @model.Id[@model.GuildMarker])\n  GetUserVoiceState(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  ModifyCurrentUserVoiceState(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyUserVoiceState(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  GetGuildTemplate(template_code~ : String)\n  CreateGuildFromTemplate(template_code~ : String)\n  GetGuildTemplates(guild_id~ : @model.Id[@model.GuildMarker])\n  CreateGuildTemplate(guild_id~ : @model.Id[@model.GuildMarker])\n  SyncGuildTemplate(guild_id~ : @model.Id[@model.GuildMarker], template_code~ : String)\n  ModifyGuildTemplate(guild_id~ : @model.Id[@model.GuildMarker], template_code~ : String)\n  DeleteGuildTemplate(guild_id~ : @model.Id[@model.GuildMarker], template_code~ : String)\n  CreateStageInstance\n  GetStageInstance(channel_id~ : @model.Id[@model.ChannelMarker])\n  ModifyStageInstance(channel_id~ : @model.Id[@model.ChannelMarker])\n  DeleteStageInstance(channel_id~ : @model.Id[@model.ChannelMarker])\n  GetInvite(code~ : String, query~ : String)\n  DeleteInvite(code~ : String)\n  UpdateInviteTargetUsers(code~ : String)\n  GetInviteTargetUsersJobStatus(code~ : String)\n  AddInviteTargetUser(code~ : String, user_id~ : @model.Id[@model.UserMarker])\n  RemoveInviteTargetUser(code~ : String, user_id~ : @model.Id[@model.UserMarker])\n  BulkAddInviteTargetUsers(code~ : String)\n  BulkDeleteInviteTargetUsers(code~ : String)\n  GetWebhook(webhook_id~ : @model.Id[@model.WebhookMarker])\n  ModifyWebhook(webhook_id~ : @model.Id[@model.WebhookMarker])\n  DeleteWebhook(webhook_id~ : @model.Id[@model.WebhookMarker])\n  GetWebhookWithToken(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String)\n  ModifyWebhookWithToken(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String)\n  DeleteWebhookWithToken(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String)\n  ExecuteWebhook(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String, query~ : String)\n  ExecuteSlackCompatibleWebhook(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String, query~ : String)\n  ExecuteGithubCompatibleWebhook(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String, query~ : String)\n  GetWebhookMessage(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String, message_id~ : @model.Id[@model.MessageMarker], query~ : String)\n  EditWebhookMessage(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String, message_id~ : @model.Id[@model.MessageMarker], query~ : String)\n  DeleteWebhookMessage(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String, message_id~ : @model.Id[@model.MessageMarker], query~ : String)\n  CreateInteractionResponse(interaction_id~ : @model.Id[@model.InteractionMarker], token~ : String, query~ : String)\n  GetOriginalInteractionResponse(application_id~ : @model.Id[@model.ApplicationMarker], token~ : String)\n  EditOriginalInteractionResponse(application_id~ : @model.Id[@model.ApplicationMarker], token~ : String)\n  DeleteOriginalInteractionResponse(application_id~ : @model.Id[@model.ApplicationMarker], token~ : String)\n  CreateFollowupMessage(application_id~ : @model.Id[@model.ApplicationMarker], token~ : String)\n  GetFollowupMessage(application_id~ : @model.Id[@model.ApplicationMarker], token~ : String, message_id~ : @model.Id[@model.MessageMarker])\n  EditFollowupMessage(application_id~ : @model.Id[@model.ApplicationMarker], token~ : String, message_id~ : @model.Id[@model.MessageMarker])\n  DeleteFollowupMessage(application_id~ : @model.Id[@model.ApplicationMarker], token~ : String, message_id~ : @model.Id[@model.MessageMarker])\n  GetGlobalCommands(application_id~ : @model.Id[@model.ApplicationMarker], query~ : String)\n  CreateGlobalCommand(application_id~ : @model.Id[@model.ApplicationMarker])\n  GetGlobalCommand(application_id~ : @model.Id[@model.ApplicationMarker], command_id~ : @model.Id[@model.CommandMarker])\n  EditGlobalCommand(application_id~ : @model.Id[@model.ApplicationMarker], command_id~ : @model.Id[@model.CommandMarker])\n  DeleteGlobalCommand(application_id~ : @model.Id[@model.ApplicationMarker], command_id~ : @model.Id[@model.CommandMarker])\n  BulkOverwriteGlobalCommands(application_id~ : @model.Id[@model.ApplicationMarker])\n  GetGuildCommands(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  CreateGuildCommand(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildCommand(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker], command_id~ : @model.Id[@model.CommandMarker])\n  EditGuildCommand(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker], command_id~ : @model.Id[@model.CommandMarker])\n  DeleteGuildCommand(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker], command_id~ : @model.Id[@model.CommandMarker])\n  BulkOverwriteGuildCommands(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildApplicationCommandPermissions(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker])\n  GetApplicationCommandPermissions(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker], command_id~ : @model.Id[@model.CommandMarker])\n  EditApplicationCommandPermissions(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker], command_id~ : @model.Id[@model.CommandMarker])\n}",
+    signature: "pub(all) enum Route {\n  Custom(request_method~ : @mttp.Method, path~ : String, bucket_key~ : String, is_interaction~ : Bool, supports_reason~ : Bool)\n  GetGateway\n  GetGatewayBot\n  GetCurrentApplication\n  EditCurrentApplication\n  GetApplicationActivityInstance(application_id~ : @model.Id[@model.ApplicationMarker], instance_id~ : String)\n  UpdateApplicationIdentityProfile(application_id~ : @model.Id[@model.ApplicationMarker], user_id~ : @model.Id[@model.UserMarker], provider_issued_user_id~ : String)\n  GetApplicationIdentityProfile(application_id~ : @model.Id[@model.ApplicationMarker], user_id~ : @model.Id[@model.UserMarker], provider_issued_user_id~ : String)\n  GetApplicationIdentitiesByUserId(user_id~ : @model.Id[@model.UserMarker], application_id~ : @model.Id[@model.ApplicationMarker])\n  GetApplicationIdentitiesByExternalId(application_id~ : @model.Id[@model.ApplicationMarker], provider_type~ : String, provider_issued_user_id~ : String, query~ : String)\n  DeleteApplicationIdentity(user_id~ : @model.Id[@model.UserMarker], application_id~ : @model.Id[@model.ApplicationMarker], provider_type~ : String, provider_issued_user_id~ : String)\n  GetApplicationRoleConnectionMetadataRecords(application_id~ : @model.Id[@model.ApplicationMarker])\n  UpdateApplicationRoleConnectionMetadataRecords(application_id~ : @model.Id[@model.ApplicationMarker])\n  ListApplicationEmojis(application_id~ : @model.Id[@model.ApplicationMarker])\n  GetApplicationEmoji(application_id~ : @model.Id[@model.ApplicationMarker], emoji_id~ : @model.Id[@model.EmojiMarker])\n  CreateApplicationEmoji(application_id~ : @model.Id[@model.ApplicationMarker])\n  ModifyApplicationEmoji(application_id~ : @model.Id[@model.ApplicationMarker], emoji_id~ : @model.Id[@model.EmojiMarker])\n  DeleteApplicationEmoji(application_id~ : @model.Id[@model.ApplicationMarker], emoji_id~ : @model.Id[@model.EmojiMarker])\n  ListEntitlements(application_id~ : @model.Id[@model.ApplicationMarker], query~ : String)\n  GetEntitlement(application_id~ : @model.Id[@model.ApplicationMarker], entitlement_id~ : @model.Id[@model.EntitlementMarker])\n  CreateTestEntitlement(application_id~ : @model.Id[@model.ApplicationMarker])\n  ConsumeEntitlement(application_id~ : @model.Id[@model.ApplicationMarker], entitlement_id~ : @model.Id[@model.EntitlementMarker])\n  DeleteTestEntitlement(application_id~ : @model.Id[@model.ApplicationMarker], entitlement_id~ : @model.Id[@model.EntitlementMarker])\n  ListSkus(application_id~ : @model.Id[@model.ApplicationMarker])\n  ListSkuSubscriptions(sku_id~ : @model.Id[@model.SkuMarker], query~ : String)\n  GetSkuSubscription(sku_id~ : @model.Id[@model.SkuMarker], subscription_id~ : @model.Id[@model.SubscriptionMarker])\n  GetCurrentUser\n  GetCurrentUserGuilds(query~ : String)\n  GetCurrentUserConnections\n  GetCurrentUserGuildMember(guild_id~ : @model.Id[@model.GuildMarker])\n  GetCurrentUserApplicationRoleConnection(application_id~ : @model.Id[@model.ApplicationMarker])\n  UpdateCurrentUserApplicationRoleConnection(application_id~ : @model.Id[@model.ApplicationMarker])\n  DeleteCurrentUserApplicationRoleConnection(application_id~ : @model.Id[@model.ApplicationMarker])\n  LeaveGuild(guild_id~ : @model.Id[@model.GuildMarker])\n  GetUser(user_id~ : @model.Id[@model.UserMarker])\n  ModifyCurrentUser\n  CreateDm\n  GetCurrentAuthorizationInformation\n  GetCurrentBotApplicationInformation\n  GetChannel(channel_id~ : @model.Id[@model.ChannelMarker])\n  ModifyChannel(channel_id~ : @model.Id[@model.ChannelMarker])\n  DeleteChannel(channel_id~ : @model.Id[@model.ChannelMarker])\n  GetChannelMessages(channel_id~ : @model.Id[@model.ChannelMarker], query~ : String)\n  GetChannelMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  CreateMessage(channel_id~ : @model.Id[@model.ChannelMarker])\n  EditMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  DeleteMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  BulkDeleteMessages(channel_id~ : @model.Id[@model.ChannelMarker])\n  CreateReaction(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker], emoji~ : String)\n  DeleteOwnReaction(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker], emoji~ : String)\n  DeleteUserReaction(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker], emoji~ : String, user_id~ : @model.Id[@model.UserMarker])\n  DeleteAllReactions(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  DeleteAllReactionsForEmoji(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker], emoji~ : String)\n  CrosspostMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  GetReactions(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker], emoji~ : String, query~ : String)\n  GetPollAnswerVoters(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker], answer_id~ : Int32, query~ : String)\n  ExpirePoll(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  SendSoundboardSound(channel_id~ : @model.Id[@model.ChannelMarker])\n  TriggerTypingIndicator(channel_id~ : @model.Id[@model.ChannelMarker])\n  PinMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  UnpinMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  GetChannelPins(channel_id~ : @model.Id[@model.ChannelMarker], query~ : String)\n  GetPinnedMessages(channel_id~ : @model.Id[@model.ChannelMarker])\n  EditChannelPermissions(channel_id~ : @model.Id[@model.ChannelMarker], overwrite_id~ : @model.Id[@model.GenericMarker])\n  DeleteChannelPermission(channel_id~ : @model.Id[@model.ChannelMarker], overwrite_id~ : @model.Id[@model.GenericMarker])\n  GetChannelMemberPermissions(channel_id~ : @model.Id[@model.ChannelMarker], user_id~ : @model.Id[@model.UserMarker], query~ : String)\n  GetChannelRolePermissions(channel_id~ : @model.Id[@model.ChannelMarker], role_id~ : @model.Id[@model.RoleMarker], query~ : String)\n  GetChannelInvites(channel_id~ : @model.Id[@model.ChannelMarker])\n  CreateChannelInvite(channel_id~ : @model.Id[@model.ChannelMarker])\n  FollowAnnouncementChannel(channel_id~ : @model.Id[@model.ChannelMarker])\n  SetVoiceChannelStatus(channel_id~ : @model.Id[@model.ChannelMarker])\n  GroupDmAddRecipient(channel_id~ : @model.Id[@model.ChannelMarker], user_id~ : @model.Id[@model.UserMarker])\n  GroupDmRemoveRecipient(channel_id~ : @model.Id[@model.ChannelMarker], user_id~ : @model.Id[@model.UserMarker])\n  CreateWebhook(channel_id~ : @model.Id[@model.ChannelMarker])\n  GetChannelWebhooks(channel_id~ : @model.Id[@model.ChannelMarker])\n  StartThreadFromMessage(channel_id~ : @model.Id[@model.ChannelMarker], message_id~ : @model.Id[@model.MessageMarker])\n  StartThreadWithoutMessage(channel_id~ : @model.Id[@model.ChannelMarker])\n  JoinThread(channel_id~ : @model.Id[@model.ChannelMarker])\n  LeaveThread(channel_id~ : @model.Id[@model.ChannelMarker])\n  ListThreadMembers(channel_id~ : @model.Id[@model.ChannelMarker], query~ : String)\n  GetThreadMember(channel_id~ : @model.Id[@model.ChannelMarker], user_id~ : @model.Id[@model.UserMarker], query~ : String)\n  AddThreadMember(channel_id~ : @model.Id[@model.ChannelMarker], user_id~ : @model.Id[@model.UserMarker])\n  RemoveThreadMember(channel_id~ : @model.Id[@model.ChannelMarker], user_id~ : @model.Id[@model.UserMarker])\n  ListPublicArchivedThreads(channel_id~ : @model.Id[@model.ChannelMarker], query~ : String)\n  ListPrivateArchivedThreads(channel_id~ : @model.Id[@model.ChannelMarker], query~ : String)\n  ListJoinedPrivateArchivedThreads(channel_id~ : @model.Id[@model.ChannelMarker], query~ : String)\n  ListActiveGuildThreads(guild_id~ : @model.Id[@model.GuildMarker])\n  SearchGuildMessages(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  GetGuild(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildWithCounts(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  ModifyGuild(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildPreview(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildChannels(guild_id~ : @model.Id[@model.GuildMarker])\n  CreateGuildChannel(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildChannelPositions(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildMember(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  GetGuildMemberPermissions(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  ListGuildMembers(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  SearchGuildMembers(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  ModifyGuildMember(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  ModifyCurrentMember(guild_id~ : @model.Id[@model.GuildMarker])\n  AddGuildMember(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  GetGuildRoles(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildRole(guild_id~ : @model.Id[@model.GuildMarker], role_id~ : @model.Id[@model.RoleMarker])\n  GetGuildRolePermissions(guild_id~ : @model.Id[@model.GuildMarker], role_id~ : @model.Id[@model.RoleMarker])\n  CreateGuildRole(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildRolePositions(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildRole(guild_id~ : @model.Id[@model.GuildMarker], role_id~ : @model.Id[@model.RoleMarker])\n  DeleteGuildRole(guild_id~ : @model.Id[@model.GuildMarker], role_id~ : @model.Id[@model.RoleMarker])\n  AddGuildMemberRole(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker], role_id~ : @model.Id[@model.RoleMarker])\n  RemoveGuildMemberRole(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker], role_id~ : @model.Id[@model.RoleMarker])\n  RemoveGuildMember(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  CreateGuildBan(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  RemoveGuildBan(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  GetGuildBan(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  GetGuildBans(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  BulkGuildBan(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildPruneCount(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  BeginGuildPrune(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildVoiceRegions(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildInvites(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildIntegrations(guild_id~ : @model.Id[@model.GuildMarker])\n  DeleteGuildIntegration(guild_id~ : @model.Id[@model.GuildMarker], integration_id~ : @model.Id[@model.IntegrationMarker])\n  GetGuildVanityUrl(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildWidgetSettings(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildWidget(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildWidget(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildWelcomeScreen(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildWelcomeScreen(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildOnboarding(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildOnboarding(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildIncidentActions(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildAuditLog(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  ListAutoModerationRules(guild_id~ : @model.Id[@model.GuildMarker])\n  GetAutoModerationRule(guild_id~ : @model.Id[@model.GuildMarker], rule_id~ : @model.Id[@model.AutoModerationRuleMarker])\n  CreateAutoModerationRule(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyAutoModerationRule(guild_id~ : @model.Id[@model.GuildMarker], rule_id~ : @model.Id[@model.AutoModerationRuleMarker])\n  DeleteAutoModerationRule(guild_id~ : @model.Id[@model.GuildMarker], rule_id~ : @model.Id[@model.AutoModerationRuleMarker])\n  ListGuildStickers(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildSticker(guild_id~ : @model.Id[@model.GuildMarker], sticker_id~ : @model.Id[@model.StickerMarker])\n  CreateGuildSticker(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildSticker(guild_id~ : @model.Id[@model.GuildMarker], sticker_id~ : @model.Id[@model.StickerMarker])\n  DeleteGuildSticker(guild_id~ : @model.Id[@model.GuildMarker], sticker_id~ : @model.Id[@model.StickerMarker])\n  ListGuildScheduledEvents(guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  CreateGuildScheduledEvent(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildScheduledEvent(guild_id~ : @model.Id[@model.GuildMarker], event_id~ : @model.Id[@model.ScheduledEventMarker], query~ : String)\n  ModifyGuildScheduledEvent(guild_id~ : @model.Id[@model.GuildMarker], event_id~ : @model.Id[@model.ScheduledEventMarker])\n  DeleteGuildScheduledEvent(guild_id~ : @model.Id[@model.GuildMarker], event_id~ : @model.Id[@model.ScheduledEventMarker])\n  ListGuildScheduledEventUsers(guild_id~ : @model.Id[@model.GuildMarker], event_id~ : @model.Id[@model.ScheduledEventMarker], query~ : String)\n  ListGuildSoundboardSounds(guild_id~ : @model.Id[@model.GuildMarker])\n  CreateGuildSoundboardSound(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildSoundboardSound(guild_id~ : @model.Id[@model.GuildMarker], sound_id~ : @model.Id[@model.SoundboardSoundMarker])\n  ModifyGuildSoundboardSound(guild_id~ : @model.Id[@model.GuildMarker], sound_id~ : @model.Id[@model.SoundboardSoundMarker])\n  DeleteGuildSoundboardSound(guild_id~ : @model.Id[@model.GuildMarker], sound_id~ : @model.Id[@model.SoundboardSoundMarker])\n  GetGuildWebhooks(guild_id~ : @model.Id[@model.GuildMarker])\n  ListGuildEmojis(guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildEmoji(guild_id~ : @model.Id[@model.GuildMarker], emoji_id~ : @model.Id[@model.EmojiMarker])\n  CreateGuildEmoji(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyGuildEmoji(guild_id~ : @model.Id[@model.GuildMarker], emoji_id~ : @model.Id[@model.EmojiMarker])\n  DeleteGuildEmoji(guild_id~ : @model.Id[@model.GuildMarker], emoji_id~ : @model.Id[@model.EmojiMarker])\n  GetSticker(sticker_id~ : @model.Id[@model.StickerMarker])\n  ListStickerPacks\n  GetStickerPack(pack_id~ : @model.Id[@model.StickerPackMarker])\n  ListDefaultSoundboardSounds\n  ListVoiceRegions\n  GetCurrentUserVoiceState(guild_id~ : @model.Id[@model.GuildMarker])\n  GetUserVoiceState(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  ModifyCurrentUserVoiceState(guild_id~ : @model.Id[@model.GuildMarker])\n  ModifyUserVoiceState(guild_id~ : @model.Id[@model.GuildMarker], user_id~ : @model.Id[@model.UserMarker])\n  GetGuildTemplate(template_code~ : String)\n  CreateGuildFromTemplate(template_code~ : String)\n  GetGuildTemplates(guild_id~ : @model.Id[@model.GuildMarker])\n  CreateGuildTemplate(guild_id~ : @model.Id[@model.GuildMarker])\n  SyncGuildTemplate(guild_id~ : @model.Id[@model.GuildMarker], template_code~ : String)\n  ModifyGuildTemplate(guild_id~ : @model.Id[@model.GuildMarker], template_code~ : String)\n  DeleteGuildTemplate(guild_id~ : @model.Id[@model.GuildMarker], template_code~ : String)\n  CreateStageInstance\n  GetStageInstance(channel_id~ : @model.Id[@model.ChannelMarker])\n  ModifyStageInstance(channel_id~ : @model.Id[@model.ChannelMarker])\n  DeleteStageInstance(channel_id~ : @model.Id[@model.ChannelMarker])\n  GetInvite(code~ : String, query~ : String)\n  DeleteInvite(code~ : String)\n  UpdateInviteTargetUsers(code~ : String)\n  GetInviteTargetUsersJobStatus(code~ : String)\n  AddInviteTargetUser(code~ : String, user_id~ : @model.Id[@model.UserMarker])\n  RemoveInviteTargetUser(code~ : String, user_id~ : @model.Id[@model.UserMarker])\n  BulkAddInviteTargetUsers(code~ : String)\n  BulkDeleteInviteTargetUsers(code~ : String)\n  GetWebhook(webhook_id~ : @model.Id[@model.WebhookMarker])\n  ModifyWebhook(webhook_id~ : @model.Id[@model.WebhookMarker])\n  DeleteWebhook(webhook_id~ : @model.Id[@model.WebhookMarker])\n  GetWebhookWithToken(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String)\n  ModifyWebhookWithToken(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String)\n  DeleteWebhookWithToken(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String)\n  ExecuteWebhook(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String, query~ : String)\n  ExecuteSlackCompatibleWebhook(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String, query~ : String)\n  ExecuteGithubCompatibleWebhook(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String, query~ : String)\n  GetWebhookMessage(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String, message_id~ : @model.Id[@model.MessageMarker], query~ : String)\n  EditWebhookMessage(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String, message_id~ : @model.Id[@model.MessageMarker], query~ : String)\n  DeleteWebhookMessage(webhook_id~ : @model.Id[@model.WebhookMarker], token~ : String, message_id~ : @model.Id[@model.MessageMarker], query~ : String)\n  CreateInteractionResponse(interaction_id~ : @model.Id[@model.InteractionMarker], token~ : String, query~ : String)\n  GetOriginalInteractionResponse(application_id~ : @model.Id[@model.ApplicationMarker], token~ : String)\n  EditOriginalInteractionResponse(application_id~ : @model.Id[@model.ApplicationMarker], token~ : String)\n  DeleteOriginalInteractionResponse(application_id~ : @model.Id[@model.ApplicationMarker], token~ : String)\n  CreateFollowupMessage(application_id~ : @model.Id[@model.ApplicationMarker], token~ : String)\n  GetFollowupMessage(application_id~ : @model.Id[@model.ApplicationMarker], token~ : String, message_id~ : @model.Id[@model.MessageMarker])\n  EditFollowupMessage(application_id~ : @model.Id[@model.ApplicationMarker], token~ : String, message_id~ : @model.Id[@model.MessageMarker])\n  DeleteFollowupMessage(application_id~ : @model.Id[@model.ApplicationMarker], token~ : String, message_id~ : @model.Id[@model.MessageMarker])\n  GetGlobalCommands(application_id~ : @model.Id[@model.ApplicationMarker], query~ : String)\n  CreateGlobalCommand(application_id~ : @model.Id[@model.ApplicationMarker])\n  GetGlobalCommand(application_id~ : @model.Id[@model.ApplicationMarker], command_id~ : @model.Id[@model.CommandMarker])\n  EditGlobalCommand(application_id~ : @model.Id[@model.ApplicationMarker], command_id~ : @model.Id[@model.CommandMarker])\n  DeleteGlobalCommand(application_id~ : @model.Id[@model.ApplicationMarker], command_id~ : @model.Id[@model.CommandMarker])\n  BulkOverwriteGlobalCommands(application_id~ : @model.Id[@model.ApplicationMarker])\n  GetGuildCommands(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker], query~ : String)\n  CreateGuildCommand(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildCommand(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker], command_id~ : @model.Id[@model.CommandMarker])\n  EditGuildCommand(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker], command_id~ : @model.Id[@model.CommandMarker])\n  DeleteGuildCommand(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker], command_id~ : @model.Id[@model.CommandMarker])\n  BulkOverwriteGuildCommands(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker])\n  GetGuildApplicationCommandPermissions(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker])\n  GetApplicationCommandPermissions(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker], command_id~ : @model.Id[@model.CommandMarker])\n  EditApplicationCommandPermissions(application_id~ : @model.Id[@model.ApplicationMarker], guild_id~ : @model.Id[@model.GuildMarker], command_id~ : @model.Id[@model.CommandMarker])\n}",
     doc: "One variant per Discord REST endpoint. A route knows its HTTP method, its\nconcrete path (including query string), and its rate-limit bucket key\n(path template with major parameters kept and minor ones squashed).\nFree-form string segments (emoji, invite/template codes, external\nidentity ids) are held raw and percent-encoded by `Route::path`.",
     file: "discord/src/http/route.mbt",
     line: 19,
@@ -10160,7 +10160,7 @@ let entries_5 : Array[ApiEntry] = [
     pkg: "gaato/discord/http",
     name: "Route::custom",
     kind: "fn",
-    signature: "pub fn Route::custom(request_method~ : @gaato/http.Method, path~ : String, bucket? : String, is_interaction? : Bool, supports_reason? : Bool) -> Self raise CustomRouteError",
+    signature: "pub fn Route::custom(request_method~ : @mttp.Method, path~ : String, bucket? : String, is_interaction? : Bool, supports_reason? : Bool) -> Self raise CustomRouteError",
     doc: "Construct a route for a Discord REST endpoint without a typed wrapper.\n\n`path` is relative to the configured API base and must start with `/`; it\nmay include a query string. When `bucket` is omitted, the rate limiter uses\na custom-route namespace plus the HTTP method and query-free concrete path.\nSupply a bucket explicitly to group minor resource IDs, for example\n`PATCH:/guilds/123/auto-moderation/rules/{}`.\n\nSet `is_interaction=true` only for interaction or webhook-token endpoints:\nthese skip the global rate limit and omit bot-token authentication.\n\n```mbt\ntest \"derive stable metadata for a custom route\" {\n  let route = @http.Route::custom(\n    request_method=Get,\n    path=\"/guilds/100/stickers?limit=25\",\n  )\n  inspect(route.path(), content=\"/guilds/100/stickers?limit=25\")\n  inspect(route.bucket(), content=\"CUSTOM:GET:/guilds/100/stickers\")\n  assert_true(route.needs_auth())\n}\n```",
     file: "discord/src/http/route.mbt",
     line: 533,
@@ -10178,7 +10178,7 @@ let entries_5 : Array[ApiEntry] = [
     pkg: "gaato/discord/http",
     name: "Route::method_",
     kind: "fn",
-    signature: "pub fn Route::method_(Self) -> @gaato/http.Method",
+    signature: "pub fn Route::method_(Self) -> @mttp.Method",
     doc: "The HTTP method this route is requested with.",
     file: "discord/src/http/route.mbt",
     line: 561,
@@ -10457,7 +10457,7 @@ let entries_5 : Array[ApiEntry] = [
     pkg: "gaato/discord/http",
     name: "VERSION",
     kind: "const",
-    signature: "pub const VERSION : String = \"0.15.0\"",
+    signature: "pub const VERSION : String = \"0.16.0\"",
     doc: "Library version, sent in the User-Agent header.",
     file: "discord/src/http/client.mbt",
     line: 34,
@@ -11643,7 +11643,7 @@ let entries_6 : Array[ApiEntry] = [
     signature: "pub(all) struct ActiveGuildThreads {\n  threads : Array[Channel]\n  members : Array[ThreadMember]\n}",
     doc: "Active thread channels in a guild and their membership records.",
     file: "discord/src/model/channel.mbt",
-    line: 332,
+    line: 467,
   },
   {
     pkg: "gaato/discord/model",
@@ -12799,7 +12799,7 @@ let entries_7 : Array[ApiEntry] = [
     signature: "pub(all) struct ArchivedThreads {\n  threads : Array[Channel]\n  members : Array[ThreadMember]\n  has_more : Bool\n}",
     doc: "Archived thread channels and their membership records.",
     file: "discord/src/model/channel.mbt",
-    line: 323,
+    line: 458,
   },
   {
     pkg: "gaato/discord/model",
@@ -13544,9 +13544,9 @@ let entries_7 : Array[ApiEntry] = [
     name: "Channel",
     kind: "struct",
     signature: "pub(all) struct Channel {\n  id : Id[ChannelMarker]\n  typ : ChannelType\n  guild_id : Id[GuildMarker]?\n  position : Int32?\n  permission_overwrites : Array[Overwrite]?\n  name : Nullable[String]?\n  topic : Nullable[String]?\n  nsfw : Bool?\n  last_message_id : Nullable[Id[MessageMarker]]?\n  bitrate : Int32?\n  user_limit : Int32?\n  rate_limit_per_user : Int32?\n  recipients : Array[User]?\n  icon : Nullable[ImageHash]?\n  owner_id : Id[UserMarker]?\n  application_id : Nullable[Id[ApplicationMarker]]?\n  managed : Bool?\n  parent_id : Nullable[Id[ChannelMarker]]?\n  last_pin_timestamp : Nullable[Timestamp]?\n  rtc_region : Nullable[String]?\n  video_quality_mode : VideoQualityMode?\n  message_count : Int32?\n  member_count : Int32?\n  thread_metadata : ThreadMetadata?\n  thread_member : ThreadMember?\n  default_auto_archive_duration : ThreadAutoArchiveDuration?\n  permissions : Permissions?\n  app_permissions : Permissions?\n  flags : ChannelFlags?\n  total_message_sent : Int32?\n  available_tags : Array[ForumTag]?\n  applied_tags : Array[Id[GenericMarker]]?\n  default_reaction_emoji : Nullable[DefaultReaction]?\n  default_thread_rate_limit_per_user : Int32?\n  default_sort_order : Nullable[SortOrderType]?\n  default_forum_layout : ForumLayoutType?\n}",
-    doc: "A flat channel model covering every Discord channel variant.",
+    doc: "A flat channel model covering every Discord channel variant.\n\nA guild channel the bot cannot view arrives over the gateway obfuscated\n(`Channel::is_obfuscated`): only `id`, `typ`, `position` and `parent_id`\nare reliable, and Discord nulls or reduces the rest.",
     file: "discord/src/model/channel.mbt",
-    line: 4,
+    line: 8,
   },
   {
     pkg: "gaato/discord/model",
@@ -13555,7 +13555,7 @@ let entries_7 : Array[ApiEntry] = [
     signature: "pub fn Channel::is_obfuscated(Self) -> Bool",
     doc: "Whether Discord obfuscated this channel's metadata because the bot cannot\nview it (`CHANNEL_OBFUSCATED` flag). Only `id`, `typ`, `position` and\n`parent_id` are reliable on an obfuscated channel; a `CHANNEL_UPDATE` with\nthe full data follows once the bot gains access.",
     file: "discord/src/model/channel.mbt",
-    line: 538,
+    line: 673,
   },
   {
     pkg: "gaato/discord/model",
@@ -13573,7 +13573,7 @@ let entries_7 : Array[ApiEntry] = [
     signature: "pub(all) struct ChannelFlags(UInt64)",
     doc: "Bit flags describing special behavior assigned to a channel.",
     file: "discord/src/model/channel.mbt",
-    line: 393,
+    line: 528,
   },
   {
     pkg: "gaato/discord/model",
@@ -13582,7 +13582,7 @@ let entries_7 : Array[ApiEntry] = [
     signature: "pub fn ChannelFlags::active_channels_removed() -> Self",
     doc: "Bit `1 << 2`, which Discord sets but does not document.",
     file: "discord/src/model/channel.mbt",
-    line: 478,
+    line: 613,
   },
   {
     pkg: "gaato/discord/model",
@@ -13591,7 +13591,7 @@ let entries_7 : Array[ApiEntry] = [
     signature: "pub fn ChannelFlags::bits(Self) -> UInt64",
     doc: "The raw bit field.",
     file: "discord/src/model/channel.mbt",
-    line: 409,
+    line: 544,
   },
   {
     pkg: "gaato/discord/model",
@@ -13600,7 +13600,7 @@ let entries_7 : Array[ApiEntry] = [
     signature: "pub fn ChannelFlags::channel_obfuscated() -> Self",
     doc: "Set on channels received over the gateway whose metadata Discord has\nobfuscated because the bot cannot view them. Only `id`, `type`, `position`\nand `parent_id` are reliable on such a channel; the HTTP API omits these\nchannels instead of setting this flag.",
     file: "discord/src/model/channel.mbt",
-    line: 523,
+    line: 658,
   },
   {
     pkg: "gaato/discord/model",
@@ -13609,7 +13609,7 @@ let entries_7 : Array[ApiEntry] = [
     signature: "pub fn ChannelFlags::clyde_ai() -> Self",
     doc: "Bit `1 << 8`, which Discord sets but does not document.",
     file: "discord/src/model/channel.mbt",
-    line: 502,
+    line: 637,
   },
   {
     pkg: "gaato/discord/model",
@@ -13618,7 +13618,7 @@ let entries_7 : Array[ApiEntry] = [
     signature: "pub fn ChannelFlags::contains(Self, Self) -> Bool",
     doc: "Whether every flag in `other` is set.",
     file: "discord/src/model/channel.mbt",
-    line: 415,
+    line: 550,
   },
   {
     pkg: "gaato/discord/model",
@@ -13627,7 +13627,7 @@ let entries_7 : Array[ApiEntry] = [
     signature: "pub fn ChannelFlags::from_bits(UInt64) -> Self",
     doc: "Flags from a raw bit field; unknown bits are kept.",
     file: "discord/src/model/channel.mbt",
-    line: 403,
+    line: 538,
   },
   {
     pkg: "gaato/discord/model",
@@ -13636,7 +13636,7 @@ let entries_7 : Array[ApiEntry] = [
     signature: "pub fn ChannelFlags::guild_feed_removed() -> Self",
     doc: "Bit `1 << 0`, which Discord sets but does not document.",
     file: "discord/src/model/channel.mbt",
-    line: 466,
+    line: 601,
   },
   {
     pkg: "gaato/discord/model",
@@ -13645,7 +13645,7 @@ let entries_7 : Array[ApiEntry] = [
     signature: "pub fn ChannelFlags::hide_media_download_options() -> Self",
     doc: "Hides the media download options; only available in media channels.",
     file: "discord/src/model/channel.mbt",
-    line: 514,
+    line: 649,
   },
   {
     pkg: "gaato/discord/model",
@@ -13654,7 +13654,7 @@ let entries_7 : Array[ApiEntry] = [
     signature: "pub fn ChannelFlags::is_guild_resource_channel() -> Self",
     doc: "Bit `1 << 7`, which Discord sets but does not document.",
     file: "discord/src/model/channel.mbt",
-    line: 496,
+    line: 631,
   },
   {
     pkg: "gaato/discord/model",
@@ -13663,7 +13663,7 @@ let entries_7 : Array[ApiEntry] = [
     signature: "pub fn ChannelFlags::is_scheduled_for_deletion() -> Self",
     doc: "Bit `1 << 9`, which Discord sets but does not document.",
     file: "discord/src/model/channel.mbt",
-    line: 508,
+    line: 643,
   },
   {
     pkg: "gaato/discord/model",
@@ -13672,7 +13672,7 @@ let entries_7 : Array[ApiEntry] = [
     signature: "pub fn ChannelFlags::is_spam() -> Self",
     doc: "Bit `1 << 5`, which Discord sets but does not document.",
     file: "discord/src/model/channel.mbt",
-    line: 490,
+    line: 625,
   },
   {
     pkg: "gaato/discord/model",
@@ -13681,7 +13681,7 @@ let entries_7 : Array[ApiEntry] = [
     signature: "pub fn ChannelFlags::is_spoiler_channel() -> Self",
     doc: "A Spoiler Channel: users must opt in to view its contents.",
     file: "discord/src/model/channel.mbt",
-    line: 529,
+    line: 664,
   },
   {
     pkg: "gaato/discord/model",
@@ -13690,7 +13690,7 @@ let entries_7 : Array[ApiEntry] = [
     signature: "pub fn ChannelFlags::none() -> Self",
     doc: "No flags set.",
     file: "discord/src/model/channel.mbt",
-    line: 397,
+    line: 532,
   },
   {
     pkg: "gaato/discord/model",
@@ -13699,7 +13699,7 @@ let entries_7 : Array[ApiEntry] = [
     signature: "pub fn ChannelFlags::pinned() -> Self",
     doc: "The thread is pinned to the top of its parent forum or media channel.",
     file: "discord/src/model/channel.mbt",
-    line: 472,
+    line: 607,
   },
   {
     pkg: "gaato/discord/model",
@@ -13708,7 +13708,7 @@ let entries_7 : Array[ApiEntry] = [
     signature: "pub fn ChannelFlags::require_tag() -> Self",
     doc: "A tag must be applied when creating a post in a forum or media channel.",
     file: "discord/src/model/channel.mbt",
-    line: 484,
+    line: 619,
   },
   {
     pkg: "gaato/discord/model",
@@ -14365,7 +14365,7 @@ let entries_7 : Array[ApiEntry] = [
     signature: "pub(all) struct DefaultReaction {\n  emoji_id : Nullable[Id[EmojiMarker]]\n  emoji_name : Nullable[String]\n}",
     doc: "The default custom or Unicode reaction for a forum or media channel.",
     file: "discord/src/model/channel.mbt",
-    line: 385,
+    line: 520,
   },
   {
     pkg: "gaato/discord/model",
@@ -15035,7 +15035,7 @@ let entries_8 : Array[ApiEntry] = [
     signature: "pub(all) struct FollowedChannel {\n  channel_id : Id[ChannelMarker]\n  webhook_id : Id[WebhookMarker]\n}",
     doc: "The announcement channel and webhook created by following a channel.",
     file: "discord/src/model/channel.mbt",
-    line: 340,
+    line: 475,
   },
   {
     pkg: "gaato/discord/model",
@@ -15053,7 +15053,7 @@ let entries_8 : Array[ApiEntry] = [
     signature: "pub(all) enum ForumLayoutType {\n  NotSet\n  ListView\n  GalleryView\n  Unknown(Int32)\n}",
     doc: "The presentation layout used by a forum channel.",
     file: "discord/src/model/channel.mbt",
-    line: 192,
+    line: 327,
   },
   {
     pkg: "gaato/discord/model",
@@ -15062,7 +15062,7 @@ let entries_8 : Array[ApiEntry] = [
     signature: "pub fn ForumLayoutType::from_int(Int32) -> Self",
     doc: "The `ForumLayoutType` for its Discord integer value; unknown values become `Unknown(n)`.",
     file: "discord/src/model/channel.mbt",
-    line: 212,
+    line: 347,
   },
   {
     pkg: "gaato/discord/model",
@@ -15071,7 +15071,7 @@ let entries_8 : Array[ApiEntry] = [
     signature: "pub fn ForumLayoutType::to_int(Self) -> Int32",
     doc: "The Discord integer value of this `ForumLayoutType`.",
     file: "discord/src/model/channel.mbt",
-    line: 201,
+    line: 336,
   },
   {
     pkg: "gaato/discord/model",
@@ -15089,7 +15089,7 @@ let entries_8 : Array[ApiEntry] = [
     signature: "pub(all) struct ForumTag {\n  id : Id[GenericMarker]\n  name : String\n  moderated : Bool\n  emoji_id : Nullable[Id[EmojiMarker]]\n  emoji_name : Nullable[String]\n}",
     doc: "A tag available for categorizing threads in a forum or media channel.",
     file: "discord/src/model/channel.mbt",
-    line: 348,
+    line: 483,
   },
   {
     pkg: "gaato/discord/model",
@@ -15107,7 +15107,7 @@ let entries_8 : Array[ApiEntry] = [
     signature: "pub(all) struct ForumTagRequest {\n  id : Id[GenericMarker]?\n  name : String\n  moderated : Bool?\n  emoji_id : Id[EmojiMarker]?\n  emoji_name : String?\n}",
     doc: "A forum tag as sent in `available_tags` when creating or modifying a\nforum or media channel. Only `name` is required; omit `id` to create a\nnew tag, keep an existing tag's `id` to update it in place. At most one\nof `emoji_id` and `emoji_name` may be set.",
     file: "discord/src/model/channel.mbt",
-    line: 362,
+    line: 497,
   },
   {
     pkg: "gaato/discord/model",
@@ -18319,7 +18319,7 @@ let entries_10 : Array[ApiEntry] = [
     signature: "pub(all) struct Overwrite {\n  id : Id[GenericMarker]\n  typ : OverwriteType\n  allow : Permissions\n  deny : Permissions\n}",
     doc: "A role or member permission override on a channel.",
     file: "discord/src/model/channel.mbt",
-    line: 46,
+    line: 181,
   },
   {
     pkg: "gaato/discord/model",
@@ -18337,7 +18337,7 @@ let entries_10 : Array[ApiEntry] = [
     signature: "pub(all) enum OverwriteType {\n  Role\n  Member\n  Unknown(Int32)\n}",
     doc: "The target category of a permission overwrite.",
     file: "discord/src/model/channel.mbt",
-    line: 57,
+    line: 192,
   },
   {
     pkg: "gaato/discord/model",
@@ -18346,7 +18346,7 @@ let entries_10 : Array[ApiEntry] = [
     signature: "pub fn OverwriteType::from_int(Int32) -> Self",
     doc: "The `OverwriteType` for its Discord integer value; unknown values become `Unknown(n)`.",
     file: "discord/src/model/channel.mbt",
-    line: 75,
+    line: 210,
   },
   {
     pkg: "gaato/discord/model",
@@ -18355,7 +18355,7 @@ let entries_10 : Array[ApiEntry] = [
     signature: "pub fn OverwriteType::to_int(Self) -> Int32",
     doc: "The Discord integer value of this `OverwriteType`.",
     file: "discord/src/model/channel.mbt",
-    line: 65,
+    line: 200,
   },
   {
     pkg: "gaato/discord/model",
@@ -19934,7 +19934,7 @@ let entries_11 : Array[ApiEntry] = [
     signature: "pub(all) enum SortOrderType {\n  LatestActivity\n  CreationDate\n  Unknown(Int32)\n}",
     doc: "The ordering used for posts in a forum or media channel.",
     file: "discord/src/model/channel.mbt",
-    line: 147,
+    line: 282,
   },
   {
     pkg: "gaato/discord/model",
@@ -19943,7 +19943,7 @@ let entries_11 : Array[ApiEntry] = [
     signature: "pub fn SortOrderType::from_int(Int32) -> Self",
     doc: "The `SortOrderType` for its Discord integer value; unknown values become `Unknown(n)`.",
     file: "discord/src/model/channel.mbt",
-    line: 165,
+    line: 300,
   },
   {
     pkg: "gaato/discord/model",
@@ -19952,7 +19952,7 @@ let entries_11 : Array[ApiEntry] = [
     signature: "pub fn SortOrderType::to_int(Self) -> Int32",
     doc: "The Discord integer value of this `SortOrderType`.",
     file: "discord/src/model/channel.mbt",
-    line: 155,
+    line: 290,
   },
   {
     pkg: "gaato/discord/model",
@@ -20672,7 +20672,7 @@ let entries_11 : Array[ApiEntry] = [
     signature: "pub(all) enum ThreadAutoArchiveDuration {\n  OneHour\n  OneDay\n  ThreeDays\n  OneWeek\n  Unknown(Int32)\n}",
     doc: "The inactivity duration in minutes before a thread is archived.",
     file: "discord/src/model/channel.mbt",
-    line: 240,
+    line: 375,
   },
   {
     pkg: "gaato/discord/model",
@@ -20681,7 +20681,7 @@ let entries_11 : Array[ApiEntry] = [
     signature: "pub fn ThreadAutoArchiveDuration::from_int(Int32) -> Self",
     doc: "The `ThreadAutoArchiveDuration` for its Discord integer value (minutes); unknown values become `Unknown(n)`.",
     file: "discord/src/model/channel.mbt",
-    line: 264,
+    line: 399,
   },
   {
     pkg: "gaato/discord/model",
@@ -20690,7 +20690,7 @@ let entries_11 : Array[ApiEntry] = [
     signature: "pub fn ThreadAutoArchiveDuration::to_int(Self) -> Int32",
     doc: "The Discord integer value of this `ThreadAutoArchiveDuration`, in minutes.",
     file: "discord/src/model/channel.mbt",
-    line: 250,
+    line: 385,
   },
   {
     pkg: "gaato/discord/model",
@@ -20753,7 +20753,7 @@ let entries_11 : Array[ApiEntry] = [
     signature: "pub(all) struct ThreadMember {\n  id : Id[ChannelMarker]?\n  user_id : Id[UserMarker]?\n  join_timestamp : Timestamp\n  flags : Int32\n  guild_member : GuildMember?\n}",
     doc: "A user's membership state in a thread.",
     file: "discord/src/model/channel.mbt",
-    line: 312,
+    line: 447,
   },
   {
     pkg: "gaato/discord/model",
@@ -20798,7 +20798,7 @@ let entries_11 : Array[ApiEntry] = [
     signature: "pub(all) struct ThreadMetadata {\n  archived : Bool\n  auto_archive_duration : ThreadAutoArchiveDuration\n  archive_timestamp : Timestamp\n  locked : Bool\n  invitable : Bool?\n  create_timestamp : Nullable[Timestamp]?\n}",
     doc: "Metadata controlling a thread's archive and lock state.",
     file: "discord/src/model/channel.mbt",
-    line: 300,
+    line: 435,
   },
   {
     pkg: "gaato/discord/model",
@@ -21347,7 +21347,7 @@ let entries_11 : Array[ApiEntry] = [
     signature: "pub(all) enum VideoQualityMode {\n  Auto\n  Full\n  Unknown(Int32)\n}",
     doc: "The camera quality mode used by a voice channel.",
     file: "discord/src/model/channel.mbt",
-    line: 102,
+    line: 237,
   },
   {
     pkg: "gaato/discord/model",
@@ -21356,7 +21356,7 @@ let entries_11 : Array[ApiEntry] = [
     signature: "pub fn VideoQualityMode::from_int(Int32) -> Self",
     doc: "The `VideoQualityMode` for its Discord integer value; unknown values become `Unknown(n)`.",
     file: "discord/src/model/channel.mbt",
-    line: 120,
+    line: 255,
   },
   {
     pkg: "gaato/discord/model",
@@ -21365,7 +21365,7 @@ let entries_11 : Array[ApiEntry] = [
     signature: "pub fn VideoQualityMode::to_int(Self) -> Int32",
     doc: "The Discord integer value of this `VideoQualityMode`.",
     file: "discord/src/model/channel.mbt",
-    line: 110,
+    line: 245,
   },
   {
     pkg: "gaato/discord/model",
@@ -21861,7 +21861,7 @@ let entries_12 : Array[ApiEntry] = [
     pkg: "gaato/discord/ratelimit",
     name: "is_discord_rate_limit",
     kind: "fn",
-    signature: "pub fn is_discord_rate_limit(@http.Headers) -> Bool",
+    signature: "pub fn is_discord_rate_limit(@mttp.Headers) -> Bool",
     doc: "Whether a 429 is Discord's own rate limit, which tells the client what to\nwait for: Discord documents its 429s with a JSON body (`retry_after`,\n`global`) and the `X-RateLimit-Scope` header, and sends `X-RateLimit-Global`\nfor a global limit. A 429 with none of these comes from something in front\nof Discord, such as Cloudflare. It names no bucket and no reliable wait,\nand since 401, 403 and 429 count towards the address's invalid-request\nlimit (10,000 per ten minutes), it is better not to send again soon.",
     file: "discord/src/ratelimit/ratelimit.mbt",
     line: 129,

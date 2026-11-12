@@ -2,7 +2,7 @@
 
 ///|
 /// The gaato/discord release both indexes were generated from.
-pub const DISCORD_VERSION : String = "0.15.0"
+pub const DISCORD_VERSION : String = "0.16.0"
 
 ///|
 pub let sections : Array[Section] = [
@@ -41,18 +41,19 @@ pub let sections : Array[Section] = [
       #|```sh
       #|moon update
       #|moon add gaato/discord
-      #|moon add moonbitlang/core/async
       #|```
       #|
-      #|The resulting `moon.mod` contains module dependencies equivalent to:
+      #|The resulting `moon.mod` contains:
       #|
       #|```mbt nocheck
       #|///|
       #|import {
-      #|  "gaato/discord",
-      #|  "moonbitlang/core/async",
+      #|  "gaato/discord@0.16.0",
       #|}
       #|```
+      #|
+      #|`moonbitlang/core/async` is part of the standard library, so it is imported
+      #|by packages without being listed in `moon.mod`.
       #|
       #|Create an executable package, for example `src/main/moon.pkg`:
       #|
@@ -1207,10 +1208,27 @@ pub let sections : Array[Section] = [
     body: (
       #|From 2026-11-16 Discord obfuscates guild channels the bot cannot view: they
       #|still arrive in `GUILD_CREATE` and channel events, but only `id`, `typ`,
-      #|`position`, and `parent_id` are reliable (the name becomes `"___hidden___"`).
-      #|Check `Channel::is_obfuscated()` before using any other field; a
-      #|`CHANNEL_UPDATE` with the full data follows once the bot gains access. Until
-      #|the cut-over, opt in to test with the Identify capability:
+      #|`position`, and `parent_id` are reliable (the name becomes `"___hidden___"`,
+      #|other fields are null or reduced, and the overwrites are one placeholder
+      #|denying `VIEW_CHANNEL` to `@everyone`). The library handles them as follows:
+      #|
+      #|- Decoding: a channel whose flags carry `CHANNEL_OBFUSCATED` keeps those four
+      #|  fields and `flags` strict, and any other field that is null or does not
+      #|  decode becomes `None`, so a hidden channel never fails the `GUILD_CREATE`
+      #|  that lists it. A channel without the flag is decoded strictly as before: a
+      #|  malformed one still fails its event, which arrives as a `DECODE_ERROR:`
+      #|  event and reaches `on_decode_error`, rather than leaving the guild cached
+      #|  without it.
+      #|- Cache: obfuscated channels are cached as received; check
+      #|  `Channel::is_obfuscated()` before using any other field. The
+      #|  `CHANNEL_UPDATE` with the full data that Discord sends once the bot gains
+      #|  access replaces the entry. `InMemoryCache::permissions_in` returns `None`
+      #|  for an obfuscated channel, because its placeholder overwrites would give a
+      #|  wrong answer for every user.
+      #|- REST: `Client::get_guild_channels` omits the channels the bot cannot view
+      #|  instead of obfuscating them. Interaction payloads are never obfuscated.
+      #|
+      #|Until the cut-over, opt in to test with the Identify capability:
       #|
       #|```mbt check
       #|///|
