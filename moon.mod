@@ -13,5 +13,5 @@ preferred_target = "native"
 warnings = "-implicit_impl_as_method"
 
 import {
-  "gaato/discord@0.16.0",
+  "gaato/discord@0.17.0",
 }
